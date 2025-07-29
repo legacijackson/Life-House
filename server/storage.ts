@@ -1,0 +1,358 @@
+import {
+  users,
+  residentProfiles,
+  referrals,
+  intakeChecklists,
+  programEnrollments,
+  attendance,
+  serviceEvents,
+  caseNotes,
+  resources,
+  residentResources,
+  properties,
+  rooms,
+  tickets,
+  donations,
+  auditLog,
+  documents,
+  type User,
+  type InsertUser,
+  type ResidentProfile,
+  type InsertResidentProfile,
+  type Referral,
+  type InsertReferral,
+  type Attendance,
+  type InsertAttendance,
+  type ServiceEvent,
+  type InsertServiceEvent,
+  type CaseNote,
+  type InsertCaseNote,
+  type Resource,
+  type InsertResource,
+  type Ticket,
+  type InsertTicket,
+  type Donation,
+  type InsertDonation,
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc, count, sql } from "drizzle-orm";
+
+export interface IStorage {
+  // User operations
+  getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User>;
+
+  // Resident operations
+  getResidentProfile(userId: string): Promise<ResidentProfile | undefined>;
+  createResidentProfile(profile: InsertResidentProfile): Promise<ResidentProfile>;
+  updateResidentProfile(id: string, updates: Partial<ResidentProfile>): Promise<ResidentProfile>;
+
+  // Referral operations
+  getReferrals(filters?: { status?: string }): Promise<Referral[]>;
+  createReferral(referral: InsertReferral): Promise<Referral>;
+  updateReferral(id: string, updates: Partial<Referral>): Promise<Referral>;
+
+  // Attendance operations
+  getAttendance(filters: { residentId?: string; dateRange?: { start: Date; end: Date } }): Promise<Attendance[]>;
+  createAttendance(attendance: InsertAttendance): Promise<Attendance>;
+
+  // Service events
+  getServiceEvents(filters: { residentId?: string; fundingStream?: string }): Promise<ServiceEvent[]>;
+  createServiceEvent(event: InsertServiceEvent): Promise<ServiceEvent>;
+
+  // Case notes
+  getCaseNotes(residentId: string): Promise<CaseNote[]>;
+  createCaseNote(note: InsertCaseNote): Promise<CaseNote>;
+
+  // Resources
+  getResources(filters?: { category?: string; status?: string }): Promise<Resource[]>;
+  createResource(resource: InsertResource): Promise<Resource>;
+  getResidentResources(residentId: string): Promise<any[]>;
+
+  // Properties and tickets
+  getProperties(): Promise<any[]>;
+  getTickets(filters?: { propertyId?: string; status?: string }): Promise<Ticket[]>;
+  createTicket(ticket: InsertTicket): Promise<Ticket>;
+
+  // Dashboard stats
+  getDashboardStats(userId: string, role: string): Promise<any>;
+
+  // Audit logging
+  logAudit(entry: any): Promise<void>;
+}
+
+export class DatabaseStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async getResidentProfile(userId: string): Promise<ResidentProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(residentProfiles)
+      .where(eq(residentProfiles.userId, userId));
+    return profile;
+  }
+
+  async createResidentProfile(profile: InsertResidentProfile): Promise<ResidentProfile> {
+    const [created] = await db
+      .insert(residentProfiles)
+      .values(profile)
+      .returning();
+    return created;
+  }
+
+  async updateResidentProfile(id: string, updates: Partial<ResidentProfile>): Promise<ResidentProfile> {
+    const [updated] = await db
+      .update(residentProfiles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(residentProfiles.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getReferrals(filters?: { status?: string }): Promise<Referral[]> {
+    let query = db.select().from(referrals);
+    
+    if (filters?.status) {
+      query = query.where(eq(referrals.status, filters.status as any));
+    }
+    
+    const results = await query.orderBy(desc(referrals.createdAt));
+    return results;
+  }
+
+  async createReferral(referral: InsertReferral): Promise<Referral> {
+    const [created] = await db
+      .insert(referrals)
+      .values(referral)
+      .returning();
+    return created;
+  }
+
+  async updateReferral(id: string, updates: Partial<Referral>): Promise<Referral> {
+    const [updated] = await db
+      .update(referrals)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(referrals.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAttendance(filters: { residentId?: string; dateRange?: { start: Date; end: Date } }): Promise<Attendance[]> {
+    let query = db.select().from(attendance);
+    
+    const conditions = [];
+    if (filters.residentId) {
+      conditions.push(eq(attendance.residentId, filters.residentId));
+    }
+    if (filters.dateRange) {
+      conditions.push(
+        and(
+          sql`${attendance.date} >= ${filters.dateRange.start}`,
+          sql`${attendance.date} <= ${filters.dateRange.end}`
+        )
+      );
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    const results = await query.orderBy(desc(attendance.date));
+    return results;
+  }
+
+  async createAttendance(attendanceData: InsertAttendance): Promise<Attendance> {
+    const [created] = await db
+      .insert(attendance)
+      .values(attendanceData)
+      .returning();
+    return created;
+  }
+
+  async getServiceEvents(filters: { residentId?: string; fundingStream?: string }): Promise<ServiceEvent[]> {
+    let query = db.select().from(serviceEvents);
+    
+    const conditions = [];
+    if (filters.residentId) {
+      conditions.push(eq(serviceEvents.residentId, filters.residentId));
+    }
+    if (filters.fundingStream) {
+      conditions.push(eq(serviceEvents.fundingStream, filters.fundingStream as any));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    const results = await query.orderBy(desc(serviceEvents.date));
+    return results;
+  }
+
+  async createServiceEvent(event: InsertServiceEvent): Promise<ServiceEvent> {
+    const [created] = await db
+      .insert(serviceEvents)
+      .values(event)
+      .returning();
+    return created;
+  }
+
+  async getCaseNotes(residentId: string): Promise<CaseNote[]> {
+    return await db
+      .select()
+      .from(caseNotes)
+      .where(eq(caseNotes.residentId, residentId))
+      .orderBy(desc(caseNotes.createdAt));
+  }
+
+  async createCaseNote(note: InsertCaseNote): Promise<CaseNote> {
+    const [created] = await db
+      .insert(caseNotes)
+      .values(note)
+      .returning();
+    return created;
+  }
+
+  async getResources(filters?: { category?: string; status?: string }): Promise<Resource[]> {
+    let query = db.select().from(resources);
+    
+    const conditions = [];
+    if (filters?.category) {
+      conditions.push(eq(resources.category, filters.category as any));
+    }
+    if (filters?.status) {
+      conditions.push(eq(resources.status, filters.status as any));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    const results = await query.orderBy(resources.name);
+    return results;
+  }
+
+  async createResource(resource: InsertResource): Promise<Resource> {
+    const [created] = await db
+      .insert(resources)
+      .values(resource)
+      .returning();
+    return created;
+  }
+
+  async getResidentResources(residentId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: residentResources.id,
+        status: residentResources.status,
+        notes: residentResources.notes,
+        resource: resources,
+      })
+      .from(residentResources)
+      .innerJoin(resources, eq(residentResources.resourceId, resources.id))
+      .where(eq(residentResources.residentId, residentId));
+  }
+
+  async getProperties(): Promise<any[]> {
+    return await db.select().from(properties);
+  }
+
+  async getTickets(filters?: { propertyId?: string; status?: string }): Promise<Ticket[]> {
+    let query = db.select().from(tickets);
+    
+    const conditions = [];
+    if (filters?.propertyId) {
+      conditions.push(eq(tickets.propertyId, filters.propertyId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(tickets.status, filters.status as any));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    const results = await query.orderBy(desc(tickets.createdAt));
+    return results;
+  }
+
+  async createTicket(ticket: InsertTicket): Promise<Ticket> {
+    const [created] = await db
+      .insert(tickets)
+      .values(ticket)
+      .returning();
+    return created;
+  }
+
+  async getDashboardStats(userId: string, role: string): Promise<any> {
+    if (role === 'CaseManager') {
+      // Get residents assigned to this case manager
+      const [activeResidents] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(and(
+          eq(users.role, 'Resident'),
+          // In a real system, you'd have a case manager assignment table
+          sql`true` // Placeholder - implement proper assignment logic
+        ));
+
+      // Get pending notes count
+      const [pendingNotes] = await db
+        .select({ count: count() })
+        .from(caseNotes)
+        .where(eq(caseNotes.createdBy, userId));
+
+      // Get open tickets count
+      const [openTickets] = await db
+        .select({ count: count() })
+        .from(tickets)
+        .where(eq(tickets.status, 'new'));
+
+      return {
+        activeResidents: activeResidents?.count || 0,
+        pendingNotes: pendingNotes?.count || 0,
+        openTickets: openTickets?.count || 0,
+        avgStage: 4.2, // Would be calculated from program enrollments
+      };
+    }
+
+    return {
+      activeResidents: 0,
+      pendingNotes: 0,
+      openTickets: 0,
+      avgStage: 0,
+    };
+  }
+
+  async logAudit(entry: any): Promise<void> {
+    await db.insert(auditLog).values(entry);
+  }
+}
+
+export const storage = new DatabaseStorage();
