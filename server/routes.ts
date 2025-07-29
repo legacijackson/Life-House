@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/referrals', async (req: AuthenticatedRequest, res) => {
+  app.post('/api/referrals', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const referralData = insertReferralSchema.parse(req.body);
       const referral = await storage.createReferral(referralData);
@@ -117,6 +117,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Create referral error:', error);
       res.status(500).json({ message: 'Failed to create referral' });
+    }
+  });
+
+  app.patch('/api/referrals/:id', requireRole(['Intake', 'Admin']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      const referral = await storage.updateReferral(id, updateData);
+      
+      await storage.logAudit({
+        actorId: req.user.id,
+        action: 'UPDATE_REFERRAL',
+        entity: 'referral',
+        entityId: id,
+        ip: req.ip,
+      });
+
+      res.json(referral);
+    } catch (error) {
+      console.error('Update referral error:', error);
+      res.status(500).json({ message: 'Failed to update referral' });
+    }
+  });
+
+  // Intake system endpoints
+  app.post('/api/intake/create-resident', requireRole(['Intake', 'Admin']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { referralId } = req.body;
+      const resident = await storage.createResidentFromReferral(referralId, req.user.id);
+      
+      await storage.logAudit({
+        actorId: req.user.id,
+        action: 'CREATE_RESIDENT_FROM_REFERRAL',
+        entity: 'resident',
+        entityId: resident.id,
+        ip: req.ip,
+      });
+
+      res.json(resident);
+    } catch (error) {
+      console.error('Create resident from referral error:', error);
+      res.status(500).json({ message: 'Failed to create resident' });
+    }
+  });
+
+  app.post('/api/intake/:residentId/checklist', requireRole(['Intake', 'Admin']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { residentId } = req.params;
+      const checklistData = req.body;
+      const checklist = await storage.createOrUpdateIntakeChecklist(residentId, checklistData);
+      
+      res.json(checklist);
+    } catch (error) {
+      console.error('Update intake checklist error:', error);
+      res.status(500).json({ message: 'Failed to update checklist' });
+    }
+  });
+
+  app.post('/api/intake/:residentId/assign-bed', requireRole(['Intake', 'Admin']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { residentId } = req.params;
+      const { propertyId, roomId } = req.body;
+      const assignment = await storage.assignBed(residentId, propertyId, roomId);
+      
+      await storage.logAudit({
+        actorId: req.user.id,
+        action: 'ASSIGN_BED',
+        entity: 'bed_assignment',
+        entityId: `${residentId}-${roomId}`,
+        ip: req.ip,
+      });
+
+      res.json(assignment);
+    } catch (error) {
+      console.error('Bed assignment error:', error);
+      res.status(500).json({ message: 'Failed to assign bed' });
     }
   });
 

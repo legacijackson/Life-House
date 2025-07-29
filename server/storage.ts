@@ -155,6 +155,115 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async updateReferral(id: string, data: Partial<Referral>): Promise<Referral> {
+    const [updated] = await db
+      .update(referrals)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(referrals.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createResidentFromReferral(referralId: string, intakeStaffId: string): Promise<User> {
+    // Get referral data
+    const [referral] = await db.select().from(referrals).where(eq(referrals.id, referralId));
+    if (!referral) {
+      throw new Error('Referral not found');
+    }
+
+    const residentInfo = referral.basicResidentInfo as any;
+
+    // Create user as resident
+    const [resident] = await db
+      .insert(users)
+      .values({
+        role: 'Resident',
+        name: residentInfo.name,
+        email: residentInfo.email,
+        phone: residentInfo.phone,
+      })
+      .returning();
+
+    // Create resident profile
+    await db.insert(residentProfiles).values({
+      userId: resident.id,
+    });
+
+    // Create program enrollment
+    await db.insert(programEnrollments).values({
+      residentId: resident.id,
+      startDate: new Date(),
+      stage: 1,
+      stageHistory: [{ stage: 1, at: new Date().toISOString(), staffId: intakeStaffId }],
+    });
+
+    // Update referral to link to resident
+    await db
+      .update(referrals)
+      .set({ 
+        linkedResidentId: resident.id,
+        status: 'accepted',
+        updatedAt: new Date()
+      })
+      .where(eq(referrals.id, referralId));
+
+    return resident;
+  }
+
+  async createOrUpdateIntakeChecklist(residentId: string, items: any[]): Promise<any> {
+    const [existing] = await db
+      .select()
+      .from(intakeChecklists)
+      .where(eq(intakeChecklists.residentId, residentId));
+
+    if (existing) {
+      const [updated] = await db
+        .update(intakeChecklists)
+        .set({ items, updatedAt: new Date() })
+        .where(eq(intakeChecklists.residentId, residentId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(intakeChecklists)
+        .values({ residentId, items })
+        .returning();
+      return created;
+    }
+  }
+
+  async assignBed(residentId: string, propertyId: string, roomId: string): Promise<any> {
+    // Update room occupants
+    const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
+    if (!room) {
+      throw new Error('Room not found');
+    }
+
+    const currentOccupants = (room.occupants as string[]) || [];
+    if (!currentOccupants.includes(residentId)) {
+      currentOccupants.push(residentId);
+    }
+
+    await db
+      .update(rooms)
+      .set({ 
+        occupants: currentOccupants,
+        updatedAt: new Date()
+      })
+      .where(eq(rooms.id, roomId));
+
+    // Update property bed availability
+    await db
+      .update(properties)
+      .set({ 
+        bedsAvailable: sql`${properties.bedsAvailable} - 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(properties.id, propertyId));
+
+    return { residentId, propertyId, roomId, assignedAt: new Date() };
+  }
+
   async updateReferral(id: string, updates: Partial<Referral>): Promise<Referral> {
     const [updated] = await db
       .update(referrals)

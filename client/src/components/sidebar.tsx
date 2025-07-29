@@ -10,11 +10,13 @@ import {
   Settings,
   BarChart3,
   MessageSquare,
-  LogOut
+  LogOut,
+  UserPlus
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Intake & Referrals", href: "/intake", icon: UserPlus, badge: "5" },
   { name: "My Residents", href: "/residents", icon: Users, badge: "12" },
   { name: "Case Notes", href: "/case-notes", icon: FileText },
   { name: "Attendance", href: "/attendance", icon: Calendar },
