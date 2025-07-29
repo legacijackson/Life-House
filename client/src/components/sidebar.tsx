@@ -44,6 +44,23 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* User Profile */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full overflow-hidden">
+            <img 
+              src="https://images.pexels.com/photos/6150527/pexels-photo-6150527.jpeg?auto=compress&cs=tinysrgb&w=100"
+              alt="Case manager profile"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900">Sarah Williams</p>
+            <p className="text-xs text-gray-500">Senior Case Manager</p>
+          </div>
+        </div>
+      </div>
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4">
         <ul className="space-y-2">

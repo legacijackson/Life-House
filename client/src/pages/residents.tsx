@@ -243,11 +243,19 @@ export default function Residents() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center space-x-3">
-                        <Avatar className="w-10 h-10">
-                          <AvatarFallback>
-                            {selectedResident.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                          <img 
+                            src="https://images.pexels.com/photos/1644888/pexels-photo-1644888.jpeg?auto=compress&cs=tinysrgb&w=100"
+                            alt={`${selectedResident.name} profile`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.parentElement!.innerHTML = selectedResident.name.split(' ').map(n => n[0]).join('');
+                              target.parentElement!.className += ' bg-blue-100 text-blue-800 font-semibold text-sm';
+                            }}
+                          />
+                        </div>
                         <div>
                           <h3 className="text-lg font-semibold">{selectedResident.name}</h3>
                           <p className="text-sm text-gray-500">{getStageLabel(selectedResident.stage)}</p>
@@ -383,9 +391,15 @@ export default function Residents() {
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
-                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden">
+                      <img 
+                        src="https://images.pexels.com/photos/7683897/pexels-photo-7683897.jpeg?auto=compress&cs=tinysrgb&w=200"
+                        alt="Life House residents walking together"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Resident</h3>
-                    <p className="text-gray-500">Choose a resident from the list to view their details and progress.</p>
+                    <p className="text-gray-500">Choose a resident from the list to view their details and progress through the Life House program.</p>
                   </CardContent>
                 </Card>
               )}

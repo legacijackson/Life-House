@@ -424,11 +424,19 @@ export default function CaseNotes() {
                           <div>
                             <h4 className="text-sm font-medium text-gray-700 mb-2">Created By</h4>
                             <div className="flex items-center space-x-2">
-                              <Avatar className="w-6 h-6">
-                                <AvatarFallback className="text-xs">
-                                  {selectedNote.staffName.split(' ').map((n: string) => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
+                              <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                                <img 
+                                  src="https://images.pexels.com/photos/6150527/pexels-photo-6150527.jpeg?auto=compress&cs=tinysrgb&w=50"
+                                  alt="Staff member"
+                                  className="w-full h-full object-cover text-xs"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    target.parentElement!.innerHTML = selectedNote.staffName.split(' ').map((n: string) => n[0]).join('');
+                                    target.parentElement!.className += ' bg-blue-100 text-blue-800 font-semibold text-xs';
+                                  }}
+                                />
+                              </div>
                               <span className="text-sm text-gray-900">{selectedNote.staffName}</span>
                             </div>
                           </div>
@@ -468,9 +476,15 @@ export default function CaseNotes() {
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
-                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full overflow-hidden">
+                      <img 
+                        src="https://images.pexels.com/photos/4926703/pexels-photo-4926703.jpeg?auto=compress&cs=tinysrgb&w=200"
+                        alt="Life House team members collaborating"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Case Note</h3>
-                    <p className="text-gray-500">Choose a case note from the list to view details, action items, and follow-up information.</p>
+                    <p className="text-gray-500">Choose a case note from the list to view details, action items, and follow-up information for Life House residents.</p>
                   </CardContent>
                 </Card>
               )}
