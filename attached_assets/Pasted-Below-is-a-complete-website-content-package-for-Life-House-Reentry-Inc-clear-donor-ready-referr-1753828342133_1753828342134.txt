@@ -1,0 +1,521 @@
+Below is a complete website content package for Life House Reentry Inc. — clear, donor‑ready, referral‑friendly, and resident‑focused. It includes page-by-page copy, intake form fields and microcopy (for ConvertKit), AI chatbot starter scripts, donor page content, and compliance/legals. Tone is inspirational and warm, branding is modern, simple, professional.
+
+0) Brand & UX Notes (for your Replit build)
+Tagline: Home for Good
+
+Primary Colors: Forest Green #2E6F40, Gold #FFD700, Cream #FFFAEB (or #FFFDCC), White #FFFFFF
+
+Type: Headings (Montserrat or Raleway), Body (Inter or Open Sans)
+
+Accessibility: Contrast ≥ 4.5:1 for body text; use Gold as an accent, not a text-on-cream default.
+
+Voice: Dignity-forward, plain language, action-oriented.
+
+Primary CTAs: “Refer a Resident,” “Apply for Housing,” “Partner With Us,” “Donate Monthly”
+
+Pages: Home, About, Programs, Residents (Apply), Referrers & Partners, Employers, Donate, Impact/Stories, FAQ, Contact, Policies (Privacy/Non‑Discrimination/Terms)
+
+1) HOME (Landing Page)
+Hero
+
+Headline: Home for Good
+
+Subhead: Safe, structured housing and life-design support for people returning from incarceration — so they can rebuild with dignity, purpose, and a path to financial independence.
+
+Primary Buttons:
+
+Apply for Housing (opens intake form modal / new tab)
+
+Refer a Resident (STOP/CalAIM/ECM)
+
+Donate Monthly
+
+Trust Bar (logos or text)
+“Partner-aligned with public and community programs: STOP (CDCR), CalAIM Community Supports, Enhanced Care Management (ECM), local reentry and workforce agencies.”
+
+What We Do (3-up cards)
+
+Stabilize: Safe, structured, non-clinical transitional housing with clear house rules and 24/7 support culture.
+
+Skill Up: Life design, financial literacy, credit repair, career training, and coaching.
+
+Move Forward: Income-based program contributions, savings & brokerage structure, and a housing exit plan (rent or buy).
+
+Why It Works
+Stable housing + targeted supports reduce recidivism and increase long-term income and wellbeing. We’re a dignified “first step home” that stays with residents through work, savings, and permanent housing.
+
+Who We Serve
+Adults returning home from incarceration in Sacramento County who are ready to do the work. Parole, probation, STOP, ECM, and community referrals welcome.
+
+For Caseworkers & Referrers
+Fast response, clear eligibility, consistent reporting, and evidence-informed programming. We coordinate with parole/probation, STOP primes, and managed care plans.
+
+Impact Snapshot (placeholders)
+
+90% enter with no stable housing → 100% stabilized within 48 hours
+
+70% complete at least one credential or training in 90 days
+
+60–80% employed by Day 90
+
+CTA Band
+
+Refer a Resident | Apply for Housing | Partner With Us | Donate
+
+Footer (quick)
+Address: 8399 Folsom Blvd, Ste 1 #4014, Sacramento, CA 95826 • Phone: (855) 4-LIFEUP (855‑454‑3387)
+Non-Discrimination • Privacy • Terms
+
+2) ABOUT
+Headline: About Life House Reentry Inc.
+Lead: We provide safe housing and holistic support for formerly incarcerated people, helping them reenter society with dignity, purpose, and a path to financial independence.
+
+Mission (plain-language)
+We provide safe, stable housing and personalized life-skills support to help formerly incarcerated individuals successfully reenter society with dignity, purpose, and a path to financial independence.
+
+Vision
+We aim to break the cycle of incarceration by creating a network of Life Houses where every returning citizen has access to healing, housing, and the tools to build a better life.
+
+Our Approach (7-Stage Resident Transformation)
+
+Intake – Stabilization, orientation, paperwork, benefits, ID, immediate needs.
+
+Design – Life design, values, goals, spiritual grounding.
+
+Training – Financial literacy, credit repair, credentials, accelerated programs.
+
+Working – Sustainable income; resident contributes up to 30% (25% saved, 5% brokerage).
+
+Overflow – Income grows; above-cap contributions support program; peer mentoring starts.
+
+Transition – Permanent rental or first-home purchase with savings returned.
+
+Legacy – Alumni coaching, mentorship, community leadership.
+
+Leadership
+
+Julius Deshon Jackson — CEO & Board Chair
+
+Kairia Shariff — CFO & Board Treasurer
+
+Brittney Jackson — COO & Board Secretary
+
+Independent Directors
+Bonita Grant • Z’Ankhu Ziaweet • Ariel Goode
+
+Our Why
+A stable home is the foundation for everything that follows—work, family, health, and hope. We stand with people who are ready to rebuild, and we make sure they aren’t doing it alone.
+
+CTA: Read Our Programs • Refer a Resident • Donate Monthly
+
+3) PROGRAMS
+Overview
+Our programs meet people where they are and move them toward income, savings, and permanent housing.
+
+Transitional Housing
+Safe, structured homes with clear expectations, curfews, chore systems, visitor policy, and supportive culture. Two per room, shared bath; monthly housekeeping; landscaping and safety checks.
+
+Life Design & Coaching
+Weekly workshops + biweekly coaching focused on identity, goals, planning, and accountability. Residents learn to design the life they want—and build it step by step.
+
+Financial Literacy & Wealth Basics
+Budgeting, banking, credit repair, debt strategies, saving and investing fundamentals. Our model channels 25% of income into savings (reimbursable at exit) and 5% into a resident-owned brokerage.
+
+Career Preparation & Placement
+Resume, interviews, job search, employer partnerships, trades and accelerated training pathways. We target living-wage outcomes and stack credentials to increase earnings.
+
+Reentry & Benefits Navigation
+ID restoration, Medi‑Cal/CalAIM, CalFresh, GA/SSI referrals, ECM care coordination, STOP alignment, legal aid referrals, child support navigation, transportation planning.
+
+Family & Community Reintegration
+Family visits, reunification support, parenting classes, monthly family meals, community service, alumni mentorship.
+
+Program Alignment (for funders/referrers)
+
+STOP (CDCR): 0–180 days + extension eligibility; daily attendance, service notes, reporting.
+
+CalAIM ECM & Community Supports: Care coordination; housing transition/tenancy supports; managed care plan billing & documentation.
+
+Local Workforce & Education: American Job Centers, adult schools, trade programs, apprenticeships.
+
+CTA: Refer a Resident • Partner With Us • Donate
+
+4) RESIDENTS — APPLY
+Headline: Apply for Housing & Support
+Intro: If you’re returning home and ready to work on goals, we’re ready to help. Our homes are safe, structured, and focused on your success.
+
+Who Can Apply
+
+Adults returning from incarceration (Sacramento region)
+
+Able to live in a shared environment and follow house rules
+
+Willing to engage in weekly workshops, coaching, and job/education activities
+
+Referred by self, family, parole/probation, STOP, ECM/care manager, or community partner
+
+Program Contribution
+Income-based. Residents contribute up to 30% of monthly income: 25% saved (returned at exit) + 5% to a resident-owned brokerage. Many costs may be covered or offset by STOP/CalAIM/partners.
+
+What to Expect
+
+Beds available for 4–6 residents per home (two per room).
+
+90-day initial term with extensions based on progress (up to 24 months).
+
+Weekly workshops + coaching; clear rules and support.
+
+Apply (ConvertKit landing form opens in modal or new tab)
+Button: “Start Application”
+
+Microcopy (below button):
+“Completing this form takes ~8 minutes. We’ll respond within 1–2 business days. If this is urgent, call (855) 4‑LIFEUP.”
+
+AI Resource Navigator (optional widget on page)
+“Not sure what you need? Chat with our Resource Navigator to find jobs, benefits, treatment, and support in minutes.”
+Button: “Open Resource Navigator”
+
+5) REFERRERS & PARTNERS (Parole, Probation, STOP, ECM, CBOs)
+Headline: Fast, Reliable Placements — Clear Reporting
+For Parole & Probation:
+
+Rapid response on referrals
+
+Intake within 24–72 hours (as beds allow)
+
+Weekly progress notes available
+
+Program compliance monitoring, curfews, and drug-free environment
+
+For STOP (CDCR) Primes:
+
+Subcontract-ready; daily attendance + service documentation
+
+Evidence-informed curriculum; non‑clinical focus
+
+Extensions supported when justified; coordinated case planning
+
+Annual monitoring welcome; policies and files audit-ready
+
+For ECM/CalAIM Care Managers (Managed Care Plans):
+
+Housing transition & tenancy support navigation
+
+ECM-complementary care coordination (non‑clinical)
+
+Secure communication; privacy/HIPAA-conscious workflows
+
+Monthly engagement summaries available
+
+For CBOs & Faith Partners:
+
+Warm handoffs; shared care planning
+
+Joint workshops and mentoring
+
+Family reconnection and community integration
+
+CTA: Submit a Referral • Book a Partnership Call • Download Program Overview (PDF)
+
+6) EMPLOYERS
+Headline: Hire Ready, Coached Talent
+Why Hire Life House Residents?
+
+Motivated, coached, and accountable
+
+Resume/interview prep done; soft skills reinforced
+
+Ongoing support from our team reduces turnover
+
+What We Offer Employers
+
+Pre-screened candidates
+
+Onboarding support and retention check‑ins
+
+Recognition as a Second Chance Employer on our site
+
+Industries
+Construction & trades, logistics/warehouse, manufacturing, food service, maintenance, landscaping, driving (CDL), and more.
+
+CTA: Post Jobs • Schedule an Info Call
+
+7) DONATE
+Headline: Your Gift Builds a Home for Good
+Lead: Every month, people return home and need a safe place to land. Your generosity turns keys, fills fridges, pays for training, and seeds savings that become deposits or down payments.
+
+Ways to Give
+
+Monthly Giving – Home for Good Circle
+$25: Hygiene & transit | $75: Workshop supplies | $150: Resident coaching | $300: One week of housing support
+
+Sponsor a Resident
+Co‑sponsor towards our $1,500/month resident match goal. Your support helps us bank 25% savings for residents and sustain wraparound services.
+
+Corporate Partnerships
+Matching gifts, grant partnerships, job commitments, and in‑kind (furniture, tech, tools).
+
+In‑Kind
+New bedding, work boots, interview clothes, laptops/tablets, transit cards, cookware.
+
+Impact Use of Funds
+
+Stabilization: beds, linens, utilities, housekeeping, safety
+
+Coaching & Training: financial literacy, life design, job prep
+
+Resident Savings: building the deposit/down payment
+
+Family Reintegration: monthly meals, children’s birthday stipends
+
+Transparency
+We publish annual reports and impact snapshots. Donations are tax‑deductible to the extent allowed by law. (If 501(c)(3) determination pending, add: Tax-deductibility may be limited until IRS recognition is confirmed.)
+
+CTA: Donate Monthly • Sponsor a Resident • Corporate Partnerships
+
+8) IMPACT & STORIES
+Headline: Progress That Lasts
+Metrics (update quarterly):
+
+Residents stabilized in safe housing within 48 hours
+
+Credentials earned in first 90 days
+
+Employment rate by Day 90 and Day 180
+
+Savings returned at exit (avg.)
+
+Permanent housing placement rate
+
+Stories (anonymized or consented)
+
+“From gate to paycheck in 30 days”
+
+“A father’s first birthday back home”
+
+“From credit lows to keys in hand”
+
+CTA: Refer a Resident • Join the Home for Good Circle
+
+9) FAQ
+Q: Who can live at Life House?
+Adults returning from incarceration who can live cooperatively and commit to programming.
+
+Q: How long can residents stay?
+Initial 90 days with extensions based on progress, up to 24 months when appropriate.
+
+Q: How much does it cost?
+Income-based. Residents contribute up to 30% of income (25% saved, 5% brokerage). STOP/CalAIM/partners may offset costs.
+
+Q: Do you offer counseling?
+We offer non‑clinical coaching and life design. We connect residents to licensed clinical care as needed.
+
+Q: Can parole or ECM refer?
+Yes. We coordinate with parole/probation, STOP, and managed care plans.
+
+Q: Do you accept donations or in‑kind?
+Yes — see our Donate page for needs.
+
+10) CONTACT
+General Inquiries
+Life House Reentry Inc. (DBA “Life House”)
+8399 Folsom Blvd, Ste 1 #4014, Sacramento, CA 95826
+Phone: (855) 4‑LIFEUP (855‑454‑3387)
+Email: hello@lifehouse.org (placeholder)
+
+Buttons: Refer a Resident • Apply for Housing • Donate • Partner With Us
+
+11) POLICIES (footers link to these pages)
+Non‑Discrimination Notice
+Life House does not discriminate on the basis of race, color, religion, sex, sexual orientation, gender identity, national origin, disability, age, veteran status, or any other protected class. Reasonable accommodations are available upon request.
+
+Privacy Policy (summary copy)
+We collect only information necessary to process applications, provide services, and improve our programs. We do not sell personal data. Health-related information is handled securely and shared only with consent or as required by law. Full policy available on request.
+
+Terms of Use (summary)
+Use the site responsibly. Content is informational, not legal or medical advice. We are not liable for third-party links or services.
+
+12) INTAKE FORM (ConvertKit) — Fields & Microcopy
+Title: Life House Resident Application (Sacramento)
+Description: Tell us about you so we can determine fit, availability, and funding options. Takes ~8 minutes.
+
+Section A: Contact & Identity
+
+Legal First & Last Name
+
+Preferred Name
+
+Phone
+
+Email
+
+Date of Birth
+
+Preferred Contact Method (Phone/Text/Email)
+
+Section B: Current Status
+
+Current Location (parole office, family, shelter, etc.)
+
+Release Date (actual or expected)
+
+Parole/Probation Status (Yes/No)
+
+Agent Name & Contact (if applicable)
+
+STOP Referral? (Yes/No/Unknown)
+
+Medi‑Cal Active? (Yes/No/Unsure)
+
+Care Manager/ECM Contact (if any)
+
+Section C: Needs & Readiness
+
+Housing need start date
+
+Any accessibility needs? (mobility, service animal, etc.)
+
+Willing to share a room and follow house rules? (Yes/No)
+
+Willing to attend weekly workshops & coaching? (Yes/No)
+
+Substance-use recovery supports desired? (Yes/No)
+
+Immediate needs (check all): ID, clothing, food, healthcare, benefits, transportation, legal aid
+
+Section D: Work & Income
+
+Current Income (range; includes benefits)
+
+Employment Interest Areas (construction, warehouse, CDL, food svc, admin, other)
+
+Education/Certifications (GED/HS, trade, other)
+
+Driver’s License status
+
+Section E: Emergency Contact
+
+Name, Relationship, Phone
+
+Consents (checkboxes)
+
+I consent to Life House contacting me and necessary partners to process this application.
+
+I understand Life House is non‑clinical and may refer me to clinical providers as needed.
+
+Submit Button: Apply Now
+Success Message: “Thanks! We’ll review and contact you within 1–2 business days. For urgent needs, call (855) 4‑LIFEUP.”
+
+Automation (ConvertKit):
+
+Tag: Resident Applicant – Lead
+
+Auto-reply email with next steps + link to “What to Expect”
+
+Internal notification to placements@lifehouse.org
+
+13) “ROOM RATES & AVAILABILITY” (presented after form)
+Microcopy (display after submit or via chatbot):
+“Program contributions are income-based (up to 30% of monthly income). Many residents qualify for STOP/CalAIM or partner support that offsets costs. We will confirm current bed availability and the exact contribution after reviewing your application.”
+
+14) AI RESOURCE NAVIGATOR (Website Chatbot) — Copy & Flows
+Welcome Prompt (resident-facing):
+“Hi, I’m your Resource Navigator. I can help you find jobs, benefits, housing supports, ID help, healthcare, training, and more. Start by telling me your zip code or city and top need (e.g., ‘food,’ ‘ID,’ ‘job training’).”
+
+Quick Buttons:
+
+Jobs & Training
+
+Housing Supports
+
+Benefits & ID
+
+Treatment & Recovery
+
+Legal & Reentry Help
+
+Transportation
+
+Follow‑ups:
+
+“Would you like to apply for housing at Life House now?” [Open Intake Form]
+
+“Do you want us to share your info with a case manager? We’ll ask your consent first.”
+
+Guardrails & Privacy Microcopy:
+“I’m not a lawyer or doctor, but I can point you to trusted resources. I’ll only use your info to help you find support.”
+
+Escalation:
+“Want to talk to a person? Share your phone or email and we’ll reach out within 1 business day.”
+
+15) “WHO WE WORK WITH” (partners page section copy)
+Referrers: Parole/probation, STOP primes, ECM care managers, shelters, CBOs, faith communities.
+
+Employers: Second-chance friendly companies in trades, logistics, facilities, food service, admin.
+
+Funders: Philanthropy, corporate partners, foundations, government contracts.
+
+Education/Training: Adult schools, community colleges, trade programs, union pre‑apprenticeships.
+
+Health & Wellness: Community clinics, behavioral health providers, recovery supports.
+
+CTA: Become a Partner • Post a Job • Make a Grant Inquiry
+
+16) COMPLIANCE NOTE (for site footer or partner page)
+“Life House Reentry Inc. is a California Nonprofit Public Benefit Corporation (501(c)(3) recognition pending/approved — update when finalized). We operate non‑clinical supports and coordinate with licensed providers as needed. We uphold fair housing and anti‑discrimination laws and provide reasonable accommodations.”
+
+17) SHORT LEADERSHIP BIOS (About → Leadership section)
+Julius Deshon Jackson — CEO & Board Chair
+Julius leads strategy, partnerships, and outcomes at Life House. His focus: dignified housing, real income, and long-term stability for returning citizens.
+
+Kairia Shariff — CFO & Board Treasurer
+Kairia oversees finances, compliance, and transparency. She ensures every donor dollar and public contract produces measurable impact.
+
+Brittney Jackson — COO & Board Secretary
+Brittney directs day‑to‑day operations, housing quality, and programming. She ensures homes are safe, structured, and supportive.
+
+Independent Directors: Bonita Grant • Z’Ankhu Ziaweet • Ariel Goode
+
+18) GRANTS/FUNDERS MICRO‑PAGE (or section on Donate)
+For Foundations & Public Funders
+We deliver stable housing with non‑clinical supports aligned to STOP and CalAIM/ECM pathways. We track attendance, services, outcomes, and long-term housing placements.
+What You’ll Get: Clear budgets, compliance documentation, quarterly outcome reports, and stories that show real change.
+Priority Funding Areas: Beds & wraparound supports, workforce/credentialing, alumni mentorship, savings matches.
+
+CTA: Request Our Grants Packet
+
+19) SEO Metadata (examples)
+Home Title: Life House Reentry Inc. | Transitional Reentry Housing in Sacramento | Home for Good
+
+Meta Description: Safe, structured housing and life-design support for people returning from incarceration. Apply for housing, refer a resident, or become a partner today.
+
+Keywords: Sacramento reentry housing, transitional housing, STOP CDCR, CalAIM ECM, second chance jobs, financial literacy reentry, parole housing Sacramento
+
+20) DONOR PAGE — LONG COPY (full narrative option)
+Headline: Turn a Key. Change a Life.
+Body:
+Coming home from incarceration should mean more than a different address. It should mean stability, coaching, a plan, and a community that believes in you. Your gift helps someone take their first steps into a new life — with a bed, a coach, a budget, and a savings plan that becomes a deposit or a down payment.
+Your Impact:
+
+$25/month: Hygiene and transportation for one resident
+
+$75/month: Workshop materials and job-prep resources
+
+$150/month: One‑on‑one coaching for a resident
+
+$300/month: One week of housing supports
+
+$1,500/month: Sponsor a resident’s match target
+Transparency & Reports: We share quarterly metrics and stories so you can see the impact of your generosity.
+CTA: Join the Home for Good Circle • Sponsor a Resident • Corporate Partnerships
+
+Final checks / a few questions to make this impeccable
+501(c)(3) status: Is your IRS determination letter finalized? (If pending, we’ll add the correct donor language.)
+
+Referral intake email: Which email should receive referral notifications? (e.g., placements@lifehouse.org)
+
+Press/Media contact: Provide an email for media inquiries.
+
+Logo lockup: As we finalize the logo, do you prefer the mark to the left of the wordmark or stacked above?
+
+Impact metrics: Do you want to start with placeholders (above) or hide the section until you have first-quarter data?

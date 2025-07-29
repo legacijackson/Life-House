@@ -15,15 +15,15 @@ import {
 } from "lucide-react";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Intake & Referrals", href: "/intake", icon: UserPlus, badge: "5" },
-  { name: "My Residents", href: "/residents", icon: Users, badge: "12" },
-  { name: "Case Notes", href: "/case-notes", icon: FileText },
-  { name: "Attendance", href: "/attendance", icon: Calendar },
-  { name: "Resources", href: "/resources", icon: Archive },
-  { name: "Properties", href: "/properties", icon: Building },
-  { name: "Maintenance", href: "/maintenance", icon: Settings, badge: "3" },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "Dashboard", href: "/app", icon: LayoutDashboard },
+  { name: "Intake & Referrals", href: "/app/intake", icon: UserPlus, badge: "5" },
+  { name: "My Residents", href: "/app/residents", icon: Users, badge: "12" },
+  { name: "Case Notes", href: "/app/case-notes", icon: FileText },
+  { name: "Attendance", href: "/app/attendance", icon: Calendar },
+  { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Properties", href: "/app/properties", icon: Building },
+  { name: "Maintenance", href: "/app/maintenance", icon: Settings, badge: "3" },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
 ];
 
 export function Sidebar() {
