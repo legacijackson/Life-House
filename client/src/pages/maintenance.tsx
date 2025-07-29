@@ -9,8 +9,8 @@ export default function Maintenance() {
       <main className="flex-1 overflow-y-auto">
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Maintenance</h1>
-            <p className="text-sm text-gray-600">Track and manage maintenance requests</p>
+            <h1 className="text-2xl font-bold text-gray-900">Property Maintenance</h1>
+            <p className="text-sm text-gray-600">Track and manage Life House property maintenance requests</p>
           </div>
         </header>
 

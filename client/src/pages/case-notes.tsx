@@ -185,7 +185,7 @@ export default function CaseNotes() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Case Notes</h1>
-                <p className="text-sm text-gray-600">Document resident interactions and progress</p>
+                <p className="text-sm text-gray-600">Document resident interactions and progress through Life House programs</p>
               </div>
               <Button onClick={() => setIsCreating(true)}>
                 <Plus className="w-4 h-4 mr-2" />

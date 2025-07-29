@@ -214,8 +214,8 @@ export default function Resources() {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Resources</h1>
-                <p className="text-sm text-gray-600">Find and manage community resources</p>
+                <h1 className="text-2xl font-bold text-gray-900">Community Resources</h1>
+                <p className="text-sm text-gray-600">Find and manage community resources for Life House residents</p>
               </div>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />

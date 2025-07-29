@@ -110,12 +110,12 @@ export default function Residents() {
   const getStageLabel = (stage: number) => {
     const stages = {
       1: 'Intake',
-      2: 'Stabilization',
-      3: 'Skill Building',
-      4: 'Independence Prep',
-      5: 'Job Readiness',
-      6: 'Housing Transition',
-      7: 'Graduation'
+      2: 'Design',
+      3: 'Training',
+      4: 'Working',
+      5: 'Overflow',
+      6: 'Transition',
+      7: 'Legacy'
     };
     return stages[stage as keyof typeof stages] || `Stage ${stage}`;
   };
@@ -137,7 +137,7 @@ export default function Residents() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">My Residents</h1>
-                <p className="text-sm text-gray-600">Manage your assigned resident caseload</p>
+                <p className="text-sm text-gray-600">Manage your assigned resident caseload through the 7-stage transformation program</p>
               </div>
               <div className="flex items-center space-x-2">
                 <Badge variant="secondary" className="bg-blue-50 text-blue-700">

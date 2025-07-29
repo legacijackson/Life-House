@@ -172,8 +172,8 @@ export default function Properties() {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Properties</h1>
-                <p className="text-sm text-gray-600">Manage housing properties and bed assignments</p>
+                <h1 className="text-2xl font-bold text-gray-900">Life House Properties</h1>
+                <p className="text-sm text-gray-600">Manage transitional housing properties and bed assignments</p>
               </div>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />

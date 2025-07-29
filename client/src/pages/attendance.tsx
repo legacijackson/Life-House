@@ -224,8 +224,8 @@ export default function Attendance() {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
-                <p className="text-sm text-gray-600">Track workshop and session attendance</p>
+                <h1 className="text-2xl font-bold text-gray-900">Program Attendance</h1>
+                <p className="text-sm text-gray-600">Track Life House workshop and coaching session attendance</p>
               </div>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
