@@ -1,0 +1,107 @@
+Pasted-You-got-it-Below-is-a-much-deeper-can-t-mess-up-build-spec-for-Replit-5-more-detailed-cover-1753826994526_1753826994526.txt
+You got it. Below is a **much deeper, “can’t‑mess‑up” build spec** for Replit—5× more detailed—covering architecture, how pieces connect, data contracts, flows, security, reporting, and step‑by‑step phases. No code, only precise instructions a dev can follow.
+
+---
+
+## 0) SYSTEM ARCHITECTURE (HOW EVERYTHING CONNECTS)
+
+**Monorepo (Replit project)**
+
+* Root folders:
+
+  * `/web` — Public marketing site (Home, About, Programs, Apply, Referrers, Employers, Impact, FAQ, Contact, Donate).
+  * `/app` — Secure portal + REST API (single service that serves the SPA + JSON API).
+  * `/shared` — Shared assets: validation schemas, constants, i18n keys, RBAC rules, email/SMS templates (text only), and UI copy blocks.
+  * `/ops` — DevOps items: backup scripts (no code here, just steps and configs), data retention policy, threat model, runbooks, environment checklist.
+  * `/docs` — Architecture map, API contracts, data dictionary, acceptance criteria.
+
+**Runtime connections**
+
+* `web` calls **no API** (marketing only) except:
+
+  * Opens **ConvertKit** modal at your URL for applications.
+  * Links to `/app` for logins/portal.
+* `app` serves:
+
+  * A **SPA** (portal UI) at `/app/*`.
+  * A **REST API** under `/api/*` (same origin—so CORS stays simple).
+* **Authentication**
+
+  * Staff SSO: Google & Microsoft via OAuth (free). Callback routes live at `/app/auth/callback/google` and `/app/auth/callback/microsoft`.
+  * Residents & Referrers: email+password + TOTP (authenticator app). No paid email required—use on‑screen QR + recovery codes.
+* **Storage**
+
+  * **Base option (no external cost):** SQLite (file) in `/data/app.db` with file‑rotation backups to `/backups/`.
+  * **Upgrade path (free tier allowed):** Postgres (e.g., Supabase free tier). Keep **SQL‑agnostic** queries and provide a migration plan in `/ops/migrations.md`.
+* **AI (OpenAI only)**
+
+  * Single agent with three modes (Notes, Resources, Forms). Calls go server‑side via `/api/ai/*`. Never expose key in the client.
+* **Payments**
+
+  * **Phase 1:** “Mail a check / ACH” + pledge form (no fees).
+  * **Phase 2 (optional, free to enable):** Stripe in test mode; production only after you decide. Keep it behind a feature flag.
+
+**Environment separation**
+
+* Modes: `DEV` (your Replit draft), `STAGE` (optional), `PROD` (live).
+* Each mode has its **own secrets** (Replit Secrets) and **own database file** (or schema).
+
+**Network trust**
+
+* All requests arrive at the `app` server:
+
+  * Public pages: `/app/login`, `/app/forgot` (if enabled).
+  * API: `/api/*` protected by JWT (short‑lived) + refresh token (httponly cookie).
+  * Admin functions require Admin role + 2FA.
+
+---
+
+## 1) PRIVACY BOUNDARY (NON‑CLINICAL ONLY)
+
+**Allowed (store/compute)**
+
+* Name, contact info, language, reading level
+* Justice status (parole/probation), agent contact info
+* Release date, IDs on file (checkboxes), benefits status (Medi‑Cal yes/no only), income range (banded), employment interests
+* Attendance (workshops/1‑1), service events (minutes/units), program stage (1–7)
+* Resource matches (category, benefit \$\$, eligibility), outcomes (applied/approved/denied)
+* House rules acknowledgments, e‑signature (typed, timestamp, IP)
+* Maintenance tickets, property details (non‑sensitive)
+* Donations (basic donor info + receipt ID)
+
+**Banned (do not store)**
+
+* Diagnoses, treatment plans, prescriptions, detailed SUD or mental health clinical data
+* Provider clinical notes, lab results, ICD codes, CPT/HCPCS codes
+* Any 42 CFR Part 2 content
+
+**Redaction rules (AI and exports)**
+
+* Strip sensitive free‑text like 3rd‑party names, phone numbers not relevant, pure PHI. Only keep non‑clinical context needed for billing or program reporting.
+
+---
+
+## 2) ROLES & PERMISSIONS (RBAC MATRIX)
+
+**Roles**
+
+* Resident
+* CaseManager
+* Intake (Referrals Coordinator)
+* Admin (Director)
+* Referrer (External)
+* Auditor (report‑only)
+
+**Matrix (key actions)**
+
+* Residents: view own profile, stage, attendance summary, saved resources; create tickets tied to their unit; cannot see case notes; can upload consents; can view/download their signed PDFs.
+* CaseManager: CRUD residents (assigned), attendance, services, case notes (private by default), run AI drafts, approve AI outputs, generate reports for their caseload, create property tickets.
+* Intake: manage referrals queue, run bed/room assignment, launch onboarding flow, assign case manager, generate intake PDFs.
+* Admin: everything + user/role management, dictionaries, properties/beds, content blocks, retention actions.
+* Referrer: submit referral; view **high‑level** status only (Submitted → Under Review → Accepted/Waitlist/Declined). No resident data access beyond status.
+* Auditor: **read‑only** reporting views + exports; no PII beyond what you agree to disclose per contract; downloads watermarked; all access logged.
+
+**Enforcement**
+
+* Every API endpoint checks `role` AND `ownership` (e.g., CM must be assigned to resident or have Admin).
+* All exports require Admin or Auditor...

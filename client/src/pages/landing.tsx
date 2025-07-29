@@ -25,87 +25,146 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-5xl font-bold text-gray-900 mb-6">
-          Home for Good
-        </h1>
-        <p className="text-xl text-gray-600 mb-8 max-w-4xl mx-auto">
-          Safe, structured housing and life-design support for people returning from incarceration — 
-          so they can rebuild with dignity, purpose, and a path to financial independence.
-        </p>
-        <div className="flex flex-wrap justify-center gap-4 mb-8">
-          <Button size="lg" className="text-white" style={{ backgroundColor: '#2E6F40', borderColor: '#2E6F40' }}>
-            Apply for Housing
-          </Button>
-          <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-            Refer a Resident
-          </Button>
-          <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-            Donate Monthly
-          </Button>
-        </div>
-        
-        {/* Trust Bar */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 max-w-4xl mx-auto">
-          <p className="text-sm text-gray-600 mb-2 font-medium">Partner-aligned with public and community programs:</p>
-          <p className="text-sm text-gray-500">STOP (CDCR) • CalAIM Community Supports • Enhanced Care Management (ECM) • Local reentry and workforce agencies</p>
+      <section className="container mx-auto px-4 py-20">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="text-left">
+            <Badge className="mb-6 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 border-0 px-4 py-2 text-sm font-semibold">
+              ✨ 7-Stage Reentry Program
+            </Badge>
+            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Home for</span><br />
+              <span className="bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Good.</span><br />
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-4xl">Forever.</span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 leading-relaxed font-medium">
+              Safe, structured housing and <span className="font-bold text-green-700">life-design support</span> for people returning from incarceration — 
+              so they can rebuild with <span className="font-bold text-blue-700">dignity, purpose</span>, and a path to <span className="font-bold text-purple-700">financial independence</span>.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <Button 
+                size="lg" 
+                className="text-lg px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg transform hover:scale-105 transition-all duration-200"
+                onClick={() => window.location.href = '/apply'}
+              >
+                <Home className="w-5 h-5 mr-2" />
+                Apply for Housing
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="text-lg px-8 py-4 border-2 border-green-600 text-green-700 hover:bg-green-50 shadow-md transform hover:scale-105 transition-all duration-200"
+                onClick={() => window.location.href = '/refer'}
+              >
+                <Users className="w-5 h-5 mr-2" />
+                Refer a Resident
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="text-lg px-8 py-4 border-2 border-purple-600 text-purple-700 hover:bg-purple-50 shadow-md transform hover:scale-105 transition-all duration-200"
+                onClick={() => window.location.href = '/donate'}
+              >
+                <DollarSign className="w-5 h-5 mr-2" />
+                Donate Monthly
+              </Button>
+            </div>
+            
+            {/* Trust Bar */}
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 backdrop-blur-sm rounded-xl p-6 border border-green-100">
+              <p className="text-sm text-gray-700 mb-2 font-bold">🤝 Partner-aligned with public and community programs:</p>
+              <p className="text-sm text-gray-600 font-medium">STOP (CDCR) • CalAIM Community Supports • Enhanced Care Management (ECM) • Local reentry and workforce agencies</p>
+            </div>
+          </div>
+          
+          <div className="relative">
+            <div className="w-full h-[500px] rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300">
+              <img 
+                src="https://images.pexels.com/photos/745045/pexels-photo-745045.jpeg?auto=compress&cs=tinysrgb&w=800"
+                alt="Diverse family celebrating together outdoors, representing hope, community, and second chances"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="absolute -bottom-6 -right-6 bg-white p-6 rounded-xl shadow-xl border-l-4 border-green-500">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-r from-green-500 to-green-600">
+                  <Heart className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900 text-xl">90% Success Rate</p>
+                  <p className="text-sm text-gray-600 font-medium">Housing stabilization within 48 hours</p>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -top-6 -left-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-xl shadow-xl">
+              <p className="font-bold text-lg">💪 Real Stories. Real Change.</p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* What We Do Cards */}
       <section className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">What We Do</h2>
+        <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
+          <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">What We Do</span>
+        </h2>
+        <p className="text-center text-gray-600 mb-12 text-lg">Three pillars of transformation that create lasting change</p>
         <div className="grid md:grid-cols-3 gap-8">
-          <Card className="border-green-100 shadow-lg">
-            <CardHeader>
-              <Shield className="w-12 h-12 mb-4" style={{ color: '#2E6F40' }} />
-              <CardTitle className="text-green-800">Stabilize</CardTitle>
-              <CardDescription>
-                Safe, structured, non-clinical transitional housing with clear house rules and 24/7 support culture.
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-green-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl text-green-800 font-bold">🏠 Stabilize</CardTitle>
+              <CardDescription className="text-gray-700 font-medium">
+                Safe, structured, non-clinical transitional housing with clear house rules and <span className="font-bold text-green-700">24/7 support culture</span>.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Secure transitional housing (2 per room)</li>
-                <li>• 24/7 supportive community culture</li>
-                <li>• Clear expectations and structure</li>
-                <li>• Immediate stabilization within 48 hours</li>
+              <ul className="space-y-3 text-sm text-gray-700">
+                <li className="flex items-center"><span className="text-green-600 mr-2">✓</span> Secure transitional housing (2 per room)</li>
+                <li className="flex items-center"><span className="text-green-600 mr-2">✓</span> 24/7 supportive community culture</li>
+                <li className="flex items-center"><span className="text-green-600 mr-2">✓</span> Clear expectations and structure</li>
+                <li className="flex items-center"><span className="text-green-600 mr-2">✓</span> <span className="font-bold">Immediate stabilization within 48 hours</span></li>
               </ul>
             </CardContent>
           </Card>
 
-          <Card className="border-green-100 shadow-lg">
-            <CardHeader>
-              <Target className="w-12 h-12 mb-4" style={{ color: '#2E6F40' }} />
-              <CardTitle className="text-green-800">Skill Up</CardTitle>
-              <CardDescription>
-                Life design, financial literacy, credit repair, career training, and coaching.
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
+                <Target className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl text-blue-800 font-bold">📚 Skill Up</CardTitle>
+              <CardDescription className="text-gray-700 font-medium">
+                Life design, financial literacy, credit repair, <span className="font-bold text-blue-700">career training</span>, and coaching.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Weekly workshops + biweekly coaching</li>
-                <li>• Financial literacy & credit repair</li>
-                <li>• Career preparation & placement</li>
-                <li>• Life design & identity work</li>
+              <ul className="space-y-3 text-sm text-gray-700">
+                <li className="flex items-center"><span className="text-blue-600 mr-2">✓</span> Weekly workshops + biweekly coaching</li>
+                <li className="flex items-center"><span className="text-blue-600 mr-2">✓</span> <span className="font-bold">Financial literacy & credit repair</span></li>
+                <li className="flex items-center"><span className="text-blue-600 mr-2">✓</span> Career preparation & placement</li>
+                <li className="flex items-center"><span className="text-blue-600 mr-2">✓</span> Life design & identity work</li>
               </ul>
             </CardContent>
           </Card>
 
-          <Card className="border-green-100 shadow-lg">
-            <CardHeader>
-              <TrendingUp className="w-12 h-12 mb-4" style={{ color: '#2E6F40' }} />
-              <CardTitle className="text-green-800">Move Forward</CardTitle>
-              <CardDescription>
-                Income-based program contributions, savings & brokerage structure, and a housing exit plan.
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
+                <TrendingUp className="w-8 h-8 text-white" />
+              </div>
+              <CardTitle className="text-2xl text-purple-800 font-bold">🚀 Move Forward</CardTitle>
+              <CardDescription className="text-gray-700 font-medium">
+                Income-based program contributions, <span className="font-bold text-purple-700">savings & brokerage structure</span>, and a housing exit plan.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Income-based contributions (30% max)</li>
-                <li>• 25% saved, 5% brokerage investment</li>
-                <li>• Permanent housing transition plan</li>
-                <li>• Savings returned at program exit</li>
+              <ul className="space-y-3 text-sm text-gray-700">
+                <li className="flex items-center"><span className="text-purple-600 mr-2">✓</span> Income-based contributions (30% max)</li>
+                <li className="flex items-center"><span className="text-purple-600 mr-2">✓</span> <span className="font-bold">25% saved, 5% brokerage investment</span></li>
+                <li className="flex items-center"><span className="text-purple-600 mr-2">✓</span> Permanent housing transition plan</li>
+                <li className="flex items-center"><span className="text-purple-600 mr-2">✓</span> Savings returned at program exit</li>
               </ul>
             </CardContent>
           </Card>
@@ -361,13 +420,28 @@ export default function Landing() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button className="w-full text-white" style={{ backgroundColor: '#2E6F40' }}>
+              <Button 
+                className="w-full text-white transform hover:scale-105 transition-all duration-200" 
+                style={{ backgroundColor: '#2E6F40' }}
+                onClick={() => window.location.href = '/apply'}
+              >
+                <Home className="w-4 h-4 mr-2" />
                 Apply for Housing
               </Button>
-              <Button variant="outline" className="w-full border-green-600 text-green-600 hover:bg-green-50">
+              <Button 
+                variant="outline" 
+                className="w-full border-green-600 text-green-600 hover:bg-green-50 transform hover:scale-105 transition-all duration-200"
+                onClick={() => window.location.href = '/refer'}
+              >
+                <Users className="w-4 h-4 mr-2" />
                 Refer a Resident
               </Button>
-              <Button variant="outline" className="w-full border-green-600 text-green-600 hover:bg-green-50">
+              <Button 
+                variant="outline" 
+                className="w-full border-purple-600 text-purple-600 hover:bg-purple-50 transform hover:scale-105 transition-all duration-200"
+                onClick={() => window.open('mailto:info@lifehousereentry.org?subject=Partnership Inquiry', '_blank')}
+              >
+                <Heart className="w-4 h-4 mr-2" />
                 Partner with Us
               </Button>
             </CardContent>

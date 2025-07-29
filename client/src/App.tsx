@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
+import Apply from "@/pages/apply";
+import Refer from "@/pages/refer";
+import Donate from "@/pages/donate";
 import Intake from "@/pages/intake";
 import Residents from "@/pages/residents";
 import CaseNotes from "@/pages/case-notes";
@@ -19,6 +22,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/apply" component={Apply} />
+      <Route path="/refer" component={Refer} />
+      <Route path="/donate" component={Donate} />
       <Route path="/app" component={Dashboard} />
       <Route path="/app/intake" component={Intake} />
       <Route path="/app/residents" component={Residents} />

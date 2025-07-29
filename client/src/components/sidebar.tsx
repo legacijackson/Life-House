@@ -33,13 +33,16 @@ export function Sidebar() {
     <aside className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
+        <div 
+          className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
+          onClick={() => window.location.href = '/'}
+        >
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E6F40' }}>
             <Building className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Life House Portal</h1>
-            <p className="text-sm text-gray-500">Case Manager</p>
+            <p className="text-sm text-gray-500">← Back to Home</p>
           </div>
         </div>
       </div>
