@@ -137,13 +137,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getReferrals(filters?: { status?: string }): Promise<Referral[]> {
-    let query = db.select().from(referrals);
+    const conditions = [];
     
     if (filters?.status) {
-      query = query.where(eq(referrals.status, filters.status as any));
+      conditions.push(eq(referrals.status, filters.status as any));
     }
     
-    const results = await query.orderBy(desc(referrals.createdAt));
+    const results = await db
+      .select()
+      .from(referrals)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(referrals.createdAt));
     return results;
   }
 
@@ -155,10 +159,10 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateReferral(id: string, data: Partial<Referral>): Promise<Referral> {
+  async updateReferral(id: string, updates: Partial<Referral>): Promise<Referral> {
     const [updated] = await db
       .update(referrals)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...updates, updatedAt: new Date() })
       .where(eq(referrals.id, id))
       .returning();
     return updated;
@@ -264,18 +268,9 @@ export class DatabaseStorage implements IStorage {
     return { residentId, propertyId, roomId, assignedAt: new Date() };
   }
 
-  async updateReferral(id: string, updates: Partial<Referral>): Promise<Referral> {
-    const [updated] = await db
-      .update(referrals)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(referrals.id, id))
-      .returning();
-    return updated;
-  }
+
 
   async getAttendance(filters: { residentId?: string; dateRange?: { start: Date; end: Date } }): Promise<Attendance[]> {
-    let query = db.select().from(attendance);
-    
     const conditions = [];
     if (filters.residentId) {
       conditions.push(eq(attendance.residentId, filters.residentId));
@@ -289,11 +284,11 @@ export class DatabaseStorage implements IStorage {
       );
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const results = await query.orderBy(desc(attendance.date));
+    const results = await db
+      .select()
+      .from(attendance)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(attendance.date));
     return results;
   }
 
@@ -306,8 +301,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getServiceEvents(filters: { residentId?: string; fundingStream?: string }): Promise<ServiceEvent[]> {
-    let query = db.select().from(serviceEvents);
-    
     const conditions = [];
     if (filters.residentId) {
       conditions.push(eq(serviceEvents.residentId, filters.residentId));
@@ -316,11 +309,11 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(serviceEvents.fundingStream, filters.fundingStream as any));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const results = await query.orderBy(desc(serviceEvents.date));
+    const results = await db
+      .select()
+      .from(serviceEvents)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(serviceEvents.date));
     return results;
   }
 
@@ -349,8 +342,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getResources(filters?: { category?: string; status?: string }): Promise<Resource[]> {
-    let query = db.select().from(resources);
-    
     const conditions = [];
     if (filters?.category) {
       conditions.push(eq(resources.category, filters.category as any));
@@ -359,11 +350,11 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(resources.status, filters.status as any));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const results = await query.orderBy(resources.name);
+    const results = await db
+      .select()
+      .from(resources)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(resources.name);
     return results;
   }
 
@@ -393,8 +384,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTickets(filters?: { propertyId?: string; status?: string }): Promise<Ticket[]> {
-    let query = db.select().from(tickets);
-    
     const conditions = [];
     if (filters?.propertyId) {
       conditions.push(eq(tickets.propertyId, filters.propertyId));
@@ -403,11 +392,11 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(tickets.status, filters.status as any));
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const results = await query.orderBy(desc(tickets.createdAt));
+    const results = await db
+      .select()
+      .from(tickets)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(tickets.createdAt));
     return results;
   }
 
