@@ -1,0 +1,782 @@
+You got it. Below is a **much deeper, “can’t‑mess‑up” build spec** for Replit—5× more detailed—covering architecture, how pieces connect, data contracts, flows, security, reporting, and step‑by‑step phases. No code, only precise instructions a dev can follow.
+
+---
+
+## 0) SYSTEM ARCHITECTURE (HOW EVERYTHING CONNECTS)
+
+**Monorepo (Replit project)**
+
+* Root folders:
+
+  * `/web` — Public marketing site (Home, About, Programs, Apply, Referrers, Employers, Impact, FAQ, Contact, Donate).
+  * `/app` — Secure portal + REST API (single service that serves the SPA + JSON API).
+  * `/shared` — Shared assets: validation schemas, constants, i18n keys, RBAC rules, email/SMS templates (text only), and UI copy blocks.
+  * `/ops` — DevOps items: backup scripts (no code here, just steps and configs), data retention policy, threat model, runbooks, environment checklist.
+  * `/docs` — Architecture map, API contracts, data dictionary, acceptance criteria.
+
+**Runtime connections**
+
+* `web` calls **no API** (marketing only) except:
+
+  * Opens **ConvertKit** modal at your URL for applications.
+  * Links to `/app` for logins/portal.
+* `app` serves:
+
+  * A **SPA** (portal UI) at `/app/*`.
+  * A **REST API** under `/api/*` (same origin—so CORS stays simple).
+* **Authentication**
+
+  * Staff SSO: Google & Microsoft via OAuth (free). Callback routes live at `/app/auth/callback/google` and `/app/auth/callback/microsoft`.
+  * Residents & Referrers: email+password + TOTP (authenticator app). No paid email required—use on‑screen QR + recovery codes.
+* **Storage**
+
+  * **Base option (no external cost):** SQLite (file) in `/data/app.db` with file‑rotation backups to `/backups/`.
+  * **Upgrade path (free tier allowed):** Postgres (e.g., Supabase free tier). Keep **SQL‑agnostic** queries and provide a migration plan in `/ops/migrations.md`.
+* **AI (OpenAI only)**
+
+  * Single agent with three modes (Notes, Resources, Forms). Calls go server‑side via `/api/ai/*`. Never expose key in the client.
+* **Payments**
+
+  * **Phase 1:** “Mail a check / ACH” + pledge form (no fees).
+  * **Phase 2 (optional, free to enable):** Stripe in test mode; production only after you decide. Keep it behind a feature flag.
+
+**Environment separation**
+
+* Modes: `DEV` (your Replit draft), `STAGE` (optional), `PROD` (live).
+* Each mode has its **own secrets** (Replit Secrets) and **own database file** (or schema).
+
+**Network trust**
+
+* All requests arrive at the `app` server:
+
+  * Public pages: `/app/login`, `/app/forgot` (if enabled).
+  * API: `/api/*` protected by JWT (short‑lived) + refresh token (httponly cookie).
+  * Admin functions require Admin role + 2FA.
+
+---
+
+## 1) PRIVACY BOUNDARY (NON‑CLINICAL ONLY)
+
+**Allowed (store/compute)**
+
+* Name, contact info, language, reading level
+* Justice status (parole/probation), agent contact info
+* Release date, IDs on file (checkboxes), benefits status (Medi‑Cal yes/no only), income range (banded), employment interests
+* Attendance (workshops/1‑1), service events (minutes/units), program stage (1–7)
+* Resource matches (category, benefit \$\$, eligibility), outcomes (applied/approved/denied)
+* House rules acknowledgments, e‑signature (typed, timestamp, IP)
+* Maintenance tickets, property details (non‑sensitive)
+* Donations (basic donor info + receipt ID)
+
+**Banned (do not store)**
+
+* Diagnoses, treatment plans, prescriptions, detailed SUD or mental health clinical data
+* Provider clinical notes, lab results, ICD codes, CPT/HCPCS codes
+* Any 42 CFR Part 2 content
+
+**Redaction rules (AI and exports)**
+
+* Strip sensitive free‑text like 3rd‑party names, phone numbers not relevant, pure PHI. Only keep non‑clinical context needed for billing or program reporting.
+
+---
+
+## 2) ROLES & PERMISSIONS (RBAC MATRIX)
+
+**Roles**
+
+* Resident
+* CaseManager
+* Intake (Referrals Coordinator)
+* Admin (Director)
+* Referrer (External)
+* Auditor (report‑only)
+
+**Matrix (key actions)**
+
+* Residents: view own profile, stage, attendance summary, saved resources; create tickets tied to their unit; cannot see case notes; can upload consents; can view/download their signed PDFs.
+* CaseManager: CRUD residents (assigned), attendance, services, case notes (private by default), run AI drafts, approve AI outputs, generate reports for their caseload, create property tickets.
+* Intake: manage referrals queue, run bed/room assignment, launch onboarding flow, assign case manager, generate intake PDFs.
+* Admin: everything + user/role management, dictionaries, properties/beds, content blocks, retention actions.
+* Referrer: submit referral; view **high‑level** status only (Submitted → Under Review → Accepted/Waitlist/Declined). No resident data access beyond status.
+* Auditor: **read‑only** reporting views + exports; no PII beyond what you agree to disclose per contract; downloads watermarked; all access logged.
+
+**Enforcement**
+
+* Every API endpoint checks `role` AND `ownership` (e.g., CM must be assigned to resident or have Admin).
+* All exports require Admin or Auditor; scope filters default to **least privilege**.
+
+---
+
+## 3) DATA MODEL (ENTITY FIELDS, TYPES, INDEXES)
+
+*Note: keep table/collection names consistent; if using SQLite now and Postgres later, avoid vendor‑specific features.*
+
+**User**
+
+* id (uuid, pk, indexed)
+* role (enum: Resident | CaseManager | Intake | Admin | Referrer | Auditor, indexed)
+* name (text)
+* email (lowercased unique index), phone (text)
+* language (enum: en | es), readingLevel (enum: resident\_5th | professional)
+* auth: passwordHash (nullable for SSO), totpSecret (encrypted), twoFAEnabled (bool)
+* ssoProviders (array of {provider, subjectId})
+* createdAt, updatedAt (timestamps)
+* **Index:** email unique, role
+
+**ResidentProfile**
+
+* id (uuid, pk)
+* userId (fk→User)
+* dateOfBirth (date) — optional
+* justiceStatus (enum: parole | probation | other)
+* agentName, agentEmail, agentPhone (text)
+* releaseDate (date)
+* idOnFile: {stateID (bool), ssn (bool), birthCert (bool), benefitsCard (bool)}
+* benefits: {mediCal (bool), calFresh (bool), GA (bool), SSI (bool), otherText}
+* incomeBand (enum: none | <1k | 1–2k | 2–4k | 4k+ per month)
+* jobInterests (array text), educationLevel (enum)
+* driverLicenseStatus (enum: none | expired | valid | inProgress)
+* emergencyContact {name, phone, relation}
+* consents\[] (array of {type, signedAt, ip, docId})
+* goalsSummary (short text, non‑clinical)
+* createdAt, updatedAt
+* **Index:** userId
+
+**Referral**
+
+* id (uuid, pk)
+* source (enum: self | parole | probation | CBO)
+* referrerOrg, referrerName, referrerEmail, referrerPhone
+* basicResidentInfo {name, email, phone, zip, earliestReadyDate}
+* notes (short text)
+* status (enum: new | in\_review | accepted | waitlist | declined)
+* linkedResidentId (nullable fk→User.id where role=Resident)
+* createdAt, updatedAt
+* **Index:** status, createdAt
+
+**IntakeChecklist**
+
+* id (uuid, pk)
+* residentId (fk→User)
+* items\[] (array of {key, label, status: pending|done|na, completedAt, staffId})
+* **Standard keys:** id\_copy, medi\_cal\_status, calfresh\_status, bank\_account, phone, clothing, transportation, resume, emergency\_contact, consents\_signed
+* createdAt, updatedAt
+
+**ProgramEnrollment**
+
+* id (uuid, pk)
+* residentId (fk→User)
+* startDate (date), initialTermDays (int=90)
+* targetLOS (int days, can be up to 365+ per contract)
+* stage (int 1–7)
+* stageHistory\[] (array of {stage, at, staffId})
+* createdAt, updatedAt
+* **Index:** residentId, stage
+
+**Attendance**
+
+* id (uuid, pk)
+* residentId, staffId
+* date (date), eventType (enum: workshop | one\_on\_one | coaching | check\_in)
+* durationMinutes (int)
+* notes (short text)
+* fundingTag (enum: STOP | ECM | CS | Other) — if relevant
+* createdAt
+* **Index:** residentId+date
+
+**ServiceEvent**
+
+* id (uuid, pk)
+* residentId, staffId
+* fundingStream (enum: STOP | ECM | CommunitySupport | Other)
+* serviceType (dictionary‑driven: e.g., “life skills class”, “housing navigation”)
+* description (short text, non‑clinical)
+* units (int: minutes or session count)
+* billable (bool)
+* attachments\[] (ref IDs to Documents)
+* date (date), createdAt
+* **Index:** residentId+date, fundingStream
+
+**CaseNote**
+
+* id (uuid, pk)
+* residentId, createdBy (staffId)
+* noteType (enum: STOP\_progress | ECM\_encounter | Workshop | Coaching | Incident | Other)
+* text (long text) — **non‑clinical**
+* tags\[] (array text), private (bool default true)
+* createdAt
+* **Index:** residentId+createdAt
+
+**Resource**
+
+* id (uuid, pk)
+* category (enum: housing|food|id\_docs|healthcare|sud\_mh\_referral|employment|training|legal|transport|family|money|emergency|education)
+* name, description, eligibility (short), benefitAmount (number, nullable)
+* geo {zip, city, county, state}, url, contact
+* languages\[] (e.g., en, es)
+* status (active | archived), tags\[]
+* createdAt, updatedAt
+* **Index:** category, status, geo.zip
+
+**ResidentResource (saved resources)**
+
+* id (uuid, pk)
+* residentId, resourceId
+* status (applied | approved | denied | received | bookmarked)
+* notes (short)
+* createdAt, updatedAt
+* **Unique index:** residentId+resourceId
+
+**Property**
+
+* id (uuid, pk)
+* address, city, state, zip
+* bedrooms (int), bedsTotal (int), bedsAvailable (int computed), occupancyLimit (int)
+* amenities (array text)
+* createdAt, updatedAt
+
+**Room**
+
+* id (uuid, pk)
+* propertyId, roomNumber
+* beds (int), occupants\[] (residentId)
+* createdAt, updatedAt
+* **Index:** propertyId
+
+**Ticket**
+
+* id (uuid, pk)
+* propertyId, roomId (nullable), residentId (nullable)
+* category (maintenance | cleaning | it | safety | other)
+* priority (low | normal | high | urgent)
+* description, photos\[] (doc ids)
+* status (new | assigned | in\_progress | on\_hold | resolved)
+* assignedTo (staffId), slaDueAt (timestamp)
+* timestamps {createdAt, assignedAt, resolvedAt}
+* **Indexes:** propertyId, status, priority
+
+**Donation**
+
+* id (uuid, pk)
+* donor {name, email}, amount (number), frequency (one\_time | monthly), designation (general | sponsor\_resident)
+* receiptId (string), createdAt
+* **Index:** createdAt, frequency
+
+**AuditLog**
+
+* id (uuid, pk)
+* actorId (nullable for system), action (string)
+* entity (string), entityId (string)
+* ts (timestamp), ip, userAgent
+* beforeHash, afterHash (content digests; store full snapshot only if needed and encrypted)
+* **Index:** entity+entityId, ts
+
+**Document**
+
+* id, ownerType (resident | org), ownerId, title, mime, size, storagePath, uploadedAt, checksum
+
+---
+
+## 4) API CONTRACTS (ENDPOINTS, REQUESTS/RESPONSES, RULES)
+
+**Auth**
+
+* `POST /api/auth/login` — email, password → returns access token (short) + refresh cookie; if 2FA enabled, requires TOTP; rate‑limited.
+* `POST /api/auth/enable-2fa` — staff/residents; returns QR data for authenticator apps; stores encrypted secret on approval.
+* `POST /api/auth/verify-2fa` — TOTP code to finalize.
+* `GET /api/auth/sso/:provider` — redirect to Google/Microsoft.
+* `GET /api/auth/callback/:provider` — complete OAuth, issue tokens; create user if first‑time and **not** auto‑assign role (Admin must assign).
+* `POST /api/auth/refresh` — rotate token; block if user role changed or account locked.
+* **Security rules:** All tokens must be audience/issuer‑checked; refresh cookie is httpOnly, secure, sameSite=strict.
+
+**Referrals & Intake**
+
+* `POST /api/referrals` — public referrer submission; validates spam (honeypot + rate limit); stores with `status=new`.
+* `GET /api/referrals?status=` — Intake/Admin only.
+* `PATCH /api/referrals/:id` — update status; link to resident.
+* `POST /api/intake/:residentId/checklist` — create/update checklist.
+* `POST /api/intake/:residentId/assign-bed` — assigns property/room/bed; adjusts occupancy.
+* `POST /api/intake/:residentId/consent` — save typed name + timestamp + IP; produce PDF (Document created).
+
+**Residents & Case Management**
+
+* `GET /api/residents?assignedTo=me|id&stage=&query=` — list.
+* `GET /api/residents/:id` — Resident 360 (filtered by role).
+* `POST /api/attendance` — create; `GET /api/attendance?residentId=&dateRange=`
+* `POST /api/services` — log service; `GET /api/services?...`
+* `POST /api/casenotes` — create; private by default; `GET /api/casenotes?residentId=` (CaseManager/Admin only)
+
+**Resources**
+
+* `GET /api/resources?category=&zip=&benefitMin=&language=&status=active` — public.
+* `POST /api/resources` — Admin/Intake/CM (curation).
+* `POST /api/resident-resources` — save resource to resident; set status.
+* `GET /api/resident-resources?residentId=`
+
+**Properties & Tickets**
+
+* `GET /api/properties` — Admin/Intake/CM.
+* `POST /api/tickets` — create from resident or staff.
+* `PATCH /api/tickets/:id` — status changes, assignments, SLA updates.
+* `GET /api/tickets?propertyId=&status=&assignee=`
+
+**Reporting & Exports**
+
+* `GET /api/reports/stop/monthly?month=YYYY-MM` — CSV + PDF cover; Admin/Auditor only.
+* `GET /api/reports/ecm/monthly?month=YYYY-MM`
+* `GET /api/reports/attendance?residentId=&range=`
+* `GET /api/reports/donations?range=`
+
+**AI (server‑side only)**
+
+* `POST /api/ai/draft-note` — input: residentId, noteType, bullet points → output: structured note text + 1–2 sentence rationale; **requires CM approval**.
+* `POST /api/ai/recommend-resources` — input: residentId, zip, categories → output: 5 internal resources w/ eligibility reasons.
+* `POST /api/ai/form-helper` — input: form context + known resident fields → output: autofill suggestions + “missing fields” list.
+* **Guardrails:** Reject if prompt contains clinical keywords or suggests storing PHI; log all AI calls (actor, purpose, token count).
+
+**Audit**
+
+* All **mutations** log to `AuditLog` with digest of before/after; exports log a “downloaded\_by” event with file hash.
+
+---
+
+## 5) FRONTEND PAGES & COMPONENT TREE (WIREFRAME‑LEVEL DETAILS)
+
+**Public (`/web`)**
+
+* **Home**: hero “Home for Good”, value cards (Stabilize, Skill Up, Move Forward), 7‑Stage overview, CTA buttons (Apply, Refer, Donate).
+* **About**: mission/vision, leadership bios (Julius—CEO, Kairia—CFO, Brittney—COO), board list (non‑invested directors).
+* **Programs**: STOP & CalAIM overview (plain, non‑clinical), services list, 90‑day → 24‑month pathway.
+* **Residents (Apply)**: ConvertKit modal; 72‑hour SLA; EN/ES copy at 5th grade; visible contact number.
+* **Referrers & Partners**: intake explainer; mini referral form (public → `/api/referrals`); allowed attachments list (IDs, release date).
+* **Employers**: hire talent; partner inquiry form (stored under `Referrals` with type “employer”).
+* **Donate**: pledge, Sponsor‑a‑Resident (\$1,500/mo), ACH/check instructions; impact stats.
+* **Impact & Stories**: anonymized stories, outcomes metrics (no PII/PHI).
+* **FAQ**: tenancy vs program participation; safety; length of stay.
+* **Contact**: address/phone/email, map link (no tracking).
+* **Footer**: Non‑Discrimination, Privacy, Terms; language toggle (EN/ES).
+
+**Portal (`/app`)**
+
+* **Login / 2FA**: staff SSO or resident email+pass + TOTP; recovery codes; lockout banner if needed.
+* **Intake Workspace**: Referrals Queue (tabs: New/In Review/Accepted/Waitlist/Declined); Bed & Room Assign; Onboarding Checklist; Consent e‑sig; Assign CM.
+* **Case Manager 360**:
+
+  * Tabs: Profile, Enrollment/Stage (1–7), Attendance, Services, Case Notes, Resources, Documents, Tickets.
+  * **AI Draft Note** button visible only to CaseManager/Admin.
+* **Resource Finder**: public search + logged‑in “Save to Resident” with status.
+* **Tickets Board**: Kanban by property; SLA badges.
+* **Reports**: STOP Monthly, ECM/CS Monthly, Attendance roll‑ups; **Auditor view** is read‑only and watermarked.
+* **Admin Console**: Users & Roles, Dictionaries (service types, funding streams, ticket categories, resource categories), Properties/Beds, Content Blocks (home copy), Retention/Export tools.
+
+**Accessibility**
+
+* All forms have labels; keyboard reachable; color contrast ≥ 4.5:1; live region for form errors.
+
+---
+
+## 6) AI ASSISTANT (PROMPT LOGIC, MODES, GUARDRAILS)
+
+**Modes**
+
+1. **Note Draft** — Input: bullets (what happened, minutes, goals addressed), context (resident stage, event type). Output: structured, contract‑friendly note (STOP or ECM style) + **1–2 sentence reason** for changes/suggestions. Flag if clinical phrases are seen → require edit.
+2. **Resource Recommender** — Input: resident zip, category filters, profile goals; searches **internal** `Resource` list only; Output: 5 items with eligibility rationale and expected benefit amount if stored.
+3. **Form Helper** — Input: intake/service form schema + resident known fields; Output: suggested autofill fields + “missing required” list; never fabricates.
+
+**Guardrails**
+
+* Block outbound web search (to avoid scraping costs and privacy risks).
+* Redact extraneous names; avoid PHI terms.
+* Add banner “AI draft—human review required” on any AI output.
+* Log: actorId, purpose, tokens used, latency; display to Admin for cost oversight.
+
+---
+
+## 7) REPORTING PACKS (FILE CONTENTS)
+
+**STOP Monthly**
+
+* **Roster CSV**: residentId, name, startDate, daysPresent, daysAbsent, servicesCount, minutesDelivered.
+* **Attendance CSV**: residentId, date, eventType, minutes, staffId, fundingTag.
+* **Services CSV**: residentId, date, serviceType, fundingStream, units, billable, staffId.
+* **Invoice Summary CSV**: residentId, billableUnits (by stream), rate (enter manually per contract), total.
+* **PDF Coversheet**: program month, property, signatures (typed name + role + timestamp).
+
+**ECM / Community Supports**
+
+* **Encounters CSV**: residentId, date, encounterType (assessment / care planning / coordination / follow‑up), minutes, domains (housing/transport/etc.), staffId.
+* **Housing Supports CSV**: residentId, service (Transition/Tenancy/Deposits), units/minutes, authorizationRef (optional text), outcome.
+* **Outreach CSV**: attempts, reached/engaged flags, date.
+
+**Auditor bundle (read‑only)**
+
+* Download links expire after 24h, watermarked with auditor’s email and timestamp; logged to AuditLog.
+
+---
+
+## 8) SECURITY & DEVOPS (HARD REQUIREMENTS)
+
+**Authentication**
+
+* Staff: SSO only + TOTP enforced every login (no “remember me”).
+* Residents/Referrers: email+password + TOTP optional for referrer (encouraged).
+
+**Authorization**
+
+* Enforce per‑endpoint RBAC and **ownership checks**.
+* Deny by default; allow minimal scopes.
+
+**Transport**
+
+* HTTPS only; HSTS; strict CSP (no inline scripts), Referrer‑Policy: strict‑origin‑when‑cross‑origin.
+
+**Storage**
+
+* Encrypt at rest: TOTP secrets, consent signatures, emergency contact, recovery codes.
+* Hash passwords using slow hash (configurable work factor).
+* Daily encrypted backup of DB file to `/backups/` (retention 30 days) with a **restore drill** doc in `/ops/runbooks.md`.
+
+**Logging**
+
+* App log (rotated), AuditLog table (all auth events, CRUD, exports, AI calls).
+* PII in logs: **No**. Use IDs only.
+* Alerting: if free email is unstable in Replit, write a “critical events” dashboard tile in Admin Console.
+
+**Rate limiting & abuse**
+
+* Public endpoints (referrals, login): IP+fingerprint rate limits (e.g., 10/min burst).
+* Abuse ban list: if repeated spam, put IP/email on deny list (config file).
+
+**Retention**
+
+* 7 years for resident records; hard‑delete only by Admin with dual confirmation; log deletion in AuditLog with digest.
+
+---
+
+## 9) PHASING WITH DETAILED TASKS & GO/NO‑GO GATES
+
+> Each phase includes **what to build**, **internal QA checklist**, and **go/no‑go** criteria. Do not start the next phase until the gate is met.
+
+### Phase 0 — Bootstrap (1 day)
+
+**Build**
+
+* Create folder structure `/web`, `/app`, `/shared`, `/ops`, `/docs`.
+* Add files: `/docs/architecture.md`, `/docs/api-contracts.md`, `/docs/data-dictionary.md`, `/ops/security-policy.md`, `/ops/backups.md`, `/ops/runbooks.md`, `/ops/threat-model.md`.
+* Configure Replit Secrets: OPENAI\_API\_KEY, ENCRYPTION\_KEY (32 chars), JWT\_SECRET, GOOGLE\_OAUTH\_ID/SECRET, MS\_OAUTH\_ID/SECRET, APP\_BASE\_URL, WEB\_BASE\_URL.
+* Write `/docs/privacy-boundary.md` with Allowed/Banned fields list above.
+
+**QA**
+
+* Secret presence check; folder structure present; privacy boundary doc reviewed.
+
+**Gate**
+
+* Security policy + threat model + secrets present.
+
+---
+
+### Phase 1 — Public Site (1–2 days)
+
+**Build**
+
+* Pages & nav as specified (EN/ES text provided in `/shared/i18n.json`).
+* SEO: titles, metas, OG images; JSON‑LD NonprofitOrganization (static fields).
+* Accessibility pass (labels/alt/skip link).
+* Performance: images ≤ 200KB, lazy load.
+
+**QA**
+
+* Lighthouse ≥ 90 across PWA/Perf/SEO/Access.
+* All CTAs route correctly; ConvertKit modal TBD in Phase 2.
+
+**Gate**
+
+* Pass Lighthouse and mobile tests.
+
+---
+
+### Phase 2 — Intake & Referrals (0.5–1 day)
+
+**Build**
+
+* “Apply” CTA opens **ConvertKit** landing page in modal (URL you provided).
+* Referrers & Partners: mini referral form → `Referral` record with `status=new`.
+* EN/ES success page stating 72‑hour SLA.
+
+**QA**
+
+* Submit test referral → appears in Intake queue later.
+* Modal renders/returns control cleanly.
+
+**Gate**
+
+* Two test submissions saved (self + referrer).
+
+---
+
+### Phase 3 — Auth & 2FA (1–2 days)
+
+**Build**
+
+* Staff SSO Google/Microsoft (callback routes); no auto Admin—Admin must assign.
+* Residents + Referrers: email+password, TOTP enrollment (QR), recovery codes.
+* Lockout after 5 failed attempts; in‑app error messages; audit all auth events.
+
+**QA**
+
+* Test: Staff SSO, then require TOTP; Resident signup + TOTP; Referrer signup; lockout after 5 bad logins; recovery code unlock.
+
+**Gate**
+
+* 2FA enforced for staff, observed in AuditLog.
+
+---
+
+### Phase 4 — Data Models & Admin Console (2 days)
+
+**Build**
+
+* Implement all entities from Section 3 with listed fields, types, and indexes.
+* Admin CRUD for Users, Residents, Referrals, Resources, Properties, Rooms, Tickets, Donations; CSV export buttons.
+* Dictionaries management: service types, funding streams, ticket categories, resource categories.
+
+**QA**
+
+* Create, edit, search, export each entity. Verify indexes work (fast list pagination).
+* Data **validation** (server‑side): enforce enums; reject unknown fields.
+
+**Gate**
+
+* CRUD + CSV working for all; dictionaries editable; no PHI fields can be inserted (blocked).
+
+---
+
+### Phase 5 — Intake Workspace (1 day)
+
+**Build**
+
+* Queue views by status; referral → new ResidentProfile.
+* Bed/Room manager: two residents per room; enforce occupancy limit per property.
+* Onboarding flow: display **consents**; typed name + timestamp + IP; store **Document**; generate PDF.
+* Assign case manager; create ProgramEnrollment with 90‑day initial term; target LOS set to max allowable.
+
+**QA**
+
+* Walk one test resident from referral to bed to signed consents to assigned CM.
+* Download test consent PDF; confirm Document entry created.
+
+**Gate**
+
+* Onboarded test resident appears in CM 360 with docs present.
+
+---
+
+### Phase 6 — Case Manager Workspace (2–3 days)
+
+**Build**
+
+* Resident 360 tabs (Profile, Enrollment/Stage, Attendance, Services, Case Notes, Resources, Documents, Tickets).
+* **AI Draft Note**: from bullet points; generate STOP or ECM style; show “human review required”; CM **must approve** → then save to CaseNote; store AI rationale alongside note (field: `aiReason`).
+* Weekly roll‑ups: attendance minutes, services by funding streams.
+
+**QA**
+
+* Enter sample week; AI drafts two notes (STOP, ECM); CM approves; notes saved; roll‑ups show accurate totals.
+* Attempt to paste clinical terms → warning pops; CM edits before save.
+
+**Gate**
+
+* Two residents with full week of data + AI notes approved; roll‑up totals match per‑day entries.
+
+---
+
+### Phase 7 — Resource Finder (1–2 days)
+
+**Build**
+
+* Public search filters: category, zip, eligibility, **benefitAmount ≥ filter**, language; show internal resources only (link out to external sites).
+* Logged‑in: Save resource to resident, set status (applied/approved/…).
+* **AI Recommender**: 5 suggestions with plain‑language eligibility rationale; only from internal Resource table.
+
+**QA**
+
+* Seed ≥30 resources; search returns expected items; AI suggestions relevant and cite why (1–2 lines).
+* Resident can save and update status; CM sees saved list on 360.
+
+**Gate**
+
+* Resource data complete; suggestions quality approved by you.
+
+---
+
+### Phase 8 — Ticketing (Yardi‑like) (1 day)
+
+**Build**
+
+* Create Ticket from Resident 360 or Property; attach photos; statuses (new → assigned → in\_progress → resolved); priorities; SLA rules: High=48h, Urgent=24h.
+* Kanban board per property; SLA badge color changes if overdue.
+* Ticket report: avg time to resolve, open by category.
+
+**QA**
+
+* Two tickets lifecycle end‑to‑end; SLA timers show; CSV export of tickets works.
+
+**Gate**
+
+* Property manager view makes sense; reports render.
+
+---
+
+### Phase 9 — Reporting & Exports (STOP & ECM) (2–3 days)
+
+**Build**
+
+* Generate **STOP CSVs** and **ECM/CS CSVs** as described; naming convention `ORG_YYYYMM_reporttype.csv`.
+* PDF coversheets with month summary and typed signature.
+* **Auditor portal**: read‑only; watermark downloads with “AUDITOR – email – timestamp”.
+* Export events logged to AuditLog; buttons disabled for non‑authorized roles.
+
+**QA**
+
+* Create a “January” dataset; export packs; total minutes/units equal the sum of entries; watermarks present.
+
+**Gate**
+
+* Month pack validated; repeat for a second month to prove stability.
+
+---
+
+### Phase 10 — Donations (0.5–1 day)
+
+**Build**
+
+* “Mail a Check / ACH” instructions; pledge form tracked in Donations table.
+* (Optional) Stripe test mode behind feature flag; show on‑screen receipt + downloadable PDF; donor CSV export.
+
+**QA**
+
+* Pledge saved; PDF receipt download; CSV export.
+
+**Gate**
+
+* One test pledge and one test (sandbox) Stripe donation recorded (if enabled).
+
+---
+
+### Phase 11 — Localization (0.5 day)
+
+**Build**
+
+* EN/ES toggle; resident UI strings at 5th‑grade reading; staff UI professional.
+* Store user language preference; default to browser setting on first visit.
+
+**QA**
+
+* Switch language across 5 pages; no mixed language artifacts.
+
+**Gate**
+
+* Spanish reviewed by you for accuracy.
+
+---
+
+### Phase 12 — Security & Backups (1 day)
+
+**Build**
+
+* Enforce HTTPS/HSTS/CSRF; secure cookies; CSP (script‑src self only).
+* Encrypt sensitive fields; add daily encrypted DB backup + **restore runbook**.
+* 2FA required for staff at every login; in‑app notification panel for criticals.
+
+**QA**
+
+* Simulate brute‑force (rate limit triggers), CSRF attempt (blocked), role escalation (denied, logged).
+* Restore a backup to a staging DB successfully.
+
+**Gate**
+
+* Security checklist signed off.
+
+---
+
+### Phase 13 — Admin v2 (0.5–1 day)
+
+**Build**
+
+* Manage content blocks (hero text, value cards) without code.
+* Manage dictionaries (service types, funding streams, ticket categories, resource categories) and see them propagate.
+* Bulk import for Resources via CSV.
+
+**QA**
+
+* Update a dictionary → new value appears in forms and is accepted in APIs.
+* Bulk import 10 resources from CSV.
+
+**Gate**
+
+* Non‑dev Admin can maintain key data alone.
+
+---
+
+### Phase 14 — Go‑Live (0.5 day)
+
+**Build**
+
+* Publish Non‑Discrimination, Privacy, Terms pages.
+* Final smoke across 10 user journeys.
+* Disable any dev banners; confirm backups run.
+
+**QA**
+
+* No console errors 24h; AuditLog populated for key actions.
+
+**Gate**
+
+* You give “go”.
+
+---
+
+## 10) TEST DATA & ACCEPTANCE CRITERIA CHECKLISTS
+
+Create `/docs/test-scenarios.md` with these paths:
+
+1. **Resident intake** (self + parole referrer), onboarding, consent PDF generated.
+2. **CM week**: 3 workshops + 2 one‑on‑ones; services logged with STOP tag; AI drafts two notes; CM approves.
+3. **Resource plan**: AI suggests 5 items; CM saves 3; one approved, one denied.
+4. **Tickets**: two tickets from resident; SLA breach visual for one.
+5. **Exports**: STOP month + ECM month; CSV totals match UI roll‑ups.
+6. **Auditor**: read‑only access, watermark, audit logs show downloads.
+7. **Security**: staff 2FA prompt; lockout after 5 attempts; refresh token rotation works.
+
+Each scenario includes:
+
+* **Inputs** (data you’ll type)
+* **Expected UI** (what you must see)
+* **Expected export lines** (row counts, totals)
+* **Audit events** (what entries must appear)
+
+---
+
+## 11) COST, RELIABILITY & UPGRADE PATH
+
+* **Zero‑cost external services** today: ConvertKit (already yours), Google/Microsoft OAuth, optional Stripe test.
+* **DB**: Start with SQLite + daily encrypted backup. Add `/ops/migrations.md` to move to Postgres (Supabase free tier) once caseload grows or when concurrency issues appear.
+* **Email/SMS**: Not required at launch due to Replit SMTP limits; all confirmations are **in‑app** with downloadable receipts. If later needed, adopt a free‑tier provider and keep it optional.
+
+---
+
+## 12) WHAT I STILL NEED FROM YOU (TO BE PERFECT)
+
+* STOP prime contractor name(s) when known + any required templates (so we can mirror their exact columns/labels).
+* MCP names (Anthem/Molina/etc.) if/when you want ECM exports customized to their formats.
+* Final dictionary values for:
+
+  * Service types (e.g., “Life Design Workshop,” “Housing Navigation Session,” “Job Coaching”)
+  * Funding streams rates (if you want invoice totals auto‑computed later)
+  * Ticket categories & SLAs (confirm current: High 48h, Urgent 24h)
+* Spanish translations you want to approve for the 7‑Stage model headings and house rules.
+
+---
+
+If you want, I can turn sections 3–5 into **printable one‑pagers** (Data Dictionary, API Contracts, and UI Map) you can hand to any dev. Ready for me to produce those PDFs next? Or do you want me to write the exact **i18n keys** and **dictionary seed lists** first?
