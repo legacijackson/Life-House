@@ -52,7 +52,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
           </Button>
           {/* Waving hand animation centered on top of button */}
           <WaveHand />
-          
+
         </div>
       </motion.div>
       {/* Menu options */}
@@ -72,6 +72,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
                 size="lg"
                 className="rounded-full h-14 w-14 shadow-lg bg-green-700 hover:bg-green-800 group"
                 title="AI Assistant"
+                aria-label="Open AI Assistant Chat"
               >
                 <Brain className="h-6 w-6" />
               </Button>

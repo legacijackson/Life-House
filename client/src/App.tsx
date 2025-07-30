@@ -14,6 +14,7 @@ import Landing from "@/pages/landing";
 import Apply from "@/pages/apply";
 import Refer from "@/pages/refer";
 import Donate from "@/pages/donate";
+import GuestResources from "@/pages/guest-resources";
 
 import Intake from "@/pages/intake";
 import Referrals from "@/pages/referrals";
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/apply" component={Apply} />
       <Route path="/refer" component={Refer} />
       <Route path="/donate" component={Donate} />
+      <Route path="/resources" component={GuestResources} />
       <Route path="/app/resources" component={Resources} />
       <Route path="/app/:rest*" component={ProtectedRoutes} />
       <Route component={NotFound} />
