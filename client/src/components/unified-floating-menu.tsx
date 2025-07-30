@@ -43,7 +43,11 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
             {isOpen ? (
               <X className="h-7 w-7" />
             ) : (
-              <Logo variant="white" layout="icon" className="h-8 w-8" />
+              <img 
+                src={_3} 
+                alt="Life House Logo" 
+                className="h-8 w-8 object-contain"
+              />
             )}
           </Button>
           {/* Waving hand animation centered on top of button */}
