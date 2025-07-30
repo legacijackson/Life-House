@@ -1,21 +1,24 @@
 interface LogoProps {
-  variant?: 'main' | 'blue' | 'white';
   className?: string;
+  onClick?: () => void;
 }
 
-export function Logo({ variant = 'main', className = '' }: LogoProps) {
-  // Logo selection based on variant
-  const logoSrc = variant === 'white' 
-    ? '/white-logo.png'
-    : variant === 'blue'
-    ? '/blue-logo.png'
-    : '/main-logo.png';
+export function Logo({ className = '', onClick }: LogoProps) {
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      // Default behavior: navigate to home page
+      window.location.href = '/';
+    }
+  };
 
   return (
     <img 
-      src={logoSrc} 
+      src="/universal-logo.png" 
       alt="Life House Reentry" 
-      className={`object-contain ${className}`}
+      className={`object-contain cursor-pointer ${className}`}
+      onClick={handleClick}
     />
   );
 }
