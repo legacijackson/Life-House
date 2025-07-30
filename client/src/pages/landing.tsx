@@ -467,7 +467,6 @@ export default function Landing() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <Logo className="w-6 h-6" />
-                <span className="text-xl font-bold">Life House Reentry</span>
               </div>
               <p className="text-green-100 text-sm">
                 Home for Good. Safe, structured housing and life-design support for people returning from incarceration.
