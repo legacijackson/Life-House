@@ -47,6 +47,7 @@ export const ticketPriorityEnum = pgEnum("ticket_priority", ["low", "normal", "h
 export const ticketStatusEnum = pgEnum("ticket_status", ["new", "assigned", "in_progress", "on_hold", "resolved"]);
 export const donationFrequencyEnum = pgEnum("donation_frequency", ["one_time", "monthly"]);
 export const donationDesignationEnum = pgEnum("donation_designation", ["general", "sponsor_resident"]);
+export const applicationStatusEnum = pgEnum("application_status", ["new", "under_review", "approved", "waitlisted", "denied"]);
 
 // Session storage table (required for auth)
 export const sessions = pgTable(
@@ -269,12 +270,41 @@ export const tickets = pgTable("tickets", {
   index("tickets_priority_idx").on(table.priority),
 ]);
 
+// Housing applications table
+export const applications = pgTable("applications", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone").notNull(),
+  dateOfBirth: timestamp("date_of_birth").notNull(),
+  releaseDate: timestamp("release_date").notNull(),
+  justiceStatus: justiceStatusEnum("justice_status").notNull(),
+  emergencyContact: varchar("emergency_contact").notNull(),
+  emergencyPhone: varchar("emergency_phone").notNull(),
+  medicalNeeds: text("medical_needs"),
+  employmentGoals: text("employment_goals"),
+  hasChildren: boolean("has_children").default(false),
+  status: applicationStatusEnum("status").default("new"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("applications_status_idx").on(table.status),
+  index("applications_created_at_idx").on(table.createdAt),
+]);
+
 export const donations = pgTable("donations", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  donor: jsonb("donor"), // {name, email}
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
   amount: decimal("amount").notNull(),
   frequency: donationFrequencyEnum("frequency").default("one_time"),
   designation: donationDesignationEnum("designation").default("general"),
+  dedication: text("dedication"),
+  isAnonymous: boolean("is_anonymous").default(false),
+  mailingList: boolean("mailing_list").default(true),
+  stripePaymentId: varchar("stripe_payment_id"),
   receiptId: varchar("receipt_id"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
@@ -473,8 +503,17 @@ export const insertTicketSchema = createInsertSchema(tickets).omit({
   resolvedAt: true,
 });
 
+export const insertApplicationSchema = createInsertSchema(applications).omit({
+  id: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertDonationSchema = createInsertSchema(donations).omit({
   id: true,
+  stripePaymentId: true,
+  receiptId: true,
   createdAt: true,
 });
 
@@ -499,6 +538,8 @@ export type Property = typeof properties.$inferSelect;
 export type Room = typeof rooms.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
 export type InsertTicket = z.infer<typeof insertTicketSchema>;
+export type Application = typeof applications.$inferSelect;
+export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 export type Donation = typeof donations.$inferSelect;
 export type InsertDonation = z.infer<typeof insertDonationSchema>;
 export type AuditLog = typeof auditLog.$inferSelect;

@@ -34,11 +34,47 @@ export default function Refer() {
     hasConsent: false
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Referral submitted:', formData);
-    // In production, this would submit to the backend
-    alert('Referral submitted! We will contact you and the client within 24 hours.');
+    try {
+      const response = await fetch('/api/public/refer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert('Referral submitted successfully! We will contact you and the client within 24 hours.');
+        // Reset form
+        setFormData({
+          referrerName: '',
+          referrerTitle: '',
+          organization: '',
+          referrerEmail: '',
+          referrerPhone: '',
+          clientName: '',
+          clientEmail: '',
+          clientPhone: '',
+          clientDOB: '',
+          releaseDate: '',
+          justiceStatus: '',
+          urgency: '',
+          currentSituation: '',
+          whyReferred: '',
+          specialNeeds: '',
+          hasConsent: false
+        });
+      } else {
+        throw new Error(result.message || 'Failed to submit referral');
+      }
+    } catch (error) {
+      console.error('Referral submission error:', error);
+      alert('There was an error submitting your referral. Please try again.');
+    }
   };
 
   return (

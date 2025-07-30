@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertUserSchema, insertReferralSchema, insertAttendanceSchema, insertServiceEventSchema, insertCaseNoteSchema, insertTicketSchema } from "@shared/schema";
+import { insertUserSchema, insertReferralSchema, insertAttendanceSchema, insertServiceEventSchema, insertCaseNoteSchema, insertTicketSchema, insertApplicationSchema, insertDonationSchema } from "@shared/schema";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -33,6 +33,93 @@ const requireRole = (roles: string[]) => (req: AuthenticatedRequest, res: Respon
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Public routes (no auth required)
+  // Housing application submission
+  app.post('/api/public/apply', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertApplicationSchema.parse(req.body);
+      const application = await storage.createApplication(validatedData);
+      
+      // In production, you'd send confirmation emails here
+      console.log('New housing application:', application.id);
+      
+      res.status(201).json({ 
+        success: true, 
+        message: 'Application submitted successfully',
+        applicationId: application.id 
+      });
+    } catch (error) {
+      console.error('Application submission error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to submit application' });
+    }
+  });
+
+  // Referral submission
+  app.post('/api/public/refer', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertReferralSchema.parse({
+        source: 'CBO',
+        referrerOrg: req.body.organization,
+        referrerName: req.body.referrerName,
+        referrerEmail: req.body.referrerEmail,
+        referrerPhone: req.body.referrerPhone,
+        basicResidentInfo: {
+          name: req.body.clientName,
+          email: req.body.clientEmail,
+          phone: req.body.clientPhone,
+          dateOfBirth: req.body.clientDOB,
+          releaseDate: req.body.releaseDate,
+          justiceStatus: req.body.justiceStatus,
+          urgency: req.body.urgency
+        },
+        notes: `Current Situation: ${req.body.currentSituation}\n\nWhy Referred: ${req.body.whyReferred}\n\nSpecial Needs: ${req.body.specialNeeds || 'None specified'}`
+      });
+      
+      const referral = await storage.createReferral(validatedData);
+      
+      // In production, you'd send notifications here
+      console.log('New referral:', referral.id);
+      
+      res.status(201).json({ 
+        success: true, 
+        message: 'Referral submitted successfully',
+        referralId: referral.id 
+      });
+    } catch (error) {
+      console.error('Referral submission error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to submit referral' });
+    }
+  });
+
+  // Donation submission
+  app.post('/api/public/donate', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertDonationSchema.parse(req.body);
+      const donation = await storage.createDonation(validatedData);
+      
+      // In production, you'd process payment with Stripe here
+      console.log('New donation:', donation.id, donation.amount);
+      
+      res.status(201).json({ 
+        success: true, 
+        message: 'Donation submitted successfully',
+        donationId: donation.id 
+      });
+    } catch (error) {
+      console.error('Donation submission error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to process donation' });
+    }
+  });
+
   // Apply auth middleware to all API routes
   app.use('/api', requireAuth);
 

@@ -12,6 +12,7 @@ import {
   properties,
   rooms,
   tickets,
+  applications,
   donations,
   auditLog,
   documents,
@@ -31,6 +32,8 @@ import {
   type InsertResource,
   type Ticket,
   type InsertTicket,
+  type Application,
+  type InsertApplication,
   type Donation,
   type InsertDonation,
 } from "@shared/schema";
@@ -78,6 +81,15 @@ export interface IStorage {
 
   // Dashboard stats
   getDashboardStats(userId: string, role: string): Promise<any>;
+
+  // Applications
+  createApplication(application: InsertApplication): Promise<Application>;
+  getApplications(filters?: { status?: string }): Promise<Application[]>;
+  updateApplication(id: string, updates: Partial<Application>): Promise<Application>;
+
+  // Donations
+  createDonation(donation: InsertDonation): Promise<Donation>;
+  getDonations(filters?: { frequency?: string }): Promise<Donation[]>;
 
   // Audit logging
   logAudit(entry: any): Promise<void>;
@@ -446,6 +458,59 @@ export class DatabaseStorage implements IStorage {
       openTickets: 0,
       avgStage: 0,
     };
+  }
+
+  async createApplication(application: InsertApplication): Promise<Application> {
+    const [created] = await db
+      .insert(applications)
+      .values(application)
+      .returning();
+    return created;
+  }
+
+  async getApplications(filters?: { status?: string }): Promise<Application[]> {
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(applications.status, filters.status as any));
+    }
+    
+    const results = await db
+      .select()
+      .from(applications)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(applications.createdAt));
+    return results;
+  }
+
+  async updateApplication(id: string, updates: Partial<Application>): Promise<Application> {
+    const [updated] = await db
+      .update(applications)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(applications.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createDonation(donation: InsertDonation): Promise<Donation> {
+    const [created] = await db
+      .insert(donations)
+      .values(donation)
+      .returning();
+    return created;
+  }
+
+  async getDonations(filters?: { frequency?: string }): Promise<Donation[]> {
+    const conditions = [];
+    if (filters?.frequency) {
+      conditions.push(eq(donations.frequency, filters.frequency as any));
+    }
+    
+    const results = await db
+      .select()
+      .from(donations)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(donations.createdAt));
+    return results;
   }
 
   async logAudit(entry: any): Promise<void> {

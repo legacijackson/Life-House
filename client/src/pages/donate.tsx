@@ -28,12 +28,46 @@ export default function Donate() {
     oneTime: ['50', '100', '250', '500', 'custom']
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalAmount = amount === 'custom' ? customAmount : amount;
-    console.log('Donation submitted:', { ...formData, amount: finalAmount, type: donationType });
-    // In production, this would process payment via Stripe
-    alert(`Thank you for your ${donationType} donation of $${finalAmount}! Processing payment...`);
+    
+    try {
+      const response = await fetch('/api/public/donate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          amount: finalAmount,
+          frequency: donationType === 'monthly' ? 'monthly' : 'one_time'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(`Thank you for your ${donationType} donation of $${finalAmount}! Your submission has been received and will be processed.`);
+        // Reset form
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          dedication: '',
+          isAnonymous: false,
+          mailingList: true
+        });
+        setAmount('50');
+        setCustomAmount('');
+      } else {
+        throw new Error(result.message || 'Failed to process donation');
+      }
+    } catch (error) {
+      console.error('Donation submission error:', error);
+      alert('There was an error processing your donation. Please try again.');
+    }
   };
 
   return (

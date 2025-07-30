@@ -25,11 +25,43 @@ export default function Apply() {
     agreedToTerms: false
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Application submitted:', formData);
-    // In production, this would submit to the backend
-    alert('Application submitted! We will contact you within 24-48 hours.');
+    try {
+      const response = await fetch('/api/public/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert('Application submitted successfully! We will contact you within 24-48 hours.');
+        // Reset form
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          dateOfBirth: '',
+          releaseDate: '',
+          justiceStatus: '',
+          emergencyContact: '',
+          emergencyPhone: '',
+          medicalNeeds: '',
+          employmentGoals: '',
+          hasChildren: false,
+          agreedToTerms: false
+        });
+      } else {
+        throw new Error(result.message || 'Failed to submit application');
+      }
+    } catch (error) {
+      console.error('Application submission error:', error);
+      alert('There was an error submitting your application. Please try again.');
+    }
   };
 
   return (
