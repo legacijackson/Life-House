@@ -50,19 +50,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
           </Button>
           {/* Waving hand animation centered on top of button */}
           <WaveHand />
-          {/* Small overlay image for custom logo */}
-          {!isOpen && (
-            <div 
-              className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md border-2 border-green-600 flex items-center justify-center cursor-pointer"
-              onClick={() => setIsOpen(!isOpen)}
-            >
-              <img 
-                src={_1} 
-                alt="Life House Logo" 
-                className="w-4 h-4 object-contain"
-              />
-            </div>
-          )}
+          
         </div>
       </motion.div>
       {/* Menu options */}
