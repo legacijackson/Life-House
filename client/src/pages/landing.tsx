@@ -32,7 +32,7 @@ export default function Landing() {
             <a href="#programs" className="text-gray-600 hover:text-green-700">Programs</a>
             <a href="#contact" className="text-gray-600 hover:text-green-700">Contact</a>
             <Button 
-              onClick={() => window.location.href = '/resources'}
+              onClick={() => window.location.href = '/app/resources'}
               id="resources-btn"
               className="border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition px-4 py-2"
               data-testid="resources-button"

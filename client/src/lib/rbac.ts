@@ -132,7 +132,10 @@ export function getAccessibleRoutes(userRole: UserRole): string[] {
   if (hasPermission(userRole, 'properties', 'view')) routes.push('/app/properties');
   
   // Special portals
-  if (userRole === 'Resident') routes.push('/app/resident-portal');
+  if (userRole === 'Resident') {
+    routes.push('/app/resident-portal');
+    routes.push('/app/check-in'); // CR-43: Check-in page for residents
+  }
   if (['CaseManager', 'Intake', 'Admin'].includes(userRole)) routes.push('/app/staff-dashboard');
   if (userRole === 'Admin') routes.push('/app/admin-panel');
   

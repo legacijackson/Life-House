@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ResourceAddModal } from "@/components/resource-add-modal";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useCurrentUser } from '@/lib/rbac';
+import { Logo } from "@/components/logo";
 import { 
   Search,
   Filter,
@@ -25,7 +28,8 @@ import {
   Stethoscope,
   Shield,
   Baby,
-  Scale
+  Scale,
+  Info
 } from 'lucide-react';
 
 interface Resource {
@@ -133,14 +137,15 @@ const mockResources: Resource[] = [
 ];
 
 export default function Resources() {
+  const { data: user } = useCurrentUser();
+  const isGuest = !user;
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
-  // In a real app, this would fetch from API
+  // Fetch resources from API (supports both guest and authenticated access)
   const { data: resources = mockResources } = useQuery({
     queryKey: ['/api/resources'],
-    enabled: false // Using mock data for now
   });
 
   const filteredResources = (resources as Resource[]).filter((resource: Resource) => {
@@ -208,22 +213,55 @@ export default function Resources() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      {!isGuest && <Sidebar />}
       
       <main className="flex-1 overflow-y-auto">
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Community Resources</h1>
-                <p className="text-sm text-gray-600">Find and manage community resources for Life House residents</p>
+              <div className="flex items-center space-x-4">
+                {isGuest && <Logo className="h-10" />}
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Community Resources</h1>
+                  <p className="text-sm text-gray-600">
+                    {isGuest 
+                      ? "Discover housing, employment, healthcare, and other support services" 
+                      : "Find and manage community resources for Life House residents"}
+                  </p>
+                </div>
               </div>
-              <ResourceAddModal />
+              <div className="flex items-center space-x-4">
+                {isGuest && (
+                  <Button 
+                    onClick={() => window.location.href = '/'}
+                    variant="outline"
+                    className="border-green-600 text-green-600 hover:bg-green-50"
+                  >
+                    Back to Home
+                  </Button>
+                )}
+                {!isGuest && <ResourceAddModal />}
+              </div>
             </div>
           </div>
         </header>
 
         <div className="p-6">
+          {/* Guest Banner */}
+          {isGuest && (
+            <Alert className="mb-6 border-blue-200 bg-blue-50">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                You're browsing as a guest. <button 
+                  onClick={() => window.location.href = '/'}
+                  className="font-medium text-blue-600 hover:text-blue-800 underline"
+                >
+                  Login to save resources
+                </button> and access additional features.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Search and Filters */}
           <div className="mb-6 space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">

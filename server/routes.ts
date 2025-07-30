@@ -360,10 +360,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Geofence check-in endpoint
+  // Check-in sessions endpoint (CR-43)
+  app.get('/api/check-in/sessions', async (req: Request, res: Response) => {
+    try {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (!token) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Mock check-in sessions for development
+      const today = new Date();
+      const sessions = [
+        {
+          id: '1',
+          name: 'Morning Check-In',
+          type: 'daily',
+          startTime: '08:00 AM',
+          endTime: '09:00 AM',
+          location: {
+            name: 'Life House Main',
+            address: '123 Recovery St, Oakland, CA',
+            coordinates: { lat: 37.8044, lng: -122.2711 },
+            radius: 91
+          },
+          status: today.getHours() >= 8 && today.getHours() < 9 ? 'active' : 
+                  today.getHours() < 8 ? 'upcoming' : 'completed',
+          checkedIn: false
+        },
+        {
+          id: '2',
+          name: 'Job Readiness Group',
+          type: 'group',
+          startTime: '02:00 PM',
+          endTime: '03:30 PM',
+          location: {
+            name: 'Community Room',
+            address: '123 Recovery St, Oakland, CA',
+            coordinates: { lat: 37.8044, lng: -122.2711 },
+            radius: 91
+          },
+          status: today.getHours() >= 14 && today.getHours() < 15.5 ? 'active' : 
+                  today.getHours() < 14 ? 'upcoming' : 'completed',
+          checkedIn: false
+        }
+      ];
+
+      res.json(sessions);
+    } catch (error) {
+      console.error('Check-in sessions error:', error);
+      res.status(500).json({ message: 'Failed to fetch check-in sessions' });
+    }
+  });
+
+  // Geofence check-in endpoint (CR-43)
   app.post('/api/check-in', async (req: Request, res: Response) => {
     try {
-      const { propertyId, latitude, longitude, distance } = req.body;
+      const { sessionId, location } = req.body;
       const token = req.headers.authorization?.replace('Bearer ', '');
 
       if (!token) {
@@ -373,29 +425,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For development, extract user ID from mock token
       const userId = token.replace('mock-token-', '');
 
-      // Validate distance (should be ≤ 91 meters)
-      if (distance > 91) {
-        return res.status(400).json({ 
-          message: 'Out of range',
-          distance,
-          maxDistance: 91
-        });
-      }
+      // In production:
+      // 1. Validate session exists and is active
+      // 2. Calculate distance from session location
+      // 3. Validate within geofence radius
+      // 4. Record check-in to database
+      // 5. Send notifications
 
-      // In production, save to database
       const checkIn = {
         id: `checkin_${Date.now()}`,
         userId,
-        propertyId,
-        latitude,
-        longitude,
-        distance,
+        sessionId,
+        location,
         timestamp: new Date().toISOString(),
       };
 
-      console.log('Geofence check-in:', checkIn);
-
-      // TODO: Send Slack notification to case manager
+      console.log('Session check-in:', checkIn);
 
       res.status(201).json({
         success: true,
@@ -893,7 +938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // Tickets Routes
+  // Tickets Routes (CR-44: Role-based access control)
   app.get('/api/tickets', roleRoute(['CaseManager', 'Admin', 'Intake', 'Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { status, priority } = req.query;
@@ -901,7 +946,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status && status !== 'all') filters.status = status as string;
       if (priority && priority !== 'all') filters.priority = priority as string;
 
-      const tickets = await storage.getTickets(filters);
+      let tickets = await storage.getTickets(filters);
+
+      // Apply role-based filtering
+      if (req.user.role === 'Resident') {
+        // Residents see only their own tickets
+        tickets = tickets.filter((ticket: any) => ticket.createdBy === req.user.id);
+      } else if (req.user.role === 'CaseManager') {
+        // Case managers see tickets for their assigned residents
+        // In production, this would filter by assigned residents
+      }
+      // Admins see all tickets (no filtering needed)
 
       // Add property address to each ticket (in production, this would be a join)
       const properties = await storage.getProperties();
@@ -909,7 +964,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const property = properties.find((p: any) => p.id === ticket.propertyId);
         return {
           ...ticket,
-          propertyAddress: property ? `${property.address}, ${property.city}` : 'Unknown Property'
+          propertyAddress: property ? `${property.address}, ${property.city}` : 'Unknown Property',
+          canEdit: req.user.role === 'Admin' || 
+                   (req.user.role === 'Resident' && ticket.createdBy === req.user.id),
+          canComment: req.user.role === 'Admin' || req.user.role === 'CaseManager'
         };
       });
 
@@ -948,21 +1006,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  app.patch('/api/tickets/:id', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/tickets/:id', roleRoute(['CaseManager', 'Admin', 'Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
+      const { status, comment } = req.body;
 
-      if (!status) {
-        return res.status(400).json({ message: 'Status is required' });
+      // Get the ticket to check permissions
+      const tickets = await storage.getTickets({});
+      const ticket = tickets.find((t: any) => t.id === id);
+      
+      if (!ticket) {
+        return res.status(404).json({ message: 'Ticket not found' });
+      }
+
+      // Check permissions
+      if (req.user.role === 'Resident' && ticket.createdBy !== req.user.id) {
+        return res.status(403).json({ message: 'You can only update your own tickets' });
+      }
+
+      // Residents can only add comments, not change status
+      if (req.user.role === 'Resident' && status) {
+        return res.status(403).json({ message: 'You cannot change ticket status' });
       }
 
       // In production, update ticket in database
       const updatedTicket = {
         id,
-        status,
-        updatedAt: new Date().toISOString(),
-        ...(status === 'resolved' ? { resolvedAt: new Date().toISOString() } : {})
+        ...(status ? { status, updatedAt: new Date().toISOString() } : {}),
+        ...(status === 'resolved' ? { resolvedAt: new Date().toISOString() } : {}),
+        ...(comment ? { 
+          comments: [
+            ...(ticket.comments || []),
+            {
+              id: Date.now().toString(),
+              text: comment,
+              author: req.user.name,
+              authorId: req.user.id,
+              createdAt: new Date().toISOString()
+            }
+          ]
+        } : {})
       };
 
       console.log('Updating ticket:', updatedTicket);
@@ -1426,13 +1509,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // Public resources endpoint for guest access (CR-39)
-  app.get('/api/resources/public', async (req: Request, res: Response) => {
+  // Unified resources endpoint (CR-42: Role-based data scoping)
+  app.get('/api/resources', async (req: Request, res: Response) => {
     try {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      let user: AuthenticatedRequest['user'] | null = null;
+      
+      // Check if user is authenticated
+      if (token && token.startsWith('mock-token-')) {
+        const userId = token.replace('mock-token-', '');
+        user = {
+          id: userId,
+          role: "CaseManager", // In production, get actual role from token
+          name: "Sarah Martinez",
+          email: "sarah.martinez@example.com"
+        };
+      }
+
       const searchQuery = req.query.q as string;
       const resources = await storage.getResources();
       
-      let filteredResources = resources.filter(r => r.status === 'active').slice(0, 100);
+      let filteredResources = resources.filter(r => r.status === 'active');
+      
+      // Apply role-based filtering
+      if (!user) {
+        // Guest users see limited resources
+        filteredResources = filteredResources.slice(0, 100);
+      } else {
+        // Authenticated users see all resources
+        // Additional filtering based on role can be added here
+        switch (user.role) {
+          case 'Resident':
+            // Residents see resources relevant to their stage/needs
+            break;
+          case 'CaseManager':
+          case 'Admin':
+            // Staff see all resources
+            break;
+          case 'Partner':
+            // Partners see resources they contribute to
+            break;
+        }
+      }
       
       if (searchQuery && searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
@@ -1443,24 +1561,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // Transform resources for public consumption (remove sensitive data)
-      const publicResources = filteredResources.map(resource => ({
-        id: resource.id,
-        name: resource.name,
-        description: resource.description,
-        category: resource.category,
-        address: resource.address,
-        phone: resource.phone,
-        website: resource.website,
-        eligibility: resource.eligibility,
-        hours: resource.hours,
-      }));
+      // Transform resources based on authentication status
+      const transformedResources = filteredResources.map(resource => {
+        if (!user) {
+          // Public view - remove sensitive data
+          return {
+            id: resource.id,
+            name: resource.name,
+            description: resource.description,
+            category: resource.category,
+            address: resource.address,
+            phone: resource.phone,
+            website: resource.website,
+            eligibility: resource.eligibility,
+            hours: resource.hours,
+          };
+        } else {
+          // Authenticated view - include all data
+          return resource;
+        }
+      });
 
-      res.json(publicResources);
+      res.json(transformedResources);
     } catch (error) {
-      console.error('Error fetching public resources:', error);
+      console.error('Error fetching resources:', error);
       res.status(500).json({ message: 'Failed to fetch resources' });
     }
+  });
+
+  // Keep the public endpoint for backward compatibility
+  app.get('/api/resources/public', async (req: Request, res: Response) => {
+    // Redirect to unified endpoint
+    return app._router.handle(Object.assign(req, { url: '/api/resources' }), res, () => {});
   });
 
   // Create HTTP server

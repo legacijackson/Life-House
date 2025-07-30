@@ -87,7 +87,7 @@ export default function Maintenance() {
   });
 
   // Fetch properties for dropdown
-  const { data: properties = [] } = useQuery({
+  const { data: properties = [] } = useQuery<Array<{ id: string; address: string; city: string }>>({
     queryKey: ["/api/properties"],
   });
 

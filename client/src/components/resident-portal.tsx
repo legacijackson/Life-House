@@ -80,7 +80,7 @@ export function ResidentPortal() {
 
   // Maintenance tickets query
   const { data: tickets } = useQuery<MaintenanceTicket[]>({
-    queryKey: ['/api/resident/tickets'],
+    queryKey: ['/api/tickets'],
   });
 
   // Resources query with search
@@ -93,7 +93,7 @@ export function ResidentPortal() {
   const createTicketMutation = useMutation({
     mutationFn: (ticketData: any) => apiRequest('/api/tickets', ticketData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/resident/tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tickets'] });
       toast({
         title: "Maintenance request submitted",
         description: "Your request has been submitted and staff will respond within 24-48 hours."

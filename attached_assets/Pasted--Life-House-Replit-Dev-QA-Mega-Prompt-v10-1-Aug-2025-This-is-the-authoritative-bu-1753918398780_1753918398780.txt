@@ -1,0 +1,144 @@
+# Life House – **Replit Dev & QA Mega‑Prompt**  (v10 – 1 Aug 2025)
+
+> **This is the authoritative build spec.** v10 folds in *everything* from v1‑v9 **plus** your latest access‑control, feature‑ parity, and UX bug‑fix requirements.  All earlier CR‑1 → CR‑40 remain **blocking**; new items are CR‑41 → CR‑50 below.  CI must pass 100 automated tests and 30 manual verifications before release **v1.3.0**.
+
+---
+
+## 1  Change‑Request Matrix (CR‑41 → CR‑50)
+
+| #                                                                                                      | New Requirement (summarised)                                                                                                 | Feature ID                                    | Dev Tasks (frontend + backend)                                     | QA ID |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------ | ----- |
+| **CR‑41**                                                                                              | **Resources page unified**                                                                                                   |                                               |                                                                    |       |
+| Navbar button now routes `/app/resources` for *all* roles incl. guest; delete `GuestResourcesPage.jsx` | I‑43\*                                                                                                                       | • Remove GuestResourcesPage                   |                                                                    |       |
+| • `ButtonResources` → `router.push('/app/resources')`                                                  |                                                                                                                              |                                               |                                                                    |       |
+| • Middleware allows `guest` on this path                                                               | F‑42 (updated)                                                                                                               |                                               |                                                                    |       |
+| **CR‑42**                                                                                              | **Role‑based data scoping** across major modules (Resources, Maintenance, Attendance, Case Notes, Reports)                   | I‑44                                          | Implement server‑side RBAC filters:                                |       |
+| • Admin → full dataset                                                                                 |                                                                                                                              |                                               |                                                                    |       |
+| • CM → residents assigned                                                                              |                                                                                                                              |                                               |                                                                    |       |
+| • Resident → self‑only                                                                                 |                                                                                                                              |                                               |                                                                    |       |
+| • Guest → read‑only resources                                                                          | SEC‑09                                                                                                                       |                                               |                                                                    |       |
+| **CR‑43**                                                                                              | **Check‑In page for residents** (`/app/check‑in`) with 100‑yard geofence & manual reason selector                            | I‑45                                          | • New DB `checkins`                                                |       |
+| • Resident view shows history & “Check Out”                                                            |                                                                                                                              |                                               |                                                                    |       |
+| • Case Mgr/Admin see indicator in Attendance                                                           | F‑45, DB‑10                                                                                                                  |                                               |                                                                    |       |
+| **CR‑44**                                                                                              | **Maintenance module parity**                                                                                                |                                               |                                                                    |       |
+| Resident: CRUD own tickets; CM: view + comment; Admin: global view & delete. Ledger of edits.          | I‑25\*                                                                                                                       | • Add `maintenance_history` table (JSON diff) |                                                                    |       |
+| • Frontend forms scoped per role                                                                       |                                                                                                                              |                                               |                                                                    |       |
+| • Slack/email notif to assignee                                                                        | F‑46                                                                                                                         |                                               |                                                                    |       |
+| **CR‑45**                                                                                              | **Case‑Notes AI assistant** only inside Note form; remove menu item                                                          | I‑24\*                                        | • Integrate OpenAI in textarea (on‑blur suggestion)                |       |
+| • Delete “AI Notes Helper” navbar entry                                                                | UI smoke                                                                                                                     |                                               |                                                                    |       |
+| **CR‑46**                                                                                              | **Reports download opens correctly** (PDF/CSV)                                                                               | I‑32\*                                        | • Use `blob` response; set header `Content‑Disposition`            |       |
+| • Verify file not empty                                                                                | F‑47                                                                                                                         |                                               |                                                                    |       |
+| **CR‑47**                                                                                              | **Profile setup first‑login** – prompt avatar upload + display real name + correct role label                                | I‑22\*                                        | • `FirstLoginWizard` after JWT claims `profileCompleted=false`     |       |
+| • Upload to S3; update profile                                                                         | F‑48                                                                                                                         |                                               |                                                                    |       |
+| **CR‑48**                                                                                              | **Support drawer close button** & ESC key                                                                                    | I‑42\*                                        | • Add `X` icon; `useKeydown('Escape')`                             |       |
+| • Persist closed state session‑storage                                                                 | F‑49                                                                                                                         |                                               |                                                                    |       |
+| **CR‑49**                                                                                              | **Intake & Referrals page**                                                                                                  |                                               |                                                                    |       |
+| *Admins* full CRUD; *CM* read‑only; Residents/Guests no access.                                        | I‑46                                                                                                                         | • Route guards; hide nav entry                |                                                                    |       |
+| • Server enforces role check                                                                           | SEC‑10                                                                                                                       |                                               |                                                                    |       |
+| **CR‑50**                                                                                              | **Admin Dashboard parity** – looks like CM dashboard but includes Panel widget with Add/Edit/Delete controls across entities | I‑47                                          | • Build `AdminPanel.jsx` (tabs: Users, Properties, Settings, Logs) | F‑50  |
+
+\*IDs with \* indicate updates to existing features from previous versions.
+
+---
+
+## 2  RBAC Summary Table (supersedes prior)
+
+| Module               | Guest | Resident                 | Case Mgr                    | Admin/Super       |
+| -------------------- | ----- | ------------------------ | --------------------------- | ----------------- |
+| **Dashboard**        | —     | ✔ self                   | ✔ cm view                   | ✔ admin view      |
+| **Resources**        | View  | View                     | View + Refer + Save         | Full CRUD         |
+| **Residents**        | —     | Self profile             | Assigned residents          | All               |
+| **Case Notes**       | —     | —                        | Create + Read own residents | Full CRUD         |
+| **Attendance**       | —     | Read self                | CRUD assigned               | CRUD all + delete |
+| **Check‑In**         | —     | Geo Check                | View only                   | View only         |
+| **Maintenance**      | —     | CRUD own tickets         | View+comment assigned       | Full CRUD         |
+| **Intake/Referrals** | —     | —                        | Read                        | Full CRUD         |
+| **Reports**          | —     | Progress/Attendance self | Generate caseload           | All reports       |
+| **Properties**       | —     | —                        | —                           | CRUD              |
+| **Admin Panel**      | —     | —                        | —                           | ✔                 |
+
+Backend middleware: `requireRoleMin` + optional `requireResidentMatch`.
+
+---
+
+## 3  Key DB Migrations (added)
+
+```sql
+CREATE TABLE checkins (
+  id serial PRIMARY KEY,
+  resident_id int REFERENCES residents(id),
+  lat double precision,
+  lon double precision,
+  reason text, -- home, life_design, work, etc.
+  status text, -- in|out
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE maintenance_history (
+  id serial PRIMARY KEY,
+  ticket_id int REFERENCES maintenance(id),
+  editor_id int REFERENCES users(id),
+  diff jsonb,
+  edited_at timestamptz DEFAULT now()
+);
+```
+
+---
+
+## 4  API Additions / Modifications
+
+| Route                      | Verb | Role     | Notes                             |
+| -------------------------- | ---- | -------- | --------------------------------- |
+| `/checkins`                | POST | resident | Geofence validate; returns record |
+| `/maintenance/history/:id` | GET  | cm+      | Returns diff log                  |
+| `/reports/download`        | GET  | cm+      | Sends `blob` `application/pdf`    |
+
+---
+
+## 5  Front‑End Components (new/updated)
+
+* **FirstLoginWizard** – avatar upload, PIN reconfirm, profileComplete flag save.
+* **CheckInPage.jsx** – Mapbox static map preview; “Check In” / “Check Out” buttons.
+* **MaintenanceLedgerDrawer** – diff timeline.
+* **AdminPanel.jsx** – shadcn `Tabs` (`Users`, `Properties`, `Logs`).
+
+---
+
+## 6  Automated Tests (now 100 total)
+
+* Added F‑45 … F‑50, SEC‑09‑10, DB‑10.
+* Update existing F‑42 to hit unified resources page.
+
+---
+
+## 7  Manual QA (30 checks)
+
+* **8‑18** – Resident Check‑In 150 m away → toast error.
+* **8‑19** – Ticket edit ledger shows diff.
+* **8‑20** – Report PDF opens in Preview/Adobe.
+
+---
+
+## 8  Artifacts Path Add‑ons
+
+```
+/artifacts/checkin/
+  resident_geo_error.png
+  resident_success.mp4
+/artifacts/reports/
+  progress_pdf.pdf
+```
+
+---
+
+## 9  Go‑Live Gate Update
+
+25. ✔️ Resident Check‑In flow passes (F‑45).
+26. ✔️ Reports openable.
+27. ✔️ Ledger of maintenance edits exists.
+
+---
+
+*Save this file as `/README_REPLIT.md`; CI must pass for v1.3.0.*
+
+*Last updated: 2025‑08‑01*

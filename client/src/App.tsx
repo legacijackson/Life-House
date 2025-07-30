@@ -14,7 +14,7 @@ import Landing from "@/pages/landing";
 import Apply from "@/pages/apply";
 import Refer from "@/pages/refer";
 import Donate from "@/pages/donate";
-import GuestResourcesPage from "@/pages/guest-resources";
+
 import Intake from "@/pages/intake";
 import Referrals from "@/pages/referrals";
 import Residents from "@/pages/residents";
@@ -25,6 +25,7 @@ import Resources from "@/pages/resources";
 import Properties from "@/pages/properties";
 import Maintenance from "@/pages/maintenance";
 import Reports from "@/pages/reports";
+import CheckIn from "@/pages/check-in";
 import { ResidentPortal } from "@/components/resident-portal";
 import { StaffDashboard } from "@/components/staff-dashboard";
 import { AdminPanel } from "@/components/admin-panel";
@@ -44,10 +45,10 @@ function ProtectedRoutes() {
         <Route path="/app/residents/:id/case-notes" component={ResidentCaseNotes} />
         <Route path="/app/case-notes" component={CaseNotes} />
         <Route path="/app/attendance" component={Attendance} />
-        <Route path="/app/resources" component={Resources} />
         <Route path="/app/properties" component={Properties} />
         <Route path="/app/maintenance" component={Maintenance} />
         <Route path="/app/reports" component={Reports} />
+        <Route path="/app/check-in" component={CheckIn} />
         <Route path="/app/resident-portal" component={ResidentPortal} />
         <Route path="/app/staff-dashboard" component={StaffDashboard} />
         <Route path="/app/admin-panel" component={AdminPanel} />
@@ -65,7 +66,7 @@ function Router() {
       <Route path="/apply" component={Apply} />
       <Route path="/refer" component={Refer} />
       <Route path="/donate" component={Donate} />
-      <Route path="/resources" component={GuestResourcesPage} />
+      <Route path="/app/resources" component={Resources} />
       <Route path="/app/:rest*" component={ProtectedRoutes} />
       <Route component={NotFound} />
     </Switch>

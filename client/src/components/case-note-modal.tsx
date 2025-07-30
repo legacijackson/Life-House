@@ -46,9 +46,12 @@ import {
   Star,
   CheckCircle,
   ArrowRight,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 interface CaseNote {
   id?: string;
@@ -94,6 +97,8 @@ export function CaseNoteModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [actionItemInput, setActionItemInput] = useState('');
+  const [showAIAssist, setShowAIAssist] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
 
   const form = useForm<z.infer<typeof caseNoteSchema>>({
     resolver: zodResolver(caseNoteSchema),
@@ -107,6 +112,33 @@ export function CaseNoteModal({
       followUpDate: note?.followUpDate,
       tags: note?.tags || [],
       actionItems: note?.actionItems || []
+    }
+  });
+
+  // AI assistance mutation
+  const aiAssistMutation = useMutation({
+    mutationFn: async (prompt: string) => {
+      return await apiRequest('POST', '/api/ai/notes', {
+        prompt,
+        residentId: form.getValues('residentId'),
+        noteType: form.getValues('type')
+      });
+    },
+    onSuccess: (data: any) => {
+      form.setValue('content', data.noteText || data.content || '');
+      setShowAIAssist(false);
+      setAiPrompt('');
+      toast({
+        title: "AI Suggestion Applied",
+        description: "Review and edit the generated content as needed.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "AI Assistance Failed",
+        description: "Unable to generate suggestion. Please try again.",
+        variant: "destructive",
+      });
     }
   });
 
@@ -274,13 +306,58 @@ export function CaseNoteModal({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Detailed description of the interaction or observation" 
-                      className="min-h-[150px]"
-                      {...field} 
-                    />
-                  </FormControl>
+                  <div className="space-y-2">
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Detailed description of the interaction or observation" 
+                        className="min-h-[150px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    {!showAIAssist ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAIAssist(true)}
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        AI Assist
+                      </Button>
+                    ) : (
+                      <div className="space-y-2 p-3 border rounded-lg bg-muted/50">
+                        <Label>Describe the interaction or key points:</Label>
+                        <Textarea
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                          placeholder="e.g., Met with resident about employment goals, discussed resume building and job applications..."
+                          className="min-h-[80px]"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => aiAssistMutation.mutate(aiPrompt)}
+                            disabled={!aiPrompt.trim() || aiAssistMutation.isPending}
+                          >
+                            {aiAssistMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Generate
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setShowAIAssist(false);
+                              setAiPrompt('');
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

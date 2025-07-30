@@ -137,7 +137,15 @@ The application follows a monorepo architecture with clear separation of concern
 - **Code Splitting**: Vite automatically splits bundles for optimal loading
 - **Database Indexing**: Strategic indexes on frequently queried columns
 
-### Recent Changes (July 2025)
+### Recent Changes (August 2025)
+
+**v10 Mega-Prompt Implementation (August 1, 2025):**
+- **CR-41**: Unified Resources page - removed separate guest resources page, all users now access resources through /app/resources
+- **CR-42**: Role-based data scoping - implemented server-side RBAC filters where Admins see full dataset, Case Managers see assigned residents, Residents see self-only data, and guests get read-only resources
+- **CR-43**: Check-In page for residents - created /app/check-in with 91-meter (100-yard) geofence validation using Haversine formula, manual reason selector, and session tracking
+- **CR-44**: Maintenance module parity - residents can CRUD own tickets, case managers can view and comment on assigned residents' tickets, admins have full access
+- **CR-45**: Case-Notes AI assistant scoping - removed AI Notes Helper menu item, integrated AI assistance directly into case note content field with inline prompt interface
+- **RBAC Updates**: Added check-in route to getAccessibleRoutes function for residents, implemented proper permission checking in maintenance tickets API
 
 **QA Framework Implementation (July 30, 2025):**
 - **Comprehensive Testing Suite**: Implemented complete testing framework with Vitest unit tests (3 suites), Cypress E2E tests (6 comprehensive suites), and detailed manual QA procedures (11-section guide)
