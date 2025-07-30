@@ -32,6 +32,14 @@ export default function Landing() {
             <a href="#programs" className="text-gray-600 hover:text-green-700">Programs</a>
             <a href="#contact" className="text-gray-600 hover:text-green-700">Contact</a>
             <Button 
+              onClick={() => window.location.href = '/resources'}
+              id="resources-btn"
+              className="border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition px-4 py-2"
+              data-testid="resources-button"
+            >
+              Resources
+            </Button>
+            <Button 
               onClick={() => setIsIntakeModalOpen(true)}
               className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-2 shadow-md transform hover:scale-105 transition-all duration-200"
             >

@@ -21,7 +21,8 @@ export const roleEnum = pgEnum("role", [
   "Resident",
   "CaseManager", 
   "Admin",
-  "Partner"
+  "Partner",
+  "Guest"
 ]);
 
 export const languageEnum = pgEnum("language", ["en", "es"]);

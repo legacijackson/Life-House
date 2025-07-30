@@ -1426,6 +1426,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Public resources endpoint for guest access (CR-39)
+  app.get('/api/resources/public', async (req: Request, res: Response) => {
+    try {
+      const searchQuery = req.query.q as string;
+      const resources = await storage.getResources();
+      
+      let filteredResources = resources.filter(r => r.status === 'active').slice(0, 100);
+      
+      if (searchQuery && searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        filteredResources = filteredResources.filter(resource =>
+          resource.name.toLowerCase().includes(query) ||
+          resource.description.toLowerCase().includes(query) ||
+          resource.category.toLowerCase().includes(query)
+        );
+      }
+
+      // Transform resources for public consumption (remove sensitive data)
+      const publicResources = filteredResources.map(resource => ({
+        id: resource.id,
+        name: resource.name,
+        description: resource.description,
+        category: resource.category,
+        address: resource.address,
+        phone: resource.phone,
+        website: resource.website,
+        eligibility: resource.eligibility,
+        hours: resource.hours,
+      }));
+
+      res.json(publicResources);
+    } catch (error) {
+      console.error('Error fetching public resources:', error);
+      res.status(500).json({ message: 'Failed to fetch resources' });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
 

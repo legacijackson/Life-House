@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageCircle, HelpCircle, Brain } from 'lucide-react';
 import { Logo } from "@/components/logo";
+import WaveHand from "@/components/ui/wave-hand";
 import _3 from "@assets/3.png";
 
 import _1 from "@assets/1.png";
@@ -16,6 +17,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
   const [isOpen, setIsOpen] = useState(false);
 
   const handleChatClick = () => {
+    localStorage.setItem('chatSeen', 'true');
     setIsOpen(false);
     onOpenChat();
   };
@@ -35,6 +37,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
         transition={{ delay: 0.3 }}
       >
         <div className="relative">
+          <WaveHand />
           <Button
             onClick={() => setIsOpen(!isOpen)}
             size="lg"

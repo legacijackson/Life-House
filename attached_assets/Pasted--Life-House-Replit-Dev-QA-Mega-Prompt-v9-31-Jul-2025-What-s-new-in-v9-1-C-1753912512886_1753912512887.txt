@@ -1,0 +1,168 @@
+# Life House – **Replit Dev & QA Mega‑Prompt** (v9 – 31 Jul 2025)
+
+> **What’s new in v9**
+>
+> 1. **CR‑39:** Add a public “Resources” button (white w/ blue border, blue‑fill hover) in the main navbar. Clicking it opens a **Guest Resource Portal** (no login required, limited read‑only access).
+> 2. Introduce `guest` role and new `/resources` route cluster.
+> 3. Update Change‑Request Matrix, DB schema, front‑end comps, API, tests, QA, and go‑live gates.
+>
+> *All prior CR‑1 → CR‑38 remain unchanged and blocking.*
+
+---
+
+## 1  Change‑Request Matrix (add CR‑39)
+
+| #                                                                                                                                                  | New Request                                | Feature ID | Dev Tasks         | QA ID |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ---------- | ----------------- | ----- |
+| **CR‑39**                                                                                                                                          | **Public Resources Button + Guest Portal** | I‑43       | **Navbar Button** |       |
+| • Insert `<ButtonResources>` right‑aligned; Tailwind classes: `border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition` |                                            |            |                   |       |
+| • ID = `resources-btn`.                                                                                                                            |                                            |            |                   |       |
+| **Routing**                                                                                                                                        |                                            |            |                   |       |
+| • New route `/resources` served by `GuestResourcesPage.jsx`.                                                                                       |                                            |            |                   |       |
+| • Route is *public*; auto‑assigns JWT role `guest` (short‑lived, ★ optional).                                                                      |                                            |            |                   |       |
+| **Guest Portal**                                                                                                                                   |                                            |            |                   |       |
+| • Page shows Resource Navigator, Add‑Resource disabled, Refer‑Resident disabled (CTA asks to login).                                               |                                            |            |                   |       |
+| **RBAC**                                                                                                                                           |                                            |            |                   |       |
+| • Add role `guest` to enum (read‑only).                                                                                                            |                                            |            |                   |       |
+| • Middleware allows guests only `/resources`, `/support`, `/login`, `/signup`.                                                                     | F‑42, B‑API‑10, SEC‑08                     |            |                   |       |
+
+---
+
+## 2  DB Schema Δ (Role enum)
+
+```sql
+-- extend enum
+ALTER TYPE user_role_enum ADD VALUE IF NOT EXISTS 'guest';
+-- no table changes needed (guest rows not persisted)
+```
+
+---
+
+## 3  API Routes – Resources (public)
+
+| Route               | Verb | Query | Notes                                       |
+| ------------------- | ---- | ----- | ------------------------------------------- |
+| `/resources/public` | GET  | `q?`  | Returns top 100 resources; no auth required |
+
+*Existing authenticated `/portal/resources` unchanged.*
+
+---
+
+## 4  Front‑End Components (additions)
+
+| Component                                                          | Key Points                                                                                   |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| **ButtonResources** (`components/Navbar/ButtonResources.jsx`)      | White background, blue border/text; on hover `bg-blue-600 text-white`; links to `/resources` |
+| **GuestResourcesPage** (`pages/GuestResources.jsx`)                | • Uses same Resource Navigator list                                                          |
+| • Hide Save, Refer buttons → replaced with tooltip “Login to save” |                                                                                              |
+| • Info banner “You’re browsing as guest.”                          |                                                                                              |
+| **RoleRouter**                                                     | Extend `roleHome` map: guest→`/resources`                                                    |
+
+---
+
+## 5  Cypress / Jest Additions
+
+| Test ID      | Scenario                                      | Expected                                                      |
+| ------------ | --------------------------------------------- | ------------------------------------------------------------- |
+| **F‑42**     | Visit `/` logged‑out → click `#resources-btn` | Navigates to `/resources`; banner visible; Save button hidden |
+| **B‑API‑10** | GET `/resources/public?q=food`                | 200, array length ≤100                                        |
+| **SEC‑08**   | Guest attempts POST `/resource`               | 403 Forbidden                                                 |
+
+---
+
+## 6  Manual QA Checklist Add‑Ons
+
+| #    | Action                              | Proof |
+| ---- | ----------------------------------- | ----- |
+| 8‑15 | Hover Resources button → blue fill  | gif   |
+| 8‑16 | Guest portal search returns results | png   |
+
+---
+
+## 7  Evidence Bundle Updates
+
+```
+/artifacts/resources/
+  button_hover.gif
+  guest_search.png
+```
+
+---
+
+## 8  Go‑Live Gate Additions
+
+22. ✔️ F‑42, B‑API‑10, SEC‑08 pass.
+23. ✔️ Manual checks 8‑15–16 attached.
+
+---
+
+All earlier sections (v8) remain valid—this update layers the **Guest Resource Portal** and navbar button on top of the existing build.
+
+*Last updated: 2025‑07‑31*
+
+---
+
+## 11  UI Attention Animation – **CR‑40**
+
+A waving‑hand gif draws attention to the green chat/help button for first‑time visitors.
+
+### 11.1  Design Requirements
+
+* **Asset:** `wave-hand.gif` (250×180, transparent bg) saved at `/public/assets/ui/wave-hand.gif`.
+* **Default state:** Visible, anchored to top‑right of the green button (‑top‑6 ‑right‑6 Tailwind offset).
+* **Animation:** CSS keyframes `wave` (0°→20°→0°) 1.2 s infinite.
+* **Hide Logic:** Once the user clicks the green button, set `localStorage.chatSeen=true`; component checks this flag on mount and hides thereafter.
+
+### 11.2  Front‑End Implementation
+
+```jsx
+// components/ui/WaveHand.jsx
+import { useEffect, useState } from 'react';
+export default function WaveHand() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!localStorage.getItem('chatSeen')) setShow(true);
+  }, []);
+  if (!show) return null;
+  return (
+    <img
+      src="/assets/ui/wave-hand.gif"
+      alt="wave"
+      className="absolute -top-6 -right-6 w-10 animate-wave pointer-events-none z-40"
+    />
+  );
+}
+```
+
+```css
+@keyframes wave {0%{transform:rotate(0deg)}50%{transform:rotate(20deg)}100%{transform:rotate(0deg)}}
+.animate-wave{animation:wave 1.2s ease-in-out infinite}
+```
+
+Integrate in `ChatButton.jsx`:
+
+```jsx
+<div className="relative">
+  <WaveHand />
+  <button ... onClick={()=>{localStorage.chatSeen=true; openChat();}}>
+    ...
+  </button>
+</div>
+```
+
+### 11.3  Cypress / Jest Tests
+
+| Test ID  | Scenario                 | Expected                                            |
+| -------- | ------------------------ | --------------------------------------------------- |
+| **F-43** | First load (no chatSeen) | `img[alt="wave"]` visible, has `animate-wave` class |
+| **F-44** | Click green button       | `img` removed on next reload                        |
+
+### 11.4  Manual QA
+
+| #    | Action                                             | Proof                                    |
+| ---- | -------------------------------------------------- | ---------------------------------------- |
+| 8-17 | Hover shows wave; after click reload → wave hidden | gif `/artifacts/ui/wave_first_visit.gif` |
+
+### 11.5  Go‑Live Gate Addition
+
+24. ✔️ F‑43 & F‑44 pass and artifact recorded.

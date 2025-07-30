@@ -73,7 +73,20 @@
     .print\\:space-y-2 > * + * {
       margin-top: 0.5rem !important;
     }
+  }
 
+  /* Wave animation for the waving hand */
+  @keyframes wave {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(20deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  .animate-wave {
+    animation: wave 1.2s ease-in-out infinite;
+  }
+
+  @media print {
     .print\\:break-inside-avoid {
       break-inside: avoid;
     }
