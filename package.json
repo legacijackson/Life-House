@@ -11,6 +11,10 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@fullcalendar/daygrid": "^6.1.18",
+    "@fullcalendar/interaction": "^6.1.18",
+    "@fullcalendar/react": "^6.1.18",
+    "@fullcalendar/timegrid": "^6.1.18",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",
@@ -44,6 +48,8 @@
     "@stripe/react-stripe-js": "^3.8.1",
     "@stripe/stripe-js": "^7.7.0",
     "@tanstack/react-query": "^5.60.5",
+    "@tiptap/react": "^3.0.7",
+    "@tiptap/starter-kit": "^3.0.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/memoizee": "^0.4.12",
     "bcryptjs": "^3.0.2",

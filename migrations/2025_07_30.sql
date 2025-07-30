@@ -1,4 +1,3 @@
-
 -- Life House Database Migration - July 30, 2025
 -- Schema updates for roles, attendance, settings, and geolocation
 
@@ -40,10 +39,35 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add geolocation to properties
-ALTER TABLE properties 
-ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 8),
-ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8);
+-- Add lat/long columns to properties
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 8);
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8);
+
+-- Create attendance table
+CREATE TABLE IF NOT EXISTS attendance (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+  resident_id TEXT NOT NULL REFERENCES users(id),
+  program_id TEXT NOT NULL,
+  date TIMESTAMP NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'excused', 'late')),
+  staff_id TEXT NOT NULL REFERENCES users(id),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP
+);
+
+-- Create events table
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  start_time TIMESTAMP NOT NULL,
+  end_time TIMESTAMP NOT NULL,
+  resident_id TEXT REFERENCES users(id),
+  type TEXT NOT NULL CHECK (type IN ('check_in', 'appointment', 'meeting', 'goal_review', 'assessment', 'other')),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP
+);
 
 -- Create super admin table
 CREATE TABLE IF NOT EXISTS super_admins (

@@ -106,6 +106,38 @@ Respond with JSON in this format:
     }
   }
 
+  async chatResponse(message: string, context: string): Promise<any> {
+    try {
+      const systemPrompt = context === 'case_management' 
+        ? "You are a helpful AI assistant for a transitional housing case management system. You can help with case management questions, resource recommendations, form completion, and administrative tasks. Keep responses helpful, professional, and relevant to transitional housing services."
+        : "You are a helpful AI assistant.";
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: message
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      });
+
+      return {
+        response: response.choices[0].message.content || "I'm sorry, I couldn't generate a response.",
+        aiGenerated: true,
+      };
+    } catch (error) {
+      console.error('AI chat error:', error);
+      throw new Error('Failed to generate chat response');
+    }
+  }
+
   async formHelper(formContext: string, knownFields: any): Promise<any> {
     try {
       const prompt = `You are helping complete a form for transitional housing case management.

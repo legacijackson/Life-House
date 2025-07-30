@@ -47,7 +47,7 @@ function roleRoute(roles: string[], handler: AuthenticatedHandler) {
 // Simple auth middleware (in production, implement proper JWT validation)
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  
+
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });
   }
@@ -76,7 +76,7 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public routes (no auth required)
-  
+
   // Housing application submission
   app.post('/api/public/apply', async (req: Request, res: Response) => {
     try {
@@ -88,10 +88,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const validatedData = insertApplicationSchema.parse(transformedData);
       const application = await storage.createApplication(validatedData);
-      
+
       // In production, you'd send confirmation emails here
       console.log('New housing application:', application.id);
-      
+
       res.status(201).json({ 
         success: true, 
         message: 'Application submitted successfully',
@@ -126,12 +126,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         notes: `Current Situation: ${req.body.currentSituation}\n\nWhy Referred: ${req.body.whyReferred}\n\nSpecial Needs: ${req.body.specialNeeds || 'None specified'}`
       });
-      
+
       const referral = await storage.createReferral(validatedData);
-      
+
       // In production, you'd send notifications here
       console.log('New referral:', referral.id);
-      
+
       res.status(201).json({ 
         success: true, 
         message: 'Referral submitted successfully',
@@ -151,10 +151,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertDonationSchema.parse(req.body);
       const donation = await storage.createDonation(validatedData);
-      
+
       // In production, you'd process payment with Stripe here
       console.log('New donation:', donation.id, donation.amount);
-      
+
       res.status(201).json({ 
         success: true, 
         message: 'Donation submitted successfully',
@@ -173,16 +173,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/signup', async (req: Request, res: Response) => {
     try {
       const { firstName, lastName, email, password } = req.body;
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: 'Email already registered' });
       }
-      
+
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
-      
+
       // Create user
       const user = await storage.createUser({
         name: `${firstName} ${lastName}`,
@@ -190,10 +190,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         passwordHash,
         role: 'Resident', // Default role for self-registrations
       });
-      
+
       // In production, generate proper JWT token
       const token = `mock-token-${user.id}`;
-      
+
       res.status(201).json({
         success: true,
         message: 'Account created successfully',
@@ -218,27 +218,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/login', async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-      
+
       // Validate input
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
       }
-      
+
       // Find user by email
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
-      
+
       // Verify password
       const passwordValid = await bcrypt.compare(password, user.passwordHash);
       if (!passwordValid) {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
-      
+
       // In production, generate proper JWT token
       const token = `mock-token-${user.id}`;
-      
+
       res.json({
         success: true,
         message: 'Login successful',
@@ -260,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/create-subscription', async (req: Request, res: Response) => {
     try {
       const { firstName, lastName, email, amount, frequency } = req.body;
-      
+
       if (!process.env.STRIPE_SECRET_KEY) {
         return res.status(500).json({ message: 'Stripe not configured' });
       }
@@ -268,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
         apiVersion: '2023-10-16',
       });
-      
+
       // Create Stripe Checkout session for subscription
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -310,10 +310,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertInquirySchema.parse(req.body);
       const inquiry = await storage.createInquiry(validatedData);
-      
+
       // In production, you'd send notification emails here
       console.log('New program inquiry:', inquiry.id);
-      
+
       res.status(201).json({
         success: true,
         message: 'Thank you for your inquiry! We\'ll be in touch soon.',
@@ -333,10 +333,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertPartnerSchema.parse(req.body);
       const partner = await storage.createPartner(validatedData);
-      
+
       // In production, you'd send notification emails here
       console.log('New partner signup:', partner.id);
-      
+
       res.status(201).json({
         success: true,
         message: 'Thank you for partnering with Life House! We\'ll be in touch within 24 hours.',
@@ -356,14 +356,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { propertyId, latitude, longitude, distance } = req.body;
       const token = req.headers.authorization?.replace('Bearer ', '');
-      
+
       if (!token) {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
       // For development, extract user ID from mock token
       const userId = token.replace('mock-token-', '');
-      
+
       // Validate distance (should be ≤ 91 meters)
       if (distance > 91) {
         return res.status(400).json({ 
@@ -385,9 +385,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       console.log('Geofence check-in:', checkIn);
-      
+
       // TODO: Send Slack notification to case manager
-      
+
       res.status(201).json({
         success: true,
         checkIn,
@@ -516,13 +516,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/staff/generate-pdf', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { residentId, type } = req.body;
-      
+
       // In production, generate actual PDF here
       const fileName = `${type}_${residentId}_${Date.now()}.pdf`;
       const downloadUrl = `/downloads/${fileName}`;
-      
+
       console.log(`Generated PDF: ${fileName} for resident ${residentId}`);
-      
+
       res.json({ 
         downloadUrl,
         fileName 
@@ -538,9 +538,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // In production, generate actual monthly report here
       const fileName = `monthly_report_${new Date().toISOString().slice(0, 7)}.pdf`;
       const downloadUrl = `/downloads/${fileName}`;
-      
+
       console.log(`Generated monthly report: ${fileName}`);
-      
+
       res.json({ 
         downloadUrl,
         fileName 
@@ -603,10 +603,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/test-connection/:type', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { type } = req.params;
-      
+
       // In production, test actual connections
       const success = Math.random() > 0.3; // Simulate 70% success rate
-      
+
       res.json({
         success,
         message: success 
@@ -684,7 +684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/resident/maintenance-request', roleRoute(['Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { title, description, priority } = req.body;
-      
+
       // In production, create actual maintenance ticket
       const ticket = {
         id: Date.now().toString(),
@@ -695,9 +695,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         submittedAt: new Date().toISOString(),
         submittedBy: req.user.id
       };
-      
+
       console.log('New maintenance request:', ticket);
-      
+
       res.status(201).json({
         success: true,
         ticket
@@ -859,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/properties', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const propertyData = req.body;
-      
+
       // Validate required fields
       if (!propertyData.address || !propertyData.city || !propertyData.state || !propertyData.zipCode) {
         return res.status(400).json({ message: 'Missing required property information' });
@@ -893,14 +893,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (priority && priority !== 'all') filters.priority = priority as string;
 
       const tickets = await storage.getTickets(filters);
-      
+
       // Add property address to each ticket (in production, this would be a join)
       const properties = await storage.getProperties();
       const ticketsWithAddress = tickets.map((ticket: any) => {
         const property = properties.find((p: any) => p.id === ticket.propertyId);
         return {
           ...ticket,
-          propertyAddress: property ? `${property.address}, ${property.city}` : 'Unknown Property'
+          propertyAddress: property ? `${property.address}, ${property.city}` : 'Unknown Property'```tool_code
         };
       });
 
@@ -914,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/tickets', roleRoute(['CaseManager', 'Admin', 'Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const ticketData = req.body;
-      
+
       // Validate required fields
       if (!ticketData.propertyId || !ticketData.title || !ticketData.description) {
         return res.status(400).json({ message: 'Missing required ticket information' });
@@ -972,14 +972,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/ai/chat', async (req: Request, res: Response) => {
     try {
       const { message, context } = req.body;
-      
+
       if (!message) {
         return res.status(400).json({ message: 'Message is required' });
       }
 
       // Import the AI helper
       const { generateAIResponse } = await import('./ai');
-      
+
       const systemPrompt = context === 'public_assistant' 
         ? `You are a helpful assistant for Life House Reentry, a transitional housing program for formerly incarcerated individuals. 
            Provide accurate information about:
@@ -989,12 +989,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
            - Program benefits (90-day initial stay, case management, job support)
            - Contact information: (855) 4-LIFEUP or (855) 454-3387
            - Location: 8399 Folsom Blvd, Ste 1, Sacramento, CA 95826
-           
+
            Be empathetic, supportive, and professional. Keep responses concise and helpful.`
         : 'You are a helpful assistant.';
 
       const response = await generateAIResponse(message, systemPrompt);
-      
+
       res.json({ response });
     } catch (error: any) {
       console.error('AI chat error:', error);
@@ -1005,8 +1005,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Attendance routes
+  app.post('/api/attendance', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertAttendanceSchema.parse(req.body);
+      const attendance = await storage.createAttendance(validatedData);
+      res.status(201).json({
+        success: true,
+        attendance
+      });
+    } catch (error) {
+      console.error('Error creating attendance:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create attendance record' });
+    }
+  });
+
+  app.get('/api/attendance', async (req: Request, res: Response) => {
+    try {
+      const { residentId, startDate, endDate } = req.query;
+      const attendance = await storage.getAttendance(residentId as string, startDate as string, endDate as string);
+      res.json(attendance);
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      res.status(500).json({ error: 'Failed to fetch attendance' });
+    }
+  });
+
+  // Events/Calendar routes
+  app.post('/api/events', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertServiceEventSchema.parse(req.body);
+      const event = await storage.createServiceEvent(validatedData);
+      res.status(201).json({
+        success: true,
+        event
+      });
+    } catch (error) {
+      console.error('Error creating event:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create event' });
+    }
+  });
+
+  app.get('/api/events', async (req: Request, res: Response) => {
+    try {
+      const { residentId } = req.query;
+      const events = await storage.getServiceEvents(residentId as string);
+      res.json(events);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      res.status(500).json({ error: 'Failed to fetch events' });
+    }
+  });
+
+  // Programs route
+  app.get('/api/programs', async (req: Request, res: Response) => {
+    try {
+      const programs = await storage.getPrograms();
+      res.json(programs);
+    } catch (error) {
+      console.error('Error fetching programs:', error);
+      res.status(500).json({ error: 'Failed to fetch programs' });
+    }
+  });
+
+  // Staff route
+  app.get('/api/staff', async (req: Request, res: Response) => {
+    try {
+      const staff = await storage.getStaff();
+      res.json(staff);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      res.status(500).json({ error: 'Failed to fetch staff' });
+    }
+  });
+
+  // User profile update
+  app.patch('/api/users/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertUserSchema.partial().parse(req.body);
+      const user = await storage.updateUser(id, validatedData);
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({
+        success: true,
+        user
+      });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ error: 'Failed to update user' });
+    }
+  });
+
+  // Avatar upload
+  app.post('/api/users/:id/avatar', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      // Mock avatar upload - in production, use proper file upload
+      const avatarUrl = `/api/avatars/${id}.jpg`;
+
+      // TODO: Implement avatar upload to S3 bucket
+      console.log('Uploading avatar:', avatarUrl);
+
+      const updatedUser = await storage.updateUser(id, { avatar: avatarUrl });
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({ avatar: avatarUrl });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      res.status(500).json({ error: 'Failed to upload avatar' });
+    }
+  });
+
+  // Soft delete notes
+  app.delete('/api/notes/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCaseNote(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      res.status(500).json({ error: 'Failed to delete note' });
+    }
+  });
+
+  // STOP touchpoints
+  app.get('/api/staff/stop-touchpoints', async (req: Request, res: Response) => {
+    try {
+      const touchpoints = await storage.getStopTouchpoints();
+      res.json(touchpoints);
+    } catch (error) {
+      console.error('Error fetching STOP touchpoints:', error);
+      res.status(500).json({ error: 'Failed to fetch touchpoints' });
+    }
+  });
+
+  // Residents
+  app.get('/api/residents', async (req: Request, res: Response) => {
+    try {
+      const residents = await storage.getUsers();
+      res.json(residents);
+    } catch (error) {
+      console.error('Get residents error:', error);
+      res.status(500).json({ message: 'Failed to fetch residents' });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
-  
+
   return httpServer;
 }
