@@ -111,7 +111,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
                 animate={{ opacity: 1, x: 0 }}
                 className="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-800 text-white px-3 py-1 rounded-md text-sm whitespace-nowrap"
               >
-                Help & Support
+                Help?
               </motion.span>
             </motion.div>
           </>
