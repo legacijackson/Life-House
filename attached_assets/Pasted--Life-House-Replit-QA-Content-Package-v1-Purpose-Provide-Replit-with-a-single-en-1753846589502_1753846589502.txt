@@ -1,0 +1,157 @@
+# Life House – **Replit QA & Content Package** (v1)
+
+> **Purpose**  Provide Replit with a single, end‑to‑end checklist—covering every button, field, API call, and nightly job—plus the full website copy deck, so the dev team can confirm that *everything is wired, renders correctly, and functions as intended* before go‑live.
+
+---
+
+## 1  Feature & UI Inventory
+
+Below is the definitive list of features referenced across all prior prompts and blueprints.
+
+| ID       | App / Surface        | Component                    | Brief Description                                    |
+| -------- | -------------------- | ---------------------------- | ---------------------------------------------------- |
+| **I‑1**  | Public Web           | **“Apply Now” CTA button**   | Opens the Unified Intake form (modal)                |
+| **I‑2**  | Unified Intake Modal | Start → Next buttons         | 5‑step wizard navigation                             |
+| **I‑3**  | Unified Intake Modal | “Upload Docs” button         | Drag‑n‑drop for ID scan, proof of income             |
+| **I‑4**  | Unified Intake Modal | Consent checkboxes           | Privacy Notice & Handbook e‑sign checkboxes          |
+| **I‑5**  | Resident Portal      | **Dashboard** nav tab        | Landing page → goals, bed status, savings            |
+| **I‑6**  | Resident Portal      | “Request Maintenance” button | Opens ticket form w/ Categories & Priorities         |
+| **I‑7**  | Resident Portal      | “Resource Navigator” search  | Live‑search Sacramento resource catalog              |
+| **I‑8**  | Staff Dashboard      | **STOP TouchPoint counter**  | Badge shows # due within 48 h                        |
+| **I‑9**  | Staff Dashboard      | “Generate PDF” button        | Creates consent & handbook packet                    |
+| **I‑10** | Staff Dashboard      | “Run Monthly Report” button  | Executes Agent 5 report pipeline                     |
+| **I‑11** | Admin Panel          | Slack Webhook field          | Stores Ops channel URL                               |
+| **I‑12** | Admin Panel          | S3 Bucket field              | Stores AWS path for document storage                 |
+| **B‑1**  | Backend Job          | **Nightly Resource Crawler** | Cron 02:00 PT, updates CSV & posts changelog         |
+| **B‑2**  | Backend Job          | STOP ARMS Reminder Worker    | Fires 48 h/24 h reminders via Slack/Email            |
+| **B‑3**  | API Layer            | `/intake` POST endpoint      | Accepts JSON payload; returns 201                    |
+| **B‑4**  | API Layer            | `/portal/resources` GET      | Returns latest catalog JSON                          |
+| **B‑5**  | Database             | `residents` table            | Stores core demographic & program data               |
+| **B‑6**  | Database             | `tickets` table              | Stores maintenance & service requests                |
+| **B‑7**  | Integrations         | Slack Bot                    | Sends notifications; slash‑command `/lifehouse help` |
+| **B‑8**  | Integrations         | E‑Signature API              | Creates & tracks signature envelopes                 |
+
+---
+
+## 2  Comprehensive QA Checklist
+
+> **How to use:** Replit QA team should tick ✔️ each Test ID once the *expected result* is observed in the deployed preview. Wherever possible, use Cypress or Playwright scripts; backend items can use Jest/PyTest.
+
+### 2.1 Frontend / UX
+
+| Test ID  | Relates to | Steps                                    | Expected Result                                            |
+| -------- | ---------- | ---------------------------------------- | ---------------------------------------------------------- |
+| **F‑01** | I‑1        | Visit home page > click “Apply Now”      | Unified Intake modal opens; URL hash `#apply` added        |
+| **F‑02** | I‑2        | Fill Step 1 > click **Next**             | Step 2 loads; progress bar advances 20 %                   |
+| **F‑03** | I‑3        | Drag PDF into “Upload Docs”              | Thumbnail preview appears; S3 pre‑signed PUT 200           |
+| **F‑04** | I‑4        | Attempt submit without checking consents | Inline error “Please accept all required consents”         |
+| **F‑05** | I‑5        | Login as resident > click Dashboard      | Goals, savings widget render; API `/resident/me` 200       |
+| **F‑06** | I‑6        | Submit maintenance ticket (P2)           | Ticket appears in list with yellow tag “High”              |
+| **F‑07** | I‑7        | Search “ID”                              | Top 3 ID‑related resources returned < 300 ms               |
+| **F‑08** | I‑8        | Login as staff > view TouchPoint badge   | Number matches count of ARMS due in DB                     |
+| **F‑09** | I‑9        | Select resident > click Generate PDF     | Browser downloads merged PDF ≤ 5 sec                       |
+| **F‑10** | I‑10       | Click Run Monthly Report                 | KPI dashboard PDF downloads; values pull from last 30 days |
+| **F‑11** | I‑11       | Enter invalid Slack URL                  | Red warning “Invalid webhook” and block save               |
+| **F‑12** | I‑12       | Enter S3 bucket & test                   | Green toast “Connection successful”                        |
+
+### 2.2 Backend / API
+
+| Test ID      | Relates to | Steps                         | Expected Result                                    |
+| ------------ | ---------- | ----------------------------- | -------------------------------------------------- |
+| **B‑API‑01** | B‑3        | POST sample intake JSON       | 201 Created; response includes resident ID         |
+| **B‑API‑02** | B‑4        | GET /portal/resources         | Returns JSON ≥ 200 rows; `version` key incremented |
+| **B‑JOB‑01** | B‑1        | Trigger crawler cron manually | New CSV written; Slack msg in #lifehouse‑ops       |
+| **B‑JOB‑02** | B‑2        | Advance system time 24 h      | Reminder worker posts “24 h until due” DM          |
+| **B‑INT‑01** | B‑7        | /lifehouse help in Slack      | Bot responds with command list                     |
+| **B‑INT‑02** | B‑8        | Create envelope via API       | Signer email received; status `sent`               |
+
+### 2.3 Database & Data Integrity
+
+| Test ID   | Relates to | Steps                 | Expected Result                                |
+| --------- | ---------- | --------------------- | ---------------------------------------------- |
+| **DB‑01** | B‑5        | Create intake         | `residents` row created w/ foreign keys intact |
+| **DB‑02** | B‑6        | Submit ticket         | `tickets` row inserts; `priority` = 2          |
+| **DB‑03** | All        | Run migration scripts | No errors; all tables at schema v2025\_07\_29  |
+
+### 2.4 Security & Compliance
+
+| Test ID    | Area      | Steps                              | Expected Result                          |
+| ---------- | --------- | ---------------------------------- | ---------------------------------------- |
+| **SEC‑01** | Auth      | Attempt portal URL unauthenticated | Redirect to /login                       |
+| **SEC‑02** | PHI       | Query REST w/out token             | 401 Unauthorized                         |
+| **SEC‑03** | Redaction | Export encounter PDF               | SSN/DOB black‑boxed per Redaction\_Rules |
+
+### 2.5 Performance & Uptime
+
+| Test ID     | Scenario                   | Target          |
+| ----------- | -------------------------- | --------------- |
+| **PERF‑01** | Home page TTI (desktop 3G) | ≤ 3 s           |
+| **PERF‑02** | Dashboard API latency      | P95 ≤ 250 ms    |
+| **UP‑01**   | Ping web app for 24 h      | ≥ 99.5 % uptime |
+
+---
+
+## 3  Website Copy Deck
+
+*(Placeholders like **{{variable}}** are runtime‑filled by CMS or API.)*
+
+### 3.1 Home Page
+
+**Hero Headline:**  *“Reentry Begins with Dignity.”*
+**Sub‑text:**  *Life House is a family‑style, six‑bed home in Sacramento where justice‑impacted men rebuild careers, reconnect with their kids, and save for homeownership.*
+**CTA Button:** **Apply Now**
+
+**Section – Why Life House?**
+• **Community Over Custody:** We’re not a shelter—we’re a family.
+• **Earn & Save:** Residents leave with a job and an average of **\${{avg\_savings}}** in the bank.
+• **Stay Healthy:** On‑site peer support, weekly workshops, and full CalAIM services.
+
+**Section – Program Pathway (7 Stages)**: Illustration + hover cards (Assessment → Aftercare).
+
+### 3.2 About Us
+
+**Mission Statement:**  *Restoring healthy and healed men back into our communities.*
+**Vision:**  By 2030, Life House will house 300 men per year across Northern CA.
+**Values:**  Accountability, Family, Excellence, Grace.
+
+### 3.3 Services
+
+*STOP Contract Beds • CalAIM ECM • Community Supports – Housing Transition & Tenancy • Employment Coaching • Financial Literacy*
+
+### 3.4 Apply Page
+
+Intro paragraph + embedded Unified Intake modal; FAQs below (“What documents do I need?”).
+
+### 3.5 Contact
+
+Address, phone, email, social links, and map embed.
+
+*(Footer copy with © 2025, Privacy Notice link.)*
+
+---
+
+## 4  Connection Matrix & Test Hooks
+
+| Component                 | Connected to        | Validation Hook                       |
+| ------------------------- | ------------------- | ------------------------------------- |
+| Unified Intake (Frontend) | `/intake` API       | Cypress intercept → assert 201        |
+| Resource Navigator        | `/portal/resources` | Mock fetch → assert 200 + JSON length |
+| Generate PDF              | S3 bucket           | Check S3 list for new object key      |
+| Slack Notifications       | Slack app token     | Listen to #lifehouse‑ops via RTM API  |
+| E‑Signature               | Docusign envelope   | Poll envelope status → `completed`    |
+
+---
+
+## 5  Go‑Live Acceptance Criteria
+
+1. ✔️ All QA tests above pass on staging URL.
+2. ✔️ Uptime monitor shows ≥ 99.5 % over 48 h soak.
+3. ✔️ First nightly resource crawler run completes and posts changelog.
+4. ✔️ STOP TouchPoint counter matches ARMS portal data for test resident.
+5. ✔️ Board‑ready Monthly Report PDF generated with dummy data.
+
+Once all five items are confirmed by Replit QA, Life House Ops may sign the *Production Readiness Form* and schedule DNS cut‑over.
+
+---
+
+*Last updated: 2025‑07‑29*
