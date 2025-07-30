@@ -432,7 +432,7 @@ export default function CaseNotes() {
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement;
                                     target.style.display = 'none';
-                                    target.parentElement!.innerHTML = selectedNote.staffName.split(' ').map((n: string) => n[0]).join('');
+                                    target.parentElement!.textContent = selectedNote.staffName.split(' ').map((n: string) => n[0]).join('');
                                     target.parentElement!.className += ' bg-blue-100 text-blue-800 font-semibold text-xs';
                                   }}
                                 />
