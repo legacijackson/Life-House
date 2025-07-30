@@ -32,7 +32,7 @@ export function ProgramOverviewModal({ isOpen, onClose }: ProgramOverviewModalPr
             <div className="flex items-center space-x-4 mb-4">
               <img src="/lifehouse-logo.png" alt="Life House Logo" className="w-16 h-16" />
               <div>
-                <h1 className="text-3xl font-bold">Life House Reentry</h1>
+                
                 <p className="text-green-100">Program Overview & Services</p>
               </div>
             </div>
