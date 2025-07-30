@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { UnifiedIntakeModal } from "@/components/unified-intake-modal";
 import { Logo } from "@/components/logo";
-import { SignupModal } from "@/components/signup-modal";
+import { PortalLoginModal } from "@/components/portal-login-modal";
 import { ProgramInquiryModal } from "@/components/program-inquiry-modal";
 import { PartnerSignupModal } from "@/components/partner-signup-modal";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
@@ -512,7 +512,7 @@ export default function Landing() {
         isOpen={isIntakeModalOpen} 
         onClose={() => setIsIntakeModalOpen(false)} 
       />
-      <SignupModal
+      <PortalLoginModal
         isOpen={isSignupModalOpen}
         onClose={() => setIsSignupModalOpen(false)}
       />

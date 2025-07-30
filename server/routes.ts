@@ -195,6 +195,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User login
+  app.post('/api/login', async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+      
+      // Validate input
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      
+      // Verify password
+      const passwordValid = await bcrypt.compare(password, user.passwordHash);
+      if (!passwordValid) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      
+      // In production, generate proper JWT token
+      const token = `mock-token-${user.id}`;
+      
+      res.json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Failed to login' });
+    }
+  });
+
   // Program inquiry submission
   app.post('/api/inquiry', async (req: Request, res: Response) => {
     try {
