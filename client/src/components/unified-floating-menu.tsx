@@ -32,17 +32,32 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
         animate={{ scale: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <Button
-          onClick={() => setIsOpen(!isOpen)}
-          size="lg"
-          className="rounded-full h-16 w-16 shadow-xl bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all duration-200"
-        >
-          {isOpen ? (
-            <X className="h-7 w-7" />
-          ) : (
-            <Logo variant="white" layout="icon" className="h-8 w-8" />
+        <div className="relative">
+          <Button
+            onClick={() => setIsOpen(!isOpen)}
+            size="lg"
+            className="rounded-full h-16 w-16 shadow-xl bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all duration-200"
+          >
+            {isOpen ? (
+              <X className="h-7 w-7" />
+            ) : (
+              <Logo variant="white" layout="icon" className="h-8 w-8" />
+            )}
+          </Button>
+          {/* Small overlay image for custom logo */}
+          {!isOpen && (
+            <div 
+              className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full shadow-md border-2 border-green-600 flex items-center justify-center cursor-pointer"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              <img 
+                src="/house-icon.png" 
+                alt="Life House Logo" 
+                className="w-4 h-4 object-contain"
+              />
+            </div>
           )}
-        </Button>
+        </div>
       </motion.div>
 
       {/* Menu options */}
