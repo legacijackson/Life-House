@@ -46,7 +46,7 @@ export default function Landing() {
               ✨ 7-Stage Reentry Program
             </Badge>
             <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Home for</span><br />
+              <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Home, for</span><br />
               <span className="bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Good.</span><br />
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-4xl">Life House</span>
             </h1>
