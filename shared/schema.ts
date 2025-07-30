@@ -327,6 +327,44 @@ export const auditLog = pgTable("audit_log", {
   index("audit_log_ts_idx").on(table.ts),
 ]);
 
+// FAQ Support System Tables
+export const faqs = pgTable("faqs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  weight: integer("weight").default(100),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("faqs_weight_idx").on(table.weight),
+]);
+
+export const faqPages = pgTable("faq_pages", {
+  faqId: uuid("faq_id").references(() => faqs.id, { onDelete: "cascade" }).notNull(),
+  pathPattern: text("path_pattern").notNull(), // e.g. '/portal*' or '/admin/*'
+}, (table) => [
+  index("faq_pages_faq_id_idx").on(table.faqId),
+  index("faq_pages_path_pattern_idx").on(table.pathPattern),
+]);
+
+export const faqRoles = pgTable("faq_roles", {
+  faqId: uuid("faq_id").references(() => faqs.id, { onDelete: "cascade" }).notNull(),
+  role: roleEnum("role").notNull(),
+}, (table) => [
+  index("faq_roles_faq_id_idx").on(table.faqId),
+  index("faq_roles_role_idx").on(table.role),
+]);
+
+export const faqFeedback = pgTable("faq_feedback", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  faqId: uuid("faq_id").references(() => faqs.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  helpful: boolean("helpful").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("faq_feedback_faq_id_idx").on(table.faqId),
+  index("faq_feedback_user_id_idx").on(table.userId),
+]);
+
 // Inquiries table for program information requests
 export const inquiries = pgTable("inquiries", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -486,6 +524,37 @@ export const ticketsRelations = relations(tickets, ({ one }) => ({
   }),
 }));
 
+export const faqsRelations = relations(faqs, ({ many }) => ({
+  pages: many(faqPages),
+  roles: many(faqRoles),
+  feedback: many(faqFeedback),
+}));
+
+export const faqPagesRelations = relations(faqPages, ({ one }) => ({
+  faq: one(faqs, {
+    fields: [faqPages.faqId],
+    references: [faqs.id],
+  }),
+}));
+
+export const faqRolesRelations = relations(faqRoles, ({ one }) => ({
+  faq: one(faqs, {
+    fields: [faqRoles.faqId],
+    references: [faqs.id],
+  }),
+}));
+
+export const faqFeedbackRelations = relations(faqFeedback, ({ one }) => ({
+  faq: one(faqs, {
+    fields: [faqFeedback.faqId],
+    references: [faqs.id],
+  }),
+  user: one(users, {
+    fields: [faqFeedback.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -562,6 +631,16 @@ export const insertPartnerSchema = createInsertSchema(partners).omit({
   approvedAt: true,
 });
 
+export const insertFaqSchema = createInsertSchema(faqs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFaqFeedbackSchema = createInsertSchema(faqFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -593,3 +672,9 @@ export type Inquiry = typeof inquiries.$inferSelect;
 export type InsertInquiry = z.infer<typeof insertInquirySchema>;
 export type Partner = typeof partners.$inferSelect;
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+export type FAQ = typeof faqs.$inferSelect;
+export type InsertFAQ = z.infer<typeof insertFaqSchema>;
+export type FAQPage = typeof faqPages.$inferSelect;
+export type FAQRole = typeof faqRoles.$inferSelect;
+export type FAQFeedback = typeof faqFeedback.$inferSelect;
+export type InsertFAQFeedback = z.infer<typeof insertFaqFeedbackSchema>;

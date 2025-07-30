@@ -1,0 +1,123 @@
+# Life House – **Replit Dev & QA Mega‑Prompt** (v8 – 31 Jul 2025)
+
+> **What’s new in v8**
+> • Context‑aware Support/FAQ system (CR‑38) that shows only the articles relevant to the *user’s role* **and** the *page they are currently viewing*.
+> • Database tables, API routes, React hooks, and Cypress/Jest tests for the new feature.
+> • Every previous CR‑1 → CR‑37 remains unchanged and blocking; CR‑38 is *additionally* blocking for v1.2.0.
+
+---
+
+## 1  Change‑Request Matrix (add CR‑38)
+
+| #                                                                                                                                           | New Request                           | Feature ID | Dev Tasks   | QA ID |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---------- | ----------- | ----- |
+| **CR‑38**                                                                                                                                   | **Role‑ & Page‑specific Support/FAQ** | I‑42       | **Backend** |       |
+| • Create `faqs`, `faq_pages`, `faq_roles` tables (see §2)                                                                                   |                                       |            |             |       |
+| • Seed articles per role/page (CSV provided separately).                                                                                    |                                       |            |             |       |
+| • Add `/support?role={role}&page={path}` GET API which returns union of generic role articles + page‑specific articles ordered by `weight`. |                                       |            |             |       |
+| **Frontend**                                                                                                                                |                                       |            |             |       |
+| • Add `<SupportDrawer>` component pinned bottom‑right; opens on `?support=true` or ❓ icon.                                                  |                                       |            |             |       |
+| • Inside drawer show search bar + accordion of FAQs returned from API.                                                                      |                                       |            |             |       |
+| • Auto‑prefill `role` from JWT and `page` from `useLocation()`.                                                                             |                                       |            |             |       |
+| • Add **Feedback** thumb‑up/down button which POSTs `/support/feedback`.                                                                    | F‑41, B‑API‑09, DB‑09                 |            |             |       |
+
+*(CR‑1 → CR‑37 unchanged; see previous sections.)*
+
+---
+
+## 2  DB Schema Δ (Support FAQ)
+
+```sql
+-- master FAQ articles
+CREATE TABLE faqs (
+  id          serial PRIMARY KEY,
+  question    text NOT NULL,
+  answer      text NOT NULL,
+  weight      int  DEFAULT 100,
+  created_at  timestamptz DEFAULT now()
+);
+-- link an FAQ to one or more app pages (by route path pattern)
+CREATE TABLE faq_pages (
+  faq_id int REFERENCES faqs(id) ON DELETE CASCADE,
+  path_pattern text  -- e.g. '/portal*' or '/admin/*'
+);
+-- link an FAQ to one or more roles
+CREATE TABLE faq_roles (
+  faq_id int REFERENCES faqs(id) ON DELETE CASCADE,
+  role   user_role_enum
+);
+-- feedback table
+CREATE TABLE faq_feedback (
+  id serial PRIMARY KEY,
+  faq_id int REFERENCES faqs(id),
+  user_id int REFERENCES users(id),
+  helpful boolean,
+  created_at timestamptz DEFAULT now()
+);
+```
+
+---
+
+## 3  API Routes – Support
+
+| Route               | Verb | Query/Body         | Notes                                                      |
+| ------------------- | ---- | ------------------ | ---------------------------------------------------------- |
+| `/support`          | GET  | `role,page`        | Returns array of `{id,question,answer}` sorted by `weight` |
+| `/support/feedback` | POST | `{faqId, helpful}` | Auth required; saves feedback                              |
+
+---
+
+## 4  Front‑End Components (additions)
+
+| Component                                          | Key Points                                                          |
+| -------------------------------------------------- | ------------------------------------------------------------------- |
+| **SupportDrawer** (`components/SupportDrawer.jsx`) | • Controlled by context `<SupportProvider>` so any page can open it |
+| • Uses `useFetch('/support?role=...&page=...')`    |                                                                     |
+| • Render search input (client‑side fuzzy search)   |                                                                     |
+| • FAQ accordion (question clickable)               |                                                                     |
+| • Thumbs 👍/👎 sends POST feedback                 |                                                                     |
+| **SupportProvider**                                | injects `openSupport()` into React context; ❓ icon uses it          |
+| **withSupport** HOC                                | Auto‑opens SupportDrawer if URL contains `?support=true`            |
+
+---
+
+## 5  Cypress / Jest Additions
+
+| Test ID      | Scenario                                         | Expected                                                                 |
+| ------------ | ------------------------------------------------ | ------------------------------------------------------------------------ |
+| **F‑41**     | Login as Resident → navigate `/portal` → click ❓ | Drawer opens; only FAQs where role=resident & page like `/portal*` shown |
+| **B‑API‑09** | GET `/support?role=admin&page=/admin/settings`   | Returns ≥1 admin‑specific article; none with role=resident only          |
+| **DB‑09**    | Verify seed: `SELECT COUNT(*) FROM faqs` ≥20     | passes                                                                   |
+| **SEC‑07**   | Resident calls `/support?role=admin`             | API ignores spoofed role and uses JWT role                               |
+
+---
+
+## 6  Manual QA Checklist Add‑Ons
+
+| #    | Action                                                    | Proof |
+| ---- | --------------------------------------------------------- | ----- |
+| 8‑12 | CM on `/case-manager` opens Support → sees CM FAQs        | png   |
+| 8‑13 | Partner on `/partner` opens Support → no resident‑only Qs | png   |
+| 8‑14 | Search “password” returns reset FAQ                       | gif   |
+
+---
+
+## 7  Evidence Bundle Updates
+
+```
+/artifacts/support/
+  resident_portal_faq.png
+  admin_settings_faq.png
+  search_password.gif
+```
+
+---
+
+## 8  Go‑Live Gate Additions
+
+20. ✔️ F‑41, B‑API‑09, SEC‑07 pass in CI.
+21. ✔️ Manual checks 8‑12‑14 attached.
+
+---
+
+All earlier sections (v7) remain valid—this update simply layers the new Support/FAQ system on top.  *Last updated: 2025‑07‑31*

@@ -12,8 +12,14 @@ import {
   insertApplicationSchema, 
   insertDonationSchema,
   insertInquirySchema,
-  insertPartnerSchema
+  insertPartnerSchema,
+  faqs,
+  faqRoles,
+  faqPages,
+  faqFeedback
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, like, desc, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import Stripe from "stripe";
 
@@ -1366,6 +1372,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch residents' });
     }
   });
+
+  // Support/FAQ system routes
+  app.get('/api/support', authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { page } = req.query;
+      const userRole = req.user.role;
+      const currentPage = page as string || '';
+
+      // Query FAQs based on user role and current page
+      const result = await db
+        .select({
+          id: faqs.id,
+          question: faqs.question,
+          answer: faqs.answer,
+          weight: faqs.weight
+        })
+        .from(faqs)
+        .innerJoin(faqRoles, eq(faqs.id, faqRoles.faqId))
+        .leftJoin(faqPages, eq(faqs.id, faqPages.faqId))
+        .where(
+          and(
+            eq(faqRoles.role, userRole as any),
+            currentPage ? like(faqPages.pathPattern, `${currentPage}*`) : sql`true`
+          )
+        )
+        .orderBy(desc(faqs.weight))
+        .groupBy(faqs.id, faqs.question, faqs.answer, faqs.weight);
+
+      res.json(result);
+    } catch (error) {
+      console.error('Support FAQ error:', error);
+      res.status(500).json({ message: 'Failed to fetch FAQs' });
+    }
+  }));
+
+  app.post('/api/support/feedback', authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { faqId, helpful } = req.body;
+      const userId = req.user.id;
+
+      // Insert feedback into database
+      await db.insert(faqFeedback).values({
+        faqId,
+        userId,
+        helpful
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('FAQ feedback error:', error);
+      res.status(500).json({ message: 'Failed to save feedback' });
+    }
+  }));
 
   // Create HTTP server
   const httpServer = createServer(app);
