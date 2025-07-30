@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, Home, Users, GraduationCap, Briefcase, DollarSign, Heart, Phone, Mail, MapPin } from "lucide-react";
+import _3 from "@assets/3.png";
 // Using direct path to the logo in public directory
 
 interface ProgramOverviewModalProps {
@@ -30,7 +31,7 @@ export function ProgramOverviewModal({ isOpen, onClose }: ProgramOverviewModalPr
               <X className="w-6 h-6" />
             </button>
             <div className="flex items-center space-x-4 mb-4">
-              <img src="/lifehouse-logo.png" alt="Life House Logo" className="w-16 h-16" />
+              <img src={_3} alt="Life House Logo" className="w-16 h-16" />
               <div>
                 
                 <p className="text-green-100">Program Overview & Services</p>
