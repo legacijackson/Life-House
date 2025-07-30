@@ -251,7 +251,7 @@ export default function Residents() {
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
                               target.style.display = 'none';
-                              target.parentElement!.innerHTML = selectedResident.name.split(' ').map(n => n[0]).join('');
+                              target.parentElement!.textContent = selectedResident.name.split(' ').map(n => n[0]).join('');
                               target.parentElement!.className += ' bg-blue-100 text-blue-800 font-semibold text-sm';
                             }}
                           />
