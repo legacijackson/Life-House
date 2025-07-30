@@ -1,3 +1,4 @@
+import Life_house_logo_ from "@assets/Life house logo .png";
 interface LogoProps {
   className?: string;
   onClick?: () => void;
@@ -15,9 +16,9 @@ export function Logo({ className = '', onClick }: LogoProps) {
 
   return (
     <img 
-      src="/lifehouse-logo.png" 
+      src={Life_house_logo_} 
       alt="Life House Reentry" 
-      className={`object-contain cursor-pointer ${className}`}
+      className="object-contain cursor-pointer h-12 ml-[2px] mr-[2px]"
       onClick={handleClick}
     />
   );
