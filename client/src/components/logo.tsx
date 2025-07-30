@@ -19,7 +19,7 @@ export function Logo({ className = '', onClick }: LogoProps) {
 
   return (
     <img 
-      src={LifeHouseHorizontal} 
+      src={Untitled_design__3_} 
       alt="Life House Reentry" 
       className="object-contain cursor-pointer h-12 ml-[2px] mr-[2px]"
       onClick={handleClick}
