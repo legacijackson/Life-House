@@ -34,7 +34,7 @@ export default function Landing() {
             <Button 
               onClick={() => window.location.href = '/resources'}
               id="resources-btn"
-              className="border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition px-4 py-2"
+              className="border border-blue-600 text-blue-600 hover:bg-[#2563eb] hover:text-white transition px-4 py-2"
               data-testid="resources-button"
             >
               Resources

@@ -29,6 +29,9 @@ export default function GuestResourcesPage() {
     queryFn: () => fetch(`/api/resources/public?q=${encodeURIComponent(searchTerm)}`).then(res => res.json()),
   });
 
+  // Ensure resources is always an array
+  const resourcesList = Array.isArray(resources) ? resources : [];
+
   const handleLoginToSave = () => {
     window.location.href = '/';
   };
@@ -91,7 +94,7 @@ export default function GuestResourcesPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
             <p className="text-gray-500">Loading resources...</p>
           </div>
-        ) : resources.length === 0 ? (
+        ) : resourcesList.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">
               {searchTerm ? 'No resources match your search.' : 'No resources available at this time.'}
@@ -99,7 +102,7 @@ export default function GuestResourcesPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {resources.map((resource: Resource) => (
+            {resourcesList.map((resource: Resource) => (
               <Card key={resource.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-lg">{resource.name}</CardTitle>
