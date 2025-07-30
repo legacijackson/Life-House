@@ -474,7 +474,11 @@ export default function Landing() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Logo className="w-6 h-6" />
+                <img 
+                  src="/attached_assets/Untitled design (4)_1753914677705.png" 
+                  alt="Life House Logo" 
+                  className="w-6 h-6 object-contain"
+                />
               </div>
               <p className="text-green-100 text-sm">
                 Home for Good. Safe, structured housing and life-design support for people returning from incarceration.
