@@ -1,0 +1,189 @@
+# Life House – **Replit QA, Change‑List & Content Package** (v4 – July 29 2025)
+
+> **Purpose**  Give Replit dev & QA teams a single, line‑item guide that (1) lists every feature, button, and background job; (2) spells out *all new fixes and enhancements requested on 2025‑07‑29*; (3) supplies the full website copy deck; and (4) provides detailed QA tests so you can verify the entire stack is wired, polished, and ready for production.
+
+---
+
+## 0  Today’s Change‑Request Sprint  ❗
+
+Below is the **must‑fix list** the user provided. Every item is mapped to a Feature ID (from §1) and has explicit Dev Tasks + QA Tests.
+
+| #                                                                                                 | User Issue / Request                                                                   | Feature ID(s) | Dev Tasks                                                                               | QA Test ID      |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------- | --------------- |
+| **CR‑1**                                                                                          | Portal Login does nothing. Should prompt for username, password, profile.              | I‑13 (new)    | • Create `/signup` modal (fields: email, password, first + last name)                   |                 |
+| • Hash passwords (bcrypt)                                                                         |                                                                                        |               |                                                                                         |                 |
+| • Insert row in `users` + `profiles` tables                                                       |                                                                                        |               |                                                                                         |                 |
+| • Send verification email via SendGrid                                                            | F‑13, B‑API‑03, DB‑04                                                                  |               |                                                                                         |                 |
+| **CR‑2**                                                                                          | **About** nav click has no action. Should scroll to About section on home.             | I‑14 (new)    | • Add `id="about"` to About div                                                         |                 |
+| • Set nav link `href="#about"`                                                                    |                                                                                        |               |                                                                                         |                 |
+| • Smooth‑scroll JS                                                                                | F‑14                                                                                   |               |                                                                                         |                 |
+| **CR‑3**                                                                                          | “Learn More About Our Programs” dead. Should open contact inquiry modal.               | I‑15 (new)    | • Build `#program‑inquiry` modal with 4 fields (name, email, program interest, message) |                 |
+| • On submit → SendGrid email to [julius@lifehousereentry.com](mailto:julius@lifehousereentry.com) |                                                                                        |               |                                                                                         |                 |
+| • Store in `inquiries` table                                                                      | F‑15, B‑INT‑03                                                                         |               |                                                                                         |                 |
+| **CR‑4**                                                                                          | Forms not routed. Use free SendGrid. Replit has API key.                               | I‑16 (new)    | • Configure SendGrid API key `REPLIT_SENDGRID_KEY` env                                  |                 |
+| • Generic `sendEmail()` util                                                                      |                                                                                        |               |                                                                                         |                 |
+| • Forward all form JSON to julius@…                                                               | B‑INT‑04                                                                               |               |                                                                                         |                 |
+| **CR‑5**                                                                                          | Confirmation alert shows Replit URL; change to “Life House Hospitality Team”.          | I‑17 (new)    | • Replace `window.alert` text in all forms                                              | F‑16            |
+| **CR‑6**                                                                                          | Privacy Notice & Handbook links. Must open PDF in modal, require open before checkbox. | I‑4           | • Add inline PDF viewer (PDF.js)                                                        |                 |
+| • Disable consent checkbox until `onOpen` fires                                                   | F‑17                                                                                   |               |                                                                                         |                 |
+| **CR‑7**                                                                                          | Draft **Terms & Conditions** doc.                                                      | I‑4           | • Create `/docs/terms.pdf`; link next to Privacy & Handbook                             | Doc deliverable |
+| **CR‑8**                                                                                          | Track **Application IDs** in DB.                                                       | B‑5           | • Add `application_id` UUID column                                                      |                 |
+| • Return ID in `/intake` response                                                                 | B‑API‑05, DB‑05                                                                        |               |                                                                                         |                 |
+| **CR‑9**                                                                                          | Donation tiers wrong. Update copy & Stripe checkout (test mode).                       | I‑18 (new)    | • Replace amounts (\$50, \$400, \$2 500) & descriptions                                 |                 |
+| • Set Stripe price IDs in `.env`                                                                  |                                                                                        |               |                                                                                         |                 |
+| • `/donate` checkout session route                                                                | F‑18, B‑INT‑05                                                                         |               |                                                                                         |                 |
+| **CR‑10**                                                                                         | **Partner With Us** link opens mail client; should open partner profile form + email.  | I‑19 (new)    | • Build `#partner‑signup` modal (org name, contact, service type)                       |                 |
+| • Save to `partners` table                                                                        |                                                                                        |               |                                                                                         |                 |
+| • SendGrid confirmation                                                                           | F‑19, DB‑06                                                                            |               |                                                                                         |                 |
+| **CR‑11**                                                                                         | Update website logo + fix hero image spacing over Donate button.                       | I‑20 (new)    | • Replace `/assets/logo.png`                                                            |                 |
+| • Adjust CSS grid on hero section                                                                 | F‑20                                                                                   |               |                                                                                         |                 |
+| **CR‑12**                                                                                         | No AI chatbot on home. Add chat widget.                                                | I‑21 (new)    | • Embed OpenAI Chat Assistant via iframe/script                                         |                 |
+| • Brand colors (#005248, #FCA311)                                                                 | F‑21, PERF‑03                                                                          |               |                                                                                         |                 |
+| **CR‑13**                                                                                         | Deliver chatbot answers on‑brand.                                                      | I‑21          | • Custom CSS to match typography                                                        |                 |
+| • Set system prompt with tone guidelines                                                          | F‑22                                                                                   |               |                                                                                         |                 |
+
+*(All F‑/B‑/DB‑ test IDs are defined in §2.)*
+
+---
+
+## 1  Feature & UI Inventory  (Updated)
+
+| ID          | App / Surface        | Component                                    | Brief Description                                |
+| ----------- | -------------------- | -------------------------------------------- | ------------------------------------------------ |
+| **I‑1**     | Public Web           | “Apply Now” CTA button                       | Opens Unified Intake modal                       |
+| **I‑2**     | Unified Intake Modal | Start → Next buttons                         | 5‑step wizard navigation                         |
+| **I‑3**     | Unified Intake Modal | “Upload Docs” button                         | Drag‑n‑drop for ID scan                          |
+| **I‑4**     | Unified Intake Modal | Consent section                              | Privacy, Handbook, Terms PDF viewer + checkboxes |
+| **I‑5**     | Resident Portal      | Dashboard nav tab                            |                                                  |
+| **I‑6**     | Resident Portal      | “Request Maintenance” button                 |                                                  |
+| **I‑7**     | Resident Portal      | Resource Navigator search                    |                                                  |
+| **I‑8**     | Staff Dashboard      | STOP TouchPoint counter                      |                                                  |
+| **I‑9**     | Staff Dashboard      | “Generate PDF” button                        |                                                  |
+| **I‑10**    | Staff Dashboard      | “Run Monthly Report” button                  |                                                  |
+| **I‑11**    | Admin Panel          | Slack Webhook field                          |                                                  |
+| **I‑12**    | Admin Panel          | S3 Bucket field                              |                                                  |
+| **I‑13**    | Auth Modals          | **Sign Up / Login** modal (new)              |                                                  |
+| **I‑14**    | Nav Bar              | “About” anchor link (new)                    |                                                  |
+| **I‑15**    | Home Hero            | “Learn More About Our Programs” button (new) |                                                  |
+| **I‑16**    | Backend Utility      | `sendEmail()` – SendGrid wrapper (new)       |                                                  |
+| **I‑17**    | Global Alerts        | Confirmation toast mod (new)                 |                                                  |
+| **I‑18**    | Donate Page          | Stripe Pricing & Checkout flow (new)         |                                                  |
+| **I‑19**    | Partner Modal        | Partner With Us signup (new)                 |                                                  |
+| **I‑20**    | Branding             | New logo & hero spacing fix                  |                                                  |
+| **I‑21**    | Home Chat            | AI Chatbot widget (new)                      |                                                  |
+| **B‑1…B‑8** | (unchanged)          |                                              |                                                  |
+
+---
+
+## 2  Comprehensive QA Checklist (Augmented)
+
+### 2.1 Frontend / UX  (Additions)
+
+| Test ID  | Relates to | Steps                                          | Expected Result                                           |
+| -------- | ---------- | ---------------------------------------------- | --------------------------------------------------------- |
+| **F‑13** | I‑13       | Click “Portal Login” > choose “Create Account” | Sign‑up modal opens; submitting creates user & profile    |
+| **F‑14** | I‑14       | Click About nav link                           | Page scrolls to About section with smooth animation       |
+| **F‑15** | I‑15       | Click Learn More About Our Programs            | Program inquiry modal opens                               |
+| **F‑16** | I‑17       | Submit any form                                | Confirmation alert shows “Life House Hospitality Team”    |
+| **F‑17** | I‑4        | Attempt to check consent before opening docs   | Checkbox disabled until PDF viewer is opened              |
+| **F‑18** | I‑18       | Choose \$400 Monthly → Donate                  | Redirects to Stripe test checkout; success page `/thanks` |
+| **F‑19** | I‑19       | Submit Partner form                            | Toast “Thank you”; email received by julius@…             |
+| **F‑20** | I‑20       | Load home hero                                 | New logo visible; Donate button not covered               |
+| **F‑21** | I‑21       | Open chat widget                               | Greets with brand colors                                  |
+| **F‑22** | I‑21       | Ask “What is Life House?”                      | On‑brand response within 2 s                              |
+
+### 2.2 Backend / API  (Additions)
+
+| Test ID      | Relates to | Steps                     | Expected Result                                |
+| ------------ | ---------- | ------------------------- | ---------------------------------------------- |
+| **B‑API‑03** | I‑13       | POST `/signup` JSON       | 201; JWT returned                              |
+| **B‑API‑05** | CR‑8       | Verify `/intake` response | Contains `application_id` UUID                 |
+| **B‑INT‑03** | I‑15       | Submit inquiry            | Row in `inquiries`; SendGrid event `delivered` |
+| **B‑INT‑04** | I‑16       | Call `sendEmail()` util   | 202 Accepted from SendGrid                     |
+| **B‑INT‑05** | I‑18       | Create Stripe checkout    | Session ID returned; status `open`             |
+
+### 2.3 Database & Data Integrity  (Additions)
+
+| Test ID   | Relates to | Steps          | Expected Result                      |
+| --------- | ---------- | -------------- | ------------------------------------ |
+| **DB‑04** | I‑13       | Create account | `users` + `profiles` rows created    |
+| **DB‑05** | CR‑8       | Intake         | `application_id` populated & indexed |
+| **DB‑06** | I‑19       | Partner signup | `partners` row created               |
+
+### 2.4 Performance & Uptime  (Additions)
+
+| Test ID     | Scenario         | Target   |
+| ----------- | ---------------- | -------- |
+| **PERF‑03** | Chat widget load | ≤ 500 ms |
+
+*(Original F‑/B‑/DB‑/SEC‑/PERF‑ tests remain valid and are required.)*
+
+---
+
+## 3  Website Copy Deck  (updated snippets)
+
+### 3.1 Donate Section (Home)
+
+```
+$50/month – Provides 1 week of stable housing
+$400/month – Funds job training & certification
+$2,500/month – Sponsors a resident's full support
+```
+
+(CTA button dynamically updates “Donate \${{amount}} {{frequency}}”.)
+
+### 3.2 Program Inquiry Modal (new)
+
+**Headline:** “Learn More About Our Programs”
+*Fill in the form below and our Hospitality Team will reach out within 24 hours.*
+
+Fields: Name, Email, Program Interest (dropdown), Message.
+
+### 3.3 Partner Signup Modal (new)
+
+**Headline:** “Partner With Life House”
+*List your organization so we can refer the right residents and co‑create impact.*
+
+Fields: Org Name, Contact Name, Email, Service Type (dropdown), Message.
+
+*(All other copy remains as v3.)*
+
+---
+
+## 4  Connection Matrix & Test Hooks (Additions)
+
+| Component       | Connected to                      | Validation Hook                              |
+| --------------- | --------------------------------- | -------------------------------------------- |
+| Sign‑Up Modal   | `/signup` API                     | Assert 201 + email sent                      |
+| Program Inquiry | `inquiries` table + `sendEmail()` | DB row + SendGrid event                      |
+| Partner Signup  | `partners` table + `sendEmail()`  | DB row + SendGrid event                      |
+| Donate Button   | Stripe Checkout Session           | Stripe Dashboard payment\_intent `succeeded` |
+| Chat Widget     | OpenAI API                        | JS console logs 200, latency < 500 ms        |
+
+---
+
+## 5  Go‑Live Acceptance Add‑Ons
+
+6. ✔️ Stripe test payments show in dashboard.
+7. ✔️ First partner signup email received.
+8. ✔️ First inquiry form logged & emailed.
+9. ✔️ Sign‑up → email verification loop works.
+10. ✔️ Chat widget answers FAQ with < 2 s latency.
+
+*All original 1–5 criteria remain mandatory.*
+
+---
+
+### 🚀 **Replit Dev Instructions (TL;DR)**
+
+1. **Pull latest code** from `main`.
+2. **Create new branches**: `feat/auth‑modal`, `feat/stripe‑donate`, etc.
+3. **Add `.env`** with `SENDGRID_KEY`, `STRIPE_SECRET`, `OPENAI_KEY`.
+4. **Implement CR‑1…CR‑13** exactly as Spec above.
+5. **Run Jest + Cypress**; ensure all tests pass.
+6. **Open PRs**, assign to QA; merge only after ✅ checklist.
+7. **Tag release v0.9.0‑rc1** once acceptance criteria met.
+
+---
+
+*Last updated: 2025‑07‑29*

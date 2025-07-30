@@ -1,0 +1,153 @@
+# Life House – **Replit Dev & QA Mega‑Prompt**  (v5 – July 29 2025)
+
+> **Purpose**  This single document is your authoritative, line‑by‑line playbook for bringing the Life House web app to production quality. It includes:
+>
+> 1. 🔧 **All change‑requests (CR‑1 → CR‑14)** mapped to dev tasks and QA tests.
+> 2. 🗂 **Asset replacement plan** with 10 new logo variants and how/where to integrate them.
+> 3. 🖥 **Full website copy deck** plus dynamic placeholders.
+> 4. ✅ **Comprehensive QA checklist** (frontend, backend, DB, security, performance).
+> 5. 🚀 **Step‑by‑step workflow** (branch strategy → deployment gating).
+>    Stick to the instructions below and you’ll hit *Feature Complete v0.9.0‑rc2*.
+
+---
+
+## 0  TODAY’S CHANGE‑REQUEST SPRINT  (CR‑1 → CR‑14)
+
+|  #                                                                                                     | User Issue / Request                                               | Feature ID(s) | **Dev Tasks (code‑level)**                                                                                   | QA Test ID |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------ | ---------- |
+| **CR‑1**                                                                                               | Portal Login does nothing; must support sign‑up & profile.         | I‑13          | ➊ Create `SignupModal.jsx` (Tailwind + framer‑motion)                                                        |            |
+|   • Fields: firstName, lastName, email, password (min 12 char, zxcvbn strength ≥ 3)                    |                                                                    |               |                                                                                                              |            |
+|   • API POST `/signup` → bcrypt hash (12 salt rounds) → `users` + `profiles`.                          |                                                                    |               |                                                                                                              |            |
+|   • JWT (HS256) returned; store in `localStorage.token`.                                               |                                                                    |               |                                                                                                              |            |
+|   • SendGrid “Welcome” email (template ID d‑welcome‑01).                                               | F‑13, B‑API‑03, DB‑04                                              |               |                                                                                                              |            |
+| **CR‑2**                                                                                               | About nav link is inert.                                           | I‑14          | Add `id="about"` to About section.                                                                           |            |
+| `<a href="#about" class="scroll-smooth">About</a>` in `Navbar.jsx`.                                    | F‑14                                                               |               |                                                                                                              |            |
+| **CR‑3**                                                                                               | “Learn More About Our Programs” dead. Needs inquiry modal + email. | I‑15          | ➊ Create `ProgramInquiryModal.jsx` with 4 fields.                                                            |            |
+| ➋ Client‑side validation (yup).                                                                        |                                                                    |               |                                                                                                              |            |
+| ➌ POST `/inquiry` → `inquiries` table.                                                                 |                                                                    |               |                                                                                                              |            |
+| ➍ `sendEmail('new-inquiry', payload)` to julius\@.                                                     | F‑15, B‑INT‑03                                                     |               |                                                                                                              |            |
+| **CR‑4**                                                                                               | Route all form emails via SendGrid (free tier).                    | I‑16          | ➊ Add `sendEmail.js` util: `from: noreply@lifehousereentry.org`.                                             |            |
+| ➋ Read env `SENDGRID_API_KEY`.                                                                         |                                                                    |               |                                                                                                              |            |
+| ➌ Handle 202/4XX gracefully (retry ×3).                                                                | B‑INT‑04                                                           |               |                                                                                                              |            |
+| **CR‑5**                                                                                               | Confirmation alert text.                                           | I‑17          | Replace `window.alert` with `react-hot-toast` → `toast.success('Thank you! – Life House Hospitality Team')`. | F‑16       |
+| **CR‑6**                                                                                               | Privacy / Handbook PDFs must open before checkbox enable.          | I‑4           | ➊ Add `PDFViewerModal.jsx` (using `@react-pdf-viewer`).                                                      |            |
+| ➋ `onOpen` sets `hasViewed=true`; disable checkbox until both docs viewed.                             | F‑17                                                               |               |                                                                                                              |            |
+| **CR‑7**                                                                                               | Draft Terms & Conditions doc.                                      | I‑4           | ➊ Create `docs/terms.pdf` (use Privacy/Handbook styling).                                                    |            |
+| ➋ Link next to other consents.                                                                         | Doc Deliverable                                                    |               |                                                                                                              |            |
+| **CR‑8**                                                                                               | Track application ID UUID.                                         | B‑5           | ALTER TABLE `residents` ADD `application_id` UUID DEFAULT gen\_random\_uuid();                               |            |
+| Return `{application_id}` in `/intake` 201 body.                                                       | B‑API‑05, DB‑05                                                    |               |                                                                                                              |            |
+| **CR‑9**                                                                                               | Update donation tiers + Stripe checkout.                           | I‑18          | ➊ Update `DonationTierCard.jsx` amounts/copy.                                                                |            |
+| ➋ Create Stripe prices in dashboard (test mode) – capture IDs `PRICE_WEEK`, `PRICE_JOB`, `PRICE_FULL`. |                                                                    |               |                                                                                                              |            |
+| ➌ POST `/donate` → stripe.checkout.sessions.create({price, mode:'subscription'}).                      | F‑18, B‑INT‑05                                                     |               |                                                                                                              |            |
+| **CR‑10**                                                                                              | Partner sign‑up modal + DB + email.                                | I‑19          | ➊ `PartnerSignupModal.jsx` (Org Name, Contact, Email, Service Type).                                         |            |
+| ➋ Save to `partners` table.                                                                            |                                                                    |               |                                                                                                              |            |
+| ➌ SendGrid confirm to user + copy to julius\@.                                                         | F‑19, DB‑06                                                        |               |                                                                                                              |            |
+| **CR‑11**                                                                                              | Replace all logos (see §A).                                        | I‑20          | — see Asset Plan below —                                                                                     | F‑20       |
+| **CR‑12**                                                                                              | Fix hero image covering Donate button.                             | I‑20          | ➊ Adjust Tailwind grid: `grid-rows-[auto_minmax(0,1fr)]`.                                                    |            |
+| ➋ Add `object-cover md:object-contain` to hero img.                                                    | F‑20                                                               |               |                                                                                                              |            |
+| **CR‑13**                                                                                              | Add AI Chatbot widget, on‑brand.                                   | I‑21          | ➊ Embed `<ChatBot provider="openai" theme="lifehouse">`.                                                     |            |
+| ➋ Set system prompt (tone: welcoming, second‑person, ≤75 words per answer).                            |                                                                    |               |                                                                                                              |            |
+| ➌ Custom CSS: primary `#7141FF`, accent `#00A86B`.                                                     | F‑21, F‑22, PERF‑03                                                |               |                                                                                                              |            |
+| **CR‑14**                                                                                              | Logo Asset Replacement (10 variants).                              | I‑20          | — *new* — see §A                                                                                             | F‑20       |
+
+> **Note:** All CR numbers are *blocking* for v0.9.0‑rc2.
+
+---
+
+## §A  LOGO ASSET REPLACEMENT PLAN  (CR‑11 + CR‑14)
+
+We received **10 PNGs** (transparent / white / light‑green; horizontal / vertical; large‑icon). Store them in `public/assets/brand/`:
+
+```
+lifehouse_color_horizontal.png   # primary nav + footer
+lifehouse_color_vertical.png     # favicon base (generate 32×32)
+lifehouse_color_icon.png         # mobile navbar
+lifehouse_white_horizontal.png   # dark‑mode nav
+lifehouse_white_icon.png         # dark‑mode mobile
+lifehouse_whitepurple_horizontal.png  # hero overlay
+lifehouse_lightgreen_horizontal.png   # email headers (light BG)
+lifehouse_lightgreen_icon.png         # email favicon
+lifehouse_color_large_icon.png        # OG‑image template
+lifehouse_white_large_icon.png        # alternate OG (dark BG)
+```
+
+### A.1  Code Changes
+
+1. **React `Logo.jsx` component** – Accept props `{variant:'color'|'white'|'lightgreen', layout:'horizontal'|'icon'}` to dynamically choose file.
+2. **Tailwind config** – Add `theme.extend.backgroundImage` for hero overlay `url('/assets/brand/lifehouse_color_horizontal.png')`.
+3. **Favicon / PWA** – Use `lifehouse_color_vertical.png` @ 32×32, 180×180, 512×512 (generate via real‑favicongenerator).
+4. **Email Templates** – Replace `<img src="cid:logo"/>` with `lifehouse_lightgreen_horizontal.png` for light backgrounds.
+5. **SEO / OG** – Update `pages/_document.jsx` meta og\:image to `lifehouse_color_large_icon.png` (1200×630).
+6. **Dark Mode** – CSS: `.dark .logo-img { content:url('/assets/brand/lifehouse_white_horizontal.png'); }`.
+
+### A.2  QA Tests
+
+| Test ID   | Path                                    | Expectation                           |
+| --------- | --------------------------------------- | ------------------------------------- |
+| **F‑20a** | Load site in light mode                 | Nav logo = color horizontal           |
+| **F‑20b** | Toggle dark mode (prefers‑color‑scheme) | Nav logo switches to white horizontal |
+| **F‑20c** | Mobile viewport 360 w                   | Logo uses color icon variant          |
+| **F‑20d** | Open email preview                      | Header logo = light‑green horizontal  |
+| **F‑20e** | View page source → meta og\:image       | Points to large\_icon.png             |
+
+---
+
+## 1  FEATURE & UI INVENTORY  (extended)
+
+*(Same table as v4 plus CR‑14; see full list in canvas.)*
+
+---
+
+## 2  COMPREHENSIVE QA CHECKLIST  (all frontend + backend + DB + perf + sec tests)
+
+*(Includes new test IDs F‑20a…F‑20e).* **All 50 tests must pass in Cypress/Jest before merge.**
+
+---
+
+## 3  FULL WEBSITE COPY DECK  (unchanged except Donate + new modals text)
+
+*(See canvas.)*
+
+---
+
+## 4  CONNECTION MATRIX & TEST HOOKS  (unchanged from v4 except logo CDN path check)
+
+---
+
+## 5  GO‑LIVE ACCEPTANCE CRITERIA  (add)
+
+11. ✔️ Logo asset swaps verified across 5 contexts (nav, dark, mobile, email, OG).
+12. ✔️ Google Lighthouse score ≥ 90 on performance & accessibility.
+
+---
+
+## 6  DEV WORKFLOW (📌 pin in README)
+
+```bash
+# 1. Clone & create branch
+$ git checkout -b feat/auth-modal
+
+# 2. Add .env
+SENDGRID_KEY=...
+STRIPE_SECRET=...
+OPENAI_KEY=...
+
+# 3. Run dev stack
+$ npm run dev
+
+# 4. Run tests
+$ npm run test         # Jest
+$ npx cypress run      # E2E
+
+# 5. Commit & push
+$ git commit -m "feat: signup modal (CR-1)"
+$ git push origin feat/auth-modal
+
+# 6. Open PR → request review from QA
+```
+
+*After all CR branches merged, tag **v0.9.0‑rc2** and deploy to Replit preview URL.*
+
+---
+
+*Last updated: 2025‑07‑29*
