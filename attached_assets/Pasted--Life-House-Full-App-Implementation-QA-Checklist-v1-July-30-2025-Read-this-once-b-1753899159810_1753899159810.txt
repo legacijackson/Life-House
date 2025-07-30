@@ -1,0 +1,1104 @@
+# Life House – **Full App Implementation & QA Checklist**  (v1 – July 30 2025)
+
+> **Read this once—build once—ship once.**  This single checklist aggregates every feature, fix, asset‑swap, integration, database migration, API route, UI element, test, and go‑live gate discussed to date.  Follow it line‑by‑line and the Life House platform will pass audit, user‑acceptance, and production readiness in a single sprint.
+>
+> **Legend**
+> • **\[DEV]** – Code you must write
+> • **\[DB]** – Schema changes / seed data
+> • **\[QA]** – Automated or manual verification
+> • **\[ASSET]** – Static file swap
+> • **\[OPS]** – Cron, environment, or deployment step
+
+---
+
+## 0  Prep
+
+| #   | Task                                                         | Type   | Done |
+| --- | ------------------------------------------------------------ | ------ | ---- |
+| 0‑1 | Pull `main`, merge all feature branches                      | \[DEV] | ☐    |
+| 0‑2 | `.env` contains SENDGRID, STRIPE (test), OPENAI, JWT\_SECRET | \[OPS] | ☐    |
+| 0‑3 | `npm i`, `npm run dev` with **0 warnings**                   | \[DEV] | ☐    |
+
+---
+
+## 1  Database & Schema
+
+| #   | Task                                                                                        | Type  | Done |
+| --- | ------------------------------------------------------------------------------------------- | ----- | ---- |
+| 1‑1 | Execute SQL in `/migrations/2025_07_30.sql` (roles, attendance, settings, lat/long, avatar) | \[DB] | ☐    |
+| 1‑2 | Seed super‑admin emails (Julius, Brittney, Kairia)                                          | \[DB] | ☐    |
+| 1‑3 | Seed `properties` with lat/long for each house                                              | \[DB] | ☐    |
+
+---
+
+## 2  Assets & Branding
+
+| #   | Task                                                            | Type     | File             | Done |
+| --- | --------------------------------------------------------------- | -------- | ---------------- | ---- |
+| 2‑1 | Copy **10 logo PNGs** → `public/assets/brand`                   | \[ASSET] | ✓ filenames list | ☐    |
+| 2‑2 | Generate favicons/PWA icons from `lifehouse_color_vertical.png` | \[ASSET] |                  | ☐    |
+| 2‑3 | Update OG image meta to `lifehouse_color_large_icon.png`        | \[ASSET] |                  | ☐    |
+| 2‑4 | Verify dark‑mode CSS swaps to white logo                        | \[QA]    | F‑20b            | ☐    |
+
+---
+
+## 3  Front‑End Components
+
+| #    | Component                | Source File                       | Key Details                               | Done |
+| ---- | ------------------------ | --------------------------------- | ----------------------------------------- | ---- |
+| 3‑1  | **ProfilePage**          | `ProfilePage.jsx`                 | Formik, PATCH `/users/:id`, avatar upload | ☐    |
+| 3‑2  | **SidebarLayout**        | `layouts/SidebarLayout.jsx`       | Import on Intake & Referrals              | ☐    |
+| 3‑3  | **CaseNotesPage**        | `Residents/CaseNotes.jsx`         | Fetch notes, print w/ @media print        | ☐    |
+| 3‑4  | **AttendanceModal**      | `AttendanceModal.jsx`             | Program dropdown, date, verifyStaff       | ☐    |
+| 3‑5  | **GeofenceCheckIn**      | `components/CheckInButton.jsx`    | Haversine ≤ 91 m                          | ☐    |
+| 3‑6  | **EditableNoteCard**     | `notes/EditableNoteCard.jsx`      | TipTap editor, soft‑delete                | ☐    |
+| 3‑7  | **AddResourceModal**     | `resources/AddResource.jsx`       | Fields per BAHC example                   | ☐    |
+| 3‑8  | **ReferResidentModal**   | `referrals/ReferResident.jsx`     | Email + DB row                            | ☐    |
+| 3‑9  | **PartnerSignupModal**   | `partners/Signup.jsx`             | Org Name, Partner Type                    | ☐    |
+| 3‑10 | **PropertyForm**         | `properties/PropertyForm.jsx`     | Only role≥admin                           | ☐    |
+| 3‑11 | **MaintenancePage**      | `maintenance/MaintenancePage.jsx` | Filter, NewTicketModal                    | ☐    |
+| 3‑12 | **ReportsPage**          | `reports/ReportsPage.jsx`         | Data checkbox matrix → PDF                | ☐    |
+| 3‑13 | **TouchpointCalendar**   | `calendar/ResidentCalendar.jsx`   | FullCalendar, POST `/events`              | ☐    |
+| 3‑14 | **ProgramOverviewModal** | `home/ProgramOverview.jsx`        | Pop‑up, overview copy, top+bottom CTA     | ☐    |
+| 3‑15 | **ChatWidget**           | `components/ChatWidget.jsx`       | OpenAI, branded CSS                       | ☐    |
+
+---
+
+## 4  API Routes & Services
+
+> **New (CR‑33): Stripe Webhook Endpoint** – handle `checkout.session.completed` so donations are confirmed server‑side.
+
+| #    | Route                   | Details                                                                                                  | Done |
+| ---- | ----------------------- | -------------------------------------------------------------------------------------------------------- | ---- |
+| 4‑1  | `POST /signup`          | Return JWT                                                                                               | ☐    |
+| 4‑2  | `PATCH /users/:id`      | Auth = self \| admin                                                                                     | ☐    |
+| 4‑3  | `POST /attendance`      | Inserts attendance row                                                                                   | ☐    |
+| 4‑4  | `POST /check‑in`        | Geofence validation                                                                                      | ☐    |
+| 4‑5  | `DELETE /notes/:id`     | Soft delete                                                                                              | ☐    |
+| 4‑6  | `POST /resource`        | Add resource row                                                                                         | ☐    |
+| 4‑7  | `POST /inquiry`         | SendGrid template d‑inquiry‑01                                                                           | ☐    |
+| 4‑8  | `POST /events`          | Create calendar event                                                                                    | ☐    |
+| 4‑9  | `POST /donate`          | Stripe checkout session (test)                                                                           | ☐    |
+| 4‑10 | `POST /webhooks/stripe` | **Verify signature**, handle `checkout.session.completed`; mark donation `paid_at`; send Thank‑You email | ☐    |
+
+| #   | Route               | Details                        | Done  |   |
+| --- | ------------------- | ------------------------------ | ----- | - |
+| 4‑1 | `POST /signup`      | Return JWT                     | ☐     |   |
+| 4‑2 | `PATCH /users/:id`  | Auth = self                    | admin | ☐ |
+| 4‑3 | `POST /attendance`  | Inserts attendance row         | ☐     |   |
+| 4‑4 | `POST /check‑in`    | Geofence validation            | ☐     |   |
+| 4‑5 | `DELETE /notes/:id` | Soft delete                    | ☐     |   |
+| 4‑6 | `POST /resource`    | Add resource row               | ☐     |   |
+| 4‑7 | `POST /inquiry`     | SendGrid template d‑inquiry‑01 | ☐     |   |
+| 4‑8 | `POST /events`      | Create calendar event          | ☐     |   |
+| 4‑9 | `POST /donate`      | Stripe checkout session (test) | ☐     |   |
+
+---
+
+## 5  Cron & Background Jobs & Webhooks
+
+| #   | Job                    | Schedule       | Behaviour                       | Done |
+| --- | ---------------------- | -------------- | ------------------------------- | ---- |
+| 5‑1 | Resource Crawler       | `0 */48 * * *` | Scrape, de‑dup, CSV, Slack diff | ☐    |
+| 5‑2 | Nightly Resource Diff  | 02:00 PT       | Already in 5‑1                  | ☐    |
+| 5‑3 | STOP ARMS Reminder     | hourly         | 48 h / 24 h alerts              | ☐    |
+| 5‑4 | Overdue Notes Watchdog | weekly         | >3 overdue → email Julius       | ☐    |
+
+---
+
+## 6  Role‑Based Access Control
+
+| Role         | Abilities                            | Verification              |
+| ------------ | ------------------------------------ | ------------------------- |
+| **Resident** | Dashboard, Check‑In, View Files      | login role=resident       |
+| **Case Mgr** | All resident CRUD, Attendance, Notes | login role=cm             |
+| **Admin**    | Add Property, Reports, Settings      | role=admin                |
+| **Super**    | Add/Remove Admins                    | email in superAdmin table |
+
+---
+
+## 7  Cypress / Jest Suites
+
+Run: `npm run test && npx cypress run`  → **Must be 0 failures**
+
+*Total tests expected: 72  (IDs F‑01 … F‑36, DB‑07 … DB‑08, etc.)*
+
+---
+
+## 8  Manual QA & Visuals
+
+| #   | Scenario                | Expected                           | Done |
+| --- | ----------------------- | ---------------------------------- | ---- |
+| 8‑1 | Light‑mode nav          | Color horizontal logo              | ☐    |
+| 8‑2 | Dark‑mode nav           | White horizontal logo              | ☐    |
+| 8‑3 | Mobile nav              | Color icon logo                    | ☐    |
+| 8‑4 | Program Overview pop‑up | Copy matches deck, CTA works       | ☐    |
+| 8‑5 | Partner signup          | Row in DB + email Julius           | ☐    |
+| 8‑6 | Case note full view     | Modal width 600 px shows full JSON | ☐    |
+| 8‑7 | Geofence fail >150 m    | Toast error “Out of range”         | ☐    |
+| 8‑8 | Reports PDF             | Download opens, correct slices     | ☐    |
+
+---
+
+## 9  Security & Performance
+
+| Tool       | Target                          | Done |
+| ---------- | ------------------------------- | ---- |
+| OWASP ZAP  | 0 high severities               | ☐    |
+| Lighthouse | ≥90 perf, a11y, best‑pract, SEO | ☐    |
+
+---
+
+## 10  Go‑Live Gates
+
+1. All checklist boxes ☑️
+2. Cypress + Jest + ZAP + Lighthouse reports archived in `/artifacts/`
+3. Version tag `v1.0.0` pushed & Replit deployment green
+4. Julius approves production cut‑over
+
+---
+
+**Save this file as ****`/README_REPLIT.md`**** in the repo root.**  When every checkbox is ticked, the app is *DONE.*
+
+---
+
+## 11  Deep‑Dive Validation Matrix  (🔬 10× Detail)
+
+> **Goal** — Leave zero ambiguity. For *every* page, button, API route, cron job, and user role below, Replit must execute **ALL** tests (functional, data, integration, security, performance, a11y, cross‑device) and attach proof in `/artifacts/`.
+>
+> **Proof Formats**
+> • **UI/UX:** Cypress video + full‑page PNG
+> • **API/DB:** Jest report + SQL .txt
+> • **Integrations:** Screenshot of email/Slack/Stripe dashboard
+> • **Perf/A11y:** Lighthouse JSON
+> **Attach** each proof file using the path conventions provided.
+
+### Legend
+
+| Col              | Meaning                            |
+| ---------------- | ---------------------------------- |
+| **T‑ID**         | Unique Test ID (prefix by feature) |
+| **Action**       | Steps exactly as QA executes       |
+| **Exp. Outcome** | What must happen                   |
+| **Proof Path**   | Where to save evidence             |
+| **✅**            | QA tick when passed                |
+
+### 11.1  Home + Public Portal
+
+| T‑ID       | Action                                           | Exp. Outcome                            | Proof Path                                       | ✅ |
+| ---------- | ------------------------------------------------ | --------------------------------------- | ------------------------------------------------ | - |
+| H‑UI‑001   | Load `/` on **Chrome 117 Desktop 1440×900**      | Hero renders, Donate button visible     | `/artifacts/home/hero_desktop.png`               | ☐ |
+| H‑UI‑002   | Load `/` on **iPhone 14 Safari** (DevTools)      | Mobile nav hamburger visible            | `/artifacts/home/hero_mobile.png`                | ☐ |
+| H‑NAV‑003  | Click **About** in navbar                        | Smooth scroll to `#about`               | Cypress video `/artifacts/home/about_scroll.mp4` | ☐ |
+| H‑POP‑004  | Click **Learn More About Our Programs**          | `ProgramOverviewModal` opens in ≤300 ms | `/artifacts/home/program_modal_open.gif`         | ☐ |
+| H‑CLA‑005  | Scroll Program modal bottom; click **Apply Now** | Unified Intake modal opens              | Screenshot                                       | ☐ |
+| H‑A11Y‑006 | Run Axe on home                                  | 0 critical violations                   | `/artifacts/home/axe.json`                       | ☐ |
+
+### 11.2  Auth & RBAC
+
+| T‑ID        | Action                                            | Exp. Outcome                          | Proof Path                                  | ✅ |
+| ----------- | ------------------------------------------------- | ------------------------------------- | ------------------------------------------- | - |
+| AU‑SIG‑001  | POST `/signup` sample user via Cypress            | 201; token in body                    | Jest log `/artifacts/auth/signup.log`       | ☐ |
+| AU‑SIG‑002  | Login as resident > access `/admin`               | 403 Forbidden                         | Cypress ss                                  | ☐ |
+| AU‑RBAC‑003 | Login as **case mgr** → `/case-manager` loads     | 200 & sidebar links visible           | video                                       | ☐ |
+| AU‑RBAC‑004 | Login as **Julius** → `/admin/settings` edit Save | Settings row updated `settings` table | SQL dump `/artifacts/db/settings_after.sql` | ☐ |
+
+### 11.3  Unified Intake
+
+\| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+\| UI‑VAL‑001 | Leave required field blank > Next | Inline error red border + msg | png | ☐ |
+\| UI‑DOC‑002 | Upload 2 MB ID png | Thumbnail preview + S3 PUT 200 | console log | ☐ |
+\| UI‑CON‑003 | Attempt to tick consents before viewing PDFs | Checkbox disabled | gif | ☐ |
+\| UI‑SUB‑004 | Submit complete form | 201; body has `application_id` UUID | log | ☐ |
+\| UI‑EMAIL‑005 | Verify “Application received” email | Email in SendGrid activity | screenshot | ☐ |
+
+### 11.4  Resident Portal
+
+\| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+\| RP‑DASH‑001 | Login resident > Dashboard loads in ≤1 s (TTFB) | Lighthouse perf item | `/artifacts/portal/resident_lh.json` | ☐ |
+\| RP‑CHK‑002 | Click **Check‑In** within 50 m radius (GPS mock) | Check‑in 201; Slack DM to CM | screenshots Slack + network | ☐ |
+\| RP‑CHK‑003 | Spoof 200 m away → Check‑In | Toast “Out of range” 400 | gif | ☐ |
+\| RP‑DOC‑004 | Open **Handbook.pdf** link | Viewer loads; correct file | png | ☐ |
+\| RP‑CAL‑005 | View calendar > event seeded by CM | Event title matches | png | ☐ |
+
+### 11.5  Case Manager Dashboard
+
+\| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+\| CM‑RES‑001 | Load *My Residents* list | 6 columns populated from DB | png | ☐ |
+\| CM‑NOT‑002 | Select **Marcus Johnson** > View Case Notes | Redirect `/residents/ID/case-notes`; header shows name | png | ☐ |
+\| CM‑NOT‑003 | Click **Edit** on note | TipTap editor appears; save updates row | gif | ☐ |
+\| CM‑NOT‑004 | Click **View Full** | Modal width 600, shows full JSON | png | ☐ |
+\| CM‑NOT‑005 | Click **Delete**; confirm | Note `deleted_at` set not null | SQL dump | ☐ |
+\| CM‑ATT‑006 | Click **Log Attendance**; select Program, Date, Verifier | Row in `attendance` table | SQL | ☐ |
+\| CM‑PRT‑007 | Click **Print** on case notes; choose “Audit” purpose | Browser print preview shows filtered table | pdf | ☐ |
+
+### 11.6  Admin Dashboard & Settings
+
+\| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+\| AD‑PROP‑001 | Add Property form submit | Row in `properties`; lat/long saved | SQL | ☐ |
+\| AD‑SET‑002 | Change SMTP from `smtp.dev`→`smtp.prod` | Settings updated; email test passes | SMTP log | ☐ |
+\| AD‑MAI‑003 | Create Maintenance ticket → status Open | Ticket row; Resident sees in portal | screenshots | ☐ |
+\| AD‑REP‑004 | Build Report → select *ECM Encounters* slice | PDF generated with table header | pdf | ☐ |
+
+### 11.7  Resources & Partner Flow
+
+\| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+\| RS‑ADD‑001 | Add Resource (Bay Area Housing Coalition) | Row `resources` table; CSV nightly export includes | SQL/CSV | ☐ |
+\| RS‑REF‑002 | Click Save Resource (logged‑out) | Redirect to signup modal | gif | ☐ |
+\| RS‑RES‑003 | **AI Crawler** run (cron) | Slack diff shows Δ rows | Slack ss | ☐ |
+\| PT‑NEW‑004 | Submit Partner signup | Row in `partners`; Julius email | screenshots | ☐ |
+
+### 11.8  Donations & Webhook
+
+| T‑ID       | Action                                                                                      | Exp. Outcome                                                                                          | Proof Path                    | ✅ |
+| ---------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------- | - |
+| DO‑050‑SUB | Choose \$400 Monthly → Donate                                                               | Stripe test checkout opens                                                                            | video                         | ☐ |
+| DO‑050‑SUC | Complete test payment 4242 card                                                             | Stripe dashboard PaymentIntent succeeded                                                              | screenshot                    | ☐ |
+| DO‑WH‑003  | **Trigger webhook**: in Stripe Dashboard → “Send test webhook” `checkout.session.completed` | Server logs signature verified; `donations` row `paid_at` not null; Thank‑You email sent via SendGrid | server log + email screenshot | ☐ |
+
+\| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+\| DO‑050‑SUB | Choose \$400 Monthly → Donate | Stripe test checkout opens | video | ☐ |
+\| DO‑050‑SUC | Complete test payment 4242 card | Stripe dashboard PaymentIntent succeeded | screenshot | ☐ |
+
+### 11.9  Performance & Security
+
+\| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+\| SEC‑JWT‑001 | Tamper JWT role→admin | API returns 403 | jest | ☐ |
+\| SEC‑XSS‑002 | Enter `<script>` in input | Stored & reflected XSS blocked | zap report | ☐ |
+\| PERF‑API‑001 | `/portal/resources` JSON 10 k rows | p95 ≤ 300 ms | k6 output | ☐ |
+
+*Add any edge‑case you uncover during dev to this table and provide proof.*
+
+---
+
+### Evidence Bundle Naming Conventions  (add webhook logs)
+
+```
+/artifacts/
+  donations/
+    checkout_subscribe.mp4
+    webhook_log.txt
+    stripe_payment_screenshot.png
+```
+
+```
+/artifacts/
+  home/
+    hero_desktop.png
+    about_scroll.mp4
+  auth/
+    signup.log
+  db/
+    settings_after.sql
+  portal/
+    resident_lh.jsonLife House – Full App Implementation & QA Checklist  (v1 – July 30 2025)
+
+Read this once—build once—ship once.  This single checklist aggregates every feature, fix, asset‑swap, integration, database migration, API route, UI element, test, and go‑live gate discussed to date.  Follow it line‑by‑line and the Life House platform will pass audit, user‑acceptance, and production readiness in a single sprint.
+
+Legend• [DEV] – Code you must write• [DB] – Schema changes / seed data• [QA] – Automated or manual verification• [ASSET] – Static file swap• [OPS] – Cron, environment, or deployment step
+
+0  Prep
+
+#
+
+Task
+
+Type
+
+Done
+
+0‑1
+
+Pull main, merge all feature branches
+
+[DEV]
+
+☐
+
+0‑2
+
+.env contains SENDGRID, STRIPE (test), OPENAI, JWT_SECRET
+
+[OPS]
+
+☐
+
+0‑3
+
+npm i, npm run dev with 0 warnings
+
+[DEV]
+
+☐
+
+1  Database & Schema
+
+#
+
+Task
+
+Type
+
+Done
+
+1‑1
+
+Execute SQL in /migrations/2025_07_30.sql (roles, attendance, settings, lat/long, avatar)
+
+[DB]
+
+☐
+
+1‑2
+
+Seed super‑admin emails (Julius, Brittney, Kairia)
+
+[DB]
+
+☐
+
+1‑3
+
+Seed properties with lat/long for each house
+
+[DB]
+
+☐
+
+2  Assets & Branding
+
+#
+
+Task
+
+Type
+
+File
+
+Done
+
+2‑1
+
+Copy 10 logo PNGs → public/assets/brand
+
+[ASSET]
+
+✓ filenames list
+
+☐
+
+2‑2
+
+Generate favicons/PWA icons from lifehouse_color_vertical.png
+
+[ASSET]
+
+
+
+☐
+
+2‑3
+
+Update OG image meta to lifehouse_color_large_icon.png
+
+[ASSET]
+
+
+
+☐
+
+2‑4
+
+Verify dark‑mode CSS swaps to white logo
+
+[QA]
+
+F‑20b
+
+☐
+
+3  Front‑End Components
+
+#
+
+Component
+
+Source File
+
+Key Details
+
+Done
+
+3‑1
+
+ProfilePage
+
+ProfilePage.jsx
+
+Formik, PATCH /users/:id, avatar upload
+
+☐
+
+3‑2
+
+SidebarLayout
+
+layouts/SidebarLayout.jsx
+
+Import on Intake & Referrals
+
+☐
+
+3‑3
+
+CaseNotesPage
+
+Residents/CaseNotes.jsx
+
+Fetch notes, print w/ @media print
+
+☐
+
+3‑4
+
+AttendanceModal
+
+AttendanceModal.jsx
+
+Program dropdown, date, verifyStaff
+
+☐
+
+3‑5
+
+GeofenceCheckIn
+
+components/CheckInButton.jsx
+
+Haversine ≤ 91 m
+
+☐
+
+3‑6
+
+EditableNoteCard
+
+notes/EditableNoteCard.jsx
+
+TipTap editor, soft‑delete
+
+☐
+
+3‑7
+
+AddResourceModal
+
+resources/AddResource.jsx
+
+Fields per BAHC example
+
+☐
+
+3‑8
+
+ReferResidentModal
+
+referrals/ReferResident.jsx
+
+Email + DB row
+
+☐
+
+3‑9
+
+PartnerSignupModal
+
+partners/Signup.jsx
+
+Org Name, Partner Type
+
+☐
+
+3‑10
+
+PropertyForm
+
+properties/PropertyForm.jsx
+
+Only role≥admin
+
+☐
+
+3‑11
+
+MaintenancePage
+
+maintenance/MaintenancePage.jsx
+
+Filter, NewTicketModal
+
+☐
+
+3‑12
+
+ReportsPage
+
+reports/ReportsPage.jsx
+
+Data checkbox matrix → PDF
+
+☐
+
+3‑13
+
+TouchpointCalendar
+
+calendar/ResidentCalendar.jsx
+
+FullCalendar, POST /events
+
+☐
+
+3‑14
+
+ProgramOverviewModal
+
+home/ProgramOverview.jsx
+
+Pop‑up, overview copy, top+bottom CTA
+
+☐
+
+3‑15
+
+ChatWidget
+
+components/ChatWidget.jsx
+
+OpenAI, branded CSS
+
+☐
+
+4  API Routes & Services
+
+#
+
+Route
+
+Details
+
+Done
+
+4‑1
+
+POST /signup
+
+Return JWT
+
+☐
+
+4‑2
+
+PATCH /users/:id
+
+Auth = self
+
+admin
+
+☐
+
+4‑3
+
+POST /attendance
+
+Inserts attendance row
+
+☐
+
+4‑4
+
+POST /check‑in
+
+Geofence validation
+
+☐
+
+4‑5
+
+DELETE /notes/:id
+
+Soft delete
+
+☐
+
+4‑6
+
+POST /resource
+
+Add resource row
+
+☐
+
+4‑7
+
+POST /inquiry
+
+SendGrid template d‑inquiry‑01
+
+☐
+
+4‑8
+
+POST /events
+
+Create calendar event
+
+☐
+
+4‑9
+
+POST /donate
+
+Stripe checkout session (test)
+
+☐
+
+5  Cron & Background Jobs
+
+#
+
+Job
+
+Schedule
+
+Behaviour
+
+Done
+
+5‑1
+
+Resource Crawler
+
+0 */48 * * *
+
+Scrape, de‑dup, CSV, Slack diff
+
+☐
+
+5‑2
+
+Nightly Resource Diff
+
+02:00 PT
+
+Already in 5‑1
+
+☐
+
+5‑3
+
+STOP ARMS Reminder
+
+hourly
+
+48 h / 24 h alerts
+
+☐
+
+5‑4
+
+Overdue Notes Watchdog
+
+weekly
+
+>3 overdue → email Julius
+
+☐
+
+6  Role‑Based Access Control
+
+Role
+
+Abilities
+
+Verification
+
+Resident
+
+Dashboard, Check‑In, View Files
+
+login role=resident
+
+Case Mgr
+
+All resident CRUD, Attendance, Notes
+
+login role=cm
+
+Admin
+
+Add Property, Reports, Settings
+
+role=admin
+
+Super
+
+Add/Remove Admins
+
+email in superAdmin table
+
+7  Cypress / Jest Suites
+
+Run: npm run test && npx cypress run  → Must be 0 failures
+
+Total tests expected: 72  (IDs F‑01 … F‑36, DB‑07 … DB‑08, etc.)
+
+8  Manual QA & Visuals
+
+#
+
+Scenario
+
+Expected
+
+Done
+
+8‑1
+
+Light‑mode nav
+
+Color horizontal logo
+
+☐
+
+8‑2
+
+Dark‑mode nav
+
+White horizontal logo
+
+☐
+
+8‑3
+
+Mobile nav
+
+Color icon logo
+
+☐
+
+8‑4
+
+Program Overview pop‑up
+
+Copy matches deck, CTA works
+
+☐
+
+8‑5
+
+Partner signup
+
+Row in DB + email Julius
+
+☐
+
+8‑6
+
+Case note full view
+
+Modal width 600 px shows full JSON
+
+☐
+
+8‑7
+
+Geofence fail >150 m
+
+Toast error “Out of range”
+
+☐
+
+8‑8
+
+Reports PDF
+
+Download opens, correct slices
+
+☐
+
+9  Security & Performance
+
+Tool
+
+Target
+
+Done
+
+OWASP ZAP
+
+0 high severities
+
+☐
+
+Lighthouse
+
+≥90 perf, a11y, best‑pract, SEO
+
+☐
+
+10  Go‑Live Gates
+
+All checklist boxes ☑️
+
+Cypress + Jest + ZAP + Lighthouse reports archived in /artifacts/
+
+Version tag v1.0.0 pushed & Replit deployment green
+
+Julius approves production cut‑over
+
+Save this file as /README_REPLIT.md in the repo root.  When every checkbox is ticked, the app is DONE.
+
+11  Deep‑Dive Validation Matrix  (🔬 10× Detail)
+
+Goal — Leave zero ambiguity. For every page, button, API route, cron job, and user role below, Replit must execute ALL tests (functional, data, integration, security, performance, a11y, cross‑device) and attach proof in /artifacts/.
+
+Proof Formats• UI/UX: Cypress video + full‑page PNG• API/DB: Jest report + SQL .txt• Integrations: Screenshot of email/Slack/Stripe dashboard• Perf/A11y: Lighthouse JSONAttach each proof file using the path conventions provided.
+
+Legend
+
+Col
+
+Meaning
+
+T‑ID
+
+Unique Test ID (prefix by feature)
+
+Action
+
+Steps exactly as QA executes
+
+Exp. Outcome
+
+What must happen
+
+Proof Path
+
+Where to save evidence
+
+✅
+
+QA tick when passed
+
+11.1  Home + Public Portal
+
+T‑ID
+
+Action
+
+Exp. Outcome
+
+Proof Path
+
+✅
+
+H‑UI‑001
+
+Load / on Chrome 117 Desktop 1440×900
+
+Hero renders, Donate button visible
+
+/artifacts/home/hero_desktop.png
+
+☐
+
+H‑UI‑002
+
+Load / on iPhone 14 Safari (DevTools)
+
+Mobile nav hamburger visible
+
+/artifacts/home/hero_mobile.png
+
+☐
+
+H‑NAV‑003
+
+Click About in navbar
+
+Smooth scroll to #about
+
+Cypress video /artifacts/home/about_scroll.mp4
+
+☐
+
+H‑POP‑004
+
+Click Learn More About Our Programs
+
+ProgramOverviewModal opens in ≤300 ms
+
+/artifacts/home/program_modal_open.gif
+
+☐
+
+H‑CLA‑005
+
+Scroll Program modal bottom; click Apply Now
+
+Unified Intake modal opens
+
+Screenshot
+
+☐
+
+H‑A11Y‑006
+
+Run Axe on home
+
+0 critical violations
+
+/artifacts/home/axe.json
+
+☐
+
+11.2  Auth & RBAC
+
+T‑ID
+
+Action
+
+Exp. Outcome
+
+Proof Path
+
+✅
+
+AU‑SIG‑001
+
+POST /signup sample user via Cypress
+
+201; token in body
+
+Jest log /artifacts/auth/signup.log
+
+☐
+
+AU‑SIG‑002
+
+Login as resident > access /admin
+
+403 Forbidden
+
+Cypress ss
+
+☐
+
+AU‑RBAC‑003
+
+Login as case mgr → /case-manager loads
+
+200 & sidebar links visible
+
+video
+
+☐
+
+AU‑RBAC‑004
+
+Login as Julius → /admin/settings edit Save
+
+Settings row updated settings table
+
+SQL dump /artifacts/db/settings_after.sql
+
+☐
+
+11.3  Unified Intake
+
+| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+| UI‑VAL‑001 | Leave required field blank > Next | Inline error red border + msg | png | ☐ |
+| UI‑DOC‑002 | Upload 2 MB ID png | Thumbnail preview + S3 PUT 200 | console log | ☐ |
+| UI‑CON‑003 | Attempt to tick consents before viewing PDFs | Checkbox disabled | gif | ☐ |
+| UI‑SUB‑004 | Submit complete form | 201; body has application_id UUID | log | ☐ |
+| UI‑EMAIL‑005 | Verify “Application received” email | Email in SendGrid activity | screenshot | ☐ |
+
+11.4  Resident Portal
+
+| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+| RP‑DASH‑001 | Login resident > Dashboard loads in ≤1 s (TTFB) | Lighthouse perf item | /artifacts/portal/resident_lh.json | ☐ |
+| RP‑CHK‑002 | Click Check‑In within 50 m radius (GPS mock) | Check‑in 201; Slack DM to CM | screenshots Slack + network | ☐ |
+| RP‑CHK‑003 | Spoof 200 m away → Check‑In | Toast “Out of range” 400 | gif | ☐ |
+| RP‑DOC‑004 | Open Handbook.pdf link | Viewer loads; correct file | png | ☐ |
+| RP‑CAL‑005 | View calendar > event seeded by CM | Event title matches | png | ☐ |
+
+11.5  Case Manager Dashboard
+
+| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+| CM‑RES‑001 | Load My Residents list | 6 columns populated from DB | png | ☐ |
+| CM‑NOT‑002 | Select Marcus Johnson > View Case Notes | Redirect /residents/ID/case-notes; header shows name | png | ☐ |
+| CM‑NOT‑003 | Click Edit on note | TipTap editor appears; save updates row | gif | ☐ |
+| CM‑NOT‑004 | Click View Full | Modal width 600, shows full JSON | png | ☐ |
+| CM‑NOT‑005 | Click Delete; confirm | Note deleted_at set not null | SQL dump | ☐ |
+| CM‑ATT‑006 | Click Log Attendance; select Program, Date, Verifier | Row in attendance table | SQL | ☐ |
+| CM‑PRT‑007 | Click Print on case notes; choose “Audit” purpose | Browser print preview shows filtered table | pdf | ☐ |
+
+11.6  Admin Dashboard & Settings
+
+| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+| AD‑PROP‑001 | Add Property form submit | Row in properties; lat/long saved | SQL | ☐ |
+| AD‑SET‑002 | Change SMTP from smtp.dev→smtp.prod | Settings updated; email test passes | SMTP log | ☐ |
+| AD‑MAI‑003 | Create Maintenance ticket → status Open | Ticket row; Resident sees in portal | screenshots | ☐ |
+| AD‑REP‑004 | Build Report → select ECM Encounters slice | PDF generated with table header | pdf | ☐ |
+
+11.7  Resources & Partner Flow
+
+| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+| RS‑ADD‑001 | Add Resource (Bay Area Housing Coalition) | Row resources table; CSV nightly export includes | SQL/CSV | ☐ |
+| RS‑REF‑002 | Click Save Resource (logged‑out) | Redirect to signup modal | gif | ☐ |
+| RS‑RES‑003 | AI Crawler run (cron) | Slack diff shows Δ rows | Slack ss | ☐ |
+| PT‑NEW‑004 | Submit Partner signup | Row in partners; Julius email | screenshots | ☐ |
+
+11.8  Donations
+
+| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+| DO‑050‑SUB | Choose $400 Monthly → Donate | Stripe test checkout opens | video | ☐ |
+| DO‑050‑SUC | Complete test payment 4242 card | Stripe dashboard PaymentIntent succeeded | screenshot | ☐ |
+
+11.9  Performance & Security
+
+| T‑ID | Action | Exp. Outcome | Proof Path | ✅ |
+| SEC‑JWT‑001 | Tamper JWT role→admin | API returns 403 | jest | ☐ |
+| SEC‑XSS‑002 | Enter <script> in input | Stored & reflected XSS blocked | zap report | ☐ |
+| PERF‑API‑001 | /portal/resources JSON 10 k rows | p95 ≤ 300 ms | k6 output | ☐ |
+
+Add any edge‑case you uncover during dev to this table and provide proof.
+
+Evidence Bundle Naming Conventions
+
+/artifacts/
+  home/
+    hero_desktop.png
+    about_scroll.mp4
+  auth/
+    signup.log
+  db/
+    settings_after.sql
+  portal/
+    resident_lh.json
+
+Archive /artifacts into artifacts_v1.0.0.zip and attach to Release tag.
+```
+
+Archive **/artifacts** into `artifacts_v1.0.0.zip` and attach to Release tag.
+
+---
+
+### Final Sign‑off
+
+*QA Lead* fills out the ✅ column, signs off in PR comment, and attaches zip. Julius must comment **APPROVED FOR PROD** to merge to `main`.
+
+---
+
+*End of Deep‑Dive Validation Matrix*

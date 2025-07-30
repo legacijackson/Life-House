@@ -971,6 +971,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Create check-in with geofence validation
+  app.post('/api/check-in', async (req: Request, res: Response) => {
+    try {
+      const { userId, propertyId, latitude, longitude } = req.body;
+      
+      // Get property location
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: 'Property not found' });
+      }
+      
+      // Calculate distance using Haversine formula
+      const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371e3; // Earth radius in meters
+        const φ1 = lat1 * Math.PI/180;
+        const φ2 = lat2 * Math.PI/180;
+        const Δφ = (lat2-lat1) * Math.PI/180;
+        const Δλ = (lon2-lon1) * Math.PI/180;
+        
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        
+        return R * c; // Distance in meters
+      };
+      
+      const distance = calculateDistance(
+        latitude, 
+        longitude, 
+        property.latitude as number, 
+        property.longitude as number
+      );
+      
+      // Check if within 91 meters (100 yards)
+      if (distance > 91) {
+        return res.status(400).json({ 
+          message: 'Out of range',
+          distance: Math.round(distance),
+          maxDistance: 91
+        });
+      }
+      
+      // Create check-in record
+      const checkIn = {
+        id: Date.now().toString(),
+        userId,
+        propertyId,
+        timestamp: new Date().toISOString(),
+        latitude,
+        longitude,
+        distance: Math.round(distance)
+      };
+      
+      // TODO: Save check-in to database
+      console.log('Check-in successful:', checkIn);
+      
+      res.status(201).json({
+        success: true,
+        checkIn,
+        message: 'Check-in successful'
+      });
+    } catch (error) {
+      console.error('Check-in error:', error);
+      res.status(500).json({ message: 'Check-in failed' });
+    }
+  });
+
+  // Create resource
+  app.post('/api/resource', async (req: Request, res: Response) => {
+    try {
+      const validatedData = req.body; // TODO: Add resource schema validation
+      const resource = await storage.createResource(validatedData);
+      res.status(201).json({
+        success: true,
+        resource
+      });
+    } catch (error) {
+      console.error('Error creating resource:', error);
+      res.status(500).json({ message: 'Failed to create resource' });
+    }
+  });
+
+  // Donation checkout with Stripe
+  app.post('/api/donate', async (req: Request, res: Response) => {
+    try {
+      const { amount, email, name, isRecurring } = req.body;
+      
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(500).json({ message: 'Stripe is not configured' });
+      }
+      
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2024-11-20.acacia'
+      });
+      
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: isRecurring ? 'subscription' : 'payment',
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Donation to Life House',
+              description: 'Your donation helps support formerly incarcerated individuals'
+            },
+            unit_amount: amount * 100, // Convert to cents
+            ...(isRecurring && { recurring: { interval: 'month' } })
+          },
+          quantity: 1
+        }],
+        customer_email: email,
+        metadata: {
+          donor_name: name,
+          donation_type: isRecurring ? 'recurring' : 'one-time'
+        },
+        success_url: `${req.headers.origin}/donate?success=true`,
+        cancel_url: `${req.headers.origin}/donate?canceled=true`
+      });
+      
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Stripe checkout error:', error);
+      res.status(500).json({ message: 'Failed to create checkout session' });
+    }
+  });
+
+  // Stripe webhook to handle successful payments
+  app.post('/api/webhooks/stripe', async (req: Request, res: Response) => {
+    try {
+      const sig = req.headers['stripe-signature'];
+      const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      
+      if (!sig || !endpointSecret) {
+        return res.status(400).json({ message: 'Missing stripe signature or webhook secret' });
+      }
+      
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+        apiVersion: '2024-11-20.acacia'
+      });
+      
+      let event;
+      
+      try {
+        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+      } catch (err: any) {
+        console.error('Webhook signature verification failed:', err.message);
+        return res.status(400).json({ message: `Webhook Error: ${err.message}` });
+      }
+      
+      // Handle the event
+      switch (event.type) {
+        case 'checkout.session.completed':
+          const session = event.data.object;
+          
+          // Save donation to database
+          const donation = {
+            stripeSessionId: session.id,
+            amount: session.amount_total ? session.amount_total / 100 : 0,
+            donorEmail: session.customer_email,
+            donorName: session.metadata?.donor_name || 'Anonymous',
+            type: session.metadata?.donation_type || 'one-time',
+            paidAt: new Date().toISOString()
+          };
+          
+          await storage.createDonation(donation);
+          
+          // TODO: Send thank you email
+          console.log('Donation successful:', donation);
+          break;
+          
+        default:
+          console.log(`Unhandled event type ${event.type}`);
+      }
+      
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Webhook error:', error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
   // AI Chat endpoint (public access for widget)
   app.post('/api/ai/chat', async (req: Request, res: Response) => {
     try {
@@ -1022,6 +1204,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching attendance:', error);
       res.status(500).json({ error: 'Failed to fetch attendance' });
+    }
+  });
+
+  // Create attendance record
+  app.post('/api/attendance', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertAttendanceSchema.parse(req.body);
+      const attendance = await storage.createAttendance(validatedData);
+      res.status(201).json({
+        success: true,
+        attendance
+      });
+    } catch (error) {
+      console.error('Error creating attendance:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create attendance record' });
     }
   });
 

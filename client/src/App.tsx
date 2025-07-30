@@ -25,6 +25,7 @@ import Reports from "@/pages/reports";
 import { ResidentPortal } from "@/components/resident-portal";
 import { StaffDashboard } from "@/components/staff-dashboard";
 import { AdminPanel } from "@/components/admin-panel";
+import ProfilePage from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 // Protected routes wrapper
@@ -46,6 +47,7 @@ function ProtectedRoutes() {
         <Route path="/app/resident-portal" component={ResidentPortal} />
         <Route path="/app/staff-dashboard" component={StaffDashboard} />
         <Route path="/app/admin-panel" component={AdminPanel} />
+        <Route path="/app/profile" component={ProfilePage} />
       </Switch>
     </RouteGuard>
   );

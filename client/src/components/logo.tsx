@@ -19,14 +19,14 @@ export function Logo({ variant, layout = 'horizontal', className = '' }: LogoPro
   const effectiveVariant = variant || (mounted && theme === 'dark' ? 'white' : 'color');
   
   const logoMap = {
-    'color-horizontal': '/assets/brand/lifehouse_color_horizontal.png',
-    'color-icon': '/assets/brand/lifehouse_color_icon.png',
-    'white-horizontal': '/assets/brand/lifehouse_white_horizontal.png',
-    'white-icon': '/assets/brand/lifehouse_white_icon.png',
-    'whitepurple-horizontal': '/assets/brand/lifehouse_whitepurple_horizontal.png',
-    'whitepurple-icon': '/assets/brand/lifehouse_whitepurple_horizontal.png', // Use horizontal as fallback
-    'lightgreen-horizontal': '/assets/brand/lifehouse_lightgreen_horizontal.png',
-    'lightgreen-icon': '/assets/brand/lifehouse_lightgreen_icon.png',
+    'color-horizontal': '/assets/brand/blue horizontal_1753856825753.png',
+    'color-icon': '/assets/brand/blue large icon_1753856825753.png',
+    'white-horizontal': '/assets/brand/white horizontal_1753856825754.png',
+    'white-icon': '/assets/brand/white large icon_1753856825753.png',
+    'whitepurple-horizontal': '/assets/brand/white with purple logo horizontal_1753856825754.png',
+    'whitepurple-icon': '/assets/brand/Life House large icon_1753856825753.png',
+    'lightgreen-horizontal': '/assets/brand/light green horizontal_1753856825754.png',
+    'lightgreen-icon': '/assets/brand/light green large icon _1753856825752.png',
   };
 
   const logoKey = `${effectiveVariant}-${layout}`;

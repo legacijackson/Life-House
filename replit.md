@@ -163,5 +163,12 @@ The application follows a monorepo architecture with clear separation of concern
 - **Dashboard Counters** (CR-28, CR-29, CR-30): Added case notes, resources, and referrals counters to the main dashboard stats
 - **Empty State UI** (CR-31): Implemented "No results found" states for residents and resources lists with helpful guidance
 - **Help Desk Widget** (CR-32): Created floating help desk with FAQs and contact support form for user assistance
+- **Profile Page** (January 2025): Added comprehensive user profile management page with avatar upload, personal information editing, and settings management
+- **Background Job System** (January 2025): Implemented in-process job scheduler with four critical background tasks:
+  - Resource Crawler: Runs every 6 hours to check resource availability
+  - Nightly Resource Diff: Runs at 2 AM daily to detect new resources
+  - STOP ARMS Reminder: Runs every 4 hours during business hours for touchpoint reminders
+  - Overdue Notes Watchdog: Runs every 2 hours to detect residents without recent case notes
+- **Additional API Endpoints** (January 2025): Added POST /attendance, POST /check-in (with geofence validation), POST /resource, POST /donate (Stripe integration), and POST /webhooks/stripe
 
 The architecture prioritizes developer experience, type safety, and maintainability while providing a solid foundation for a production transitional housing management system.
