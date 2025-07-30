@@ -12,8 +12,8 @@ export default function WaveHand() {
   if (!show) return null;
 
   return (
-    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10 animate-wave pointer-events-none z-50">
-      <span className="text-2xl">👋</span>
+    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center animate-wave pointer-events-none z-50">
+      <span className="text-4xl">👋</span>
     </div>
   );
 }
