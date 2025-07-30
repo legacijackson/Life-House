@@ -9,6 +9,8 @@ import { ProgramInquiryModal } from "@/components/program-inquiry-modal";
 import { PartnerSignupModal } from "@/components/partner-signup-modal";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
+import _3 from "@assets/3.png";
+
 export default function Landing() {
   const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
@@ -31,7 +33,7 @@ export default function Landing() {
               onClick={() => setIsIntakeModalOpen(true)}
               className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-2 shadow-md transform hover:scale-105 transition-all duration-200"
             >
-              <img src="/lifehouse-icon.png" alt="Life House" className="w-4 h-4 mr-2" />
+              <img src={_3} alt="Life House" className="w-4 h-4 mr-2" />
               Apply Now
             </Button>
             <Button 
