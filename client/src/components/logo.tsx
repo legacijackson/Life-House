@@ -15,7 +15,7 @@ export function Logo({ className = '', onClick }: LogoProps) {
 
   return (
     <img 
-      src="/universal-logo.png" 
+      src="/lifehouse-logo.png" 
       alt="Life House Reentry" 
       className={`object-contain cursor-pointer ${className}`}
       onClick={handleClick}
