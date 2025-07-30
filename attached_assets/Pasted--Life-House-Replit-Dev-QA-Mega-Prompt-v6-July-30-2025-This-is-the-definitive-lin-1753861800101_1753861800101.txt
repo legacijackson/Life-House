@@ -1,0 +1,207 @@
+# Life House – **Replit Dev & QA Mega‑Prompt**  (v6 – July 30 2025)
+
+> **This is the definitive, line‑by‑line playbook** for bringing the Life House web app to *production‑ready, audit‑ready* quality. It supersedes all prior prompts. Anything marked **CR‑XX** below is **blocking** for release `v1.0.0`.
+>
+> Sections:
+>
+> 1. Change‑Request Matrix (CR‑1 → CR‑32)
+> 2. Feature & UI Inventory (expanded)
+> 3. Database Schema Deltas
+> 4. API Specs (new/modified)
+> 5. QA Checklist (72 Cypress/Jest/Zap tests)
+> 6. Asset Replacement Plan (logo, favicon, OG)
+> 7. Role‑Based Portal Flow
+> 8. Copy Deck & Pop‑ups
+> 9. Dev Workflow / Branch Strategy
+> 10. Go‑Live Gates
+>
+> **Follow this doc exactly**—file paths, Tailwind classes, API routes, DB columns, tests—no guesswork.
+
+---
+
+## 1  Change‑Request Matrix (additions CR‑15 → CR‑32)
+
+| #                                                                                               | User Request                                                                                           | Feature ID(s) | Dev Tasks (code‑level detail)                                                                                                     | QA ID       |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| **CR‑15**                                                                                       | **Profile editing** for Sarah Williams (case manager) + any user.                                      | I‑22          | ➊ Add `ProfilePage.jsx` route `/profile`                                                                                          |             |
+| ➋ Formik form bound to `users` + `profiles` tables (first, last, phone, avatar, role)           |                                                                                                        |               |                                                                                                                                   |             |
+| ➌ PATCH `/users/:id` API → update & return JWT (claims stay in sync).                           | F‑23, B‑API‑06                                                                                         |               |                                                                                                                                   |             |
+| **CR‑16**                                                                                       | **Sidebar** missing on *Intake* & *Referrals* pages.                                                   | I‑23          | Import `SidebarLayout` wrapper in `IntakePage.jsx` & `ReferralsPage.jsx`; ensure `NavLink` highlights.                            | UI smoke    |
+| **CR‑17**                                                                                       | **View Case Notes** button on *My Residents* must load notes for selected resident & printable report. | I‑24          | ➊ Clicking **View Case Notes** ⇒ route `/residents/:id/case‑notes`.                                                               |             |
+| ➋ Fetch `/residents/:id/notes?type=all`.                                                        |                                                                                                        |               |                                                                                                                                   |             |
+| ➌ “Print” -> `window.print()` style sheet (`@media print`) + `?purpose=` query param to filter. | F‑24, B‑API‑07                                                                                         |               |                                                                                                                                   |             |
+| **CR‑18**                                                                                       | **Log Attendance** button inactive.                                                                    | I‑25          | ➊ Create `AttendanceModal.jsx` (program dropdown from `programs` table, date, verifyingStaff autocomplete).                       |             |
+| ➋ POST `/attendance` inserts row; refresh table.                                                | F‑25, DB‑07                                                                                            |               |                                                                                                                                   |             |
+| **CR‑19**                                                                                       | **Geofence Check‑In** (within 100 yds).                                                                | I‑26          | ➊ Store property lat/long in `properties` table.                                                                                  |             |
+| ➋ Resident app: HTML5 `navigator.geolocation`; compute Haversine; block check‑in if >91 m.      |                                                                                                        |               |                                                                                                                                   |             |
+| ➌ POST `/check‑in` records lat/long, timestamp, auto‑flag late if after curfew.                 |                                                                                                        |               |                                                                                                                                   |             |
+| ➍ Notify case manager via Slack DM + email.                                                     | F‑26, SEC‑04, B‑INT‑06                                                                                 |               |                                                                                                                                   |             |
+| **CR‑20**                                                                                       | **Case Notes** edit, view full, delete, new.                                                           | I‑24          | ➊ `EditableNoteCard.jsx` – inline editor (TipTap WYSIWYG).                                                                        |             |
+| ➋ `ViewFullModal` expands to 600 px width.                                                      |                                                                                                        |               |                                                                                                                                   |             |
+| ➌ DELETE `/notes/:id` → soft delete (`deleted_at`).                                             | F‑27, B‑API‑08                                                                                         |               |                                                                                                                                   |             |
+| **CR‑21**                                                                                       | **RBAC**: residents ≈ CM view; CM ≈ admin view; only 3 emails are super‑admin.                         | I‑27          | ➊ Add `role` enum {resident, cm, admin, super}.                                                                                   |             |
+| ➋ Seed `superAdmins` list (\[3 emails]).                                                        |                                                                                                        |               |                                                                                                                                   |             |
+| ➌ Middleware `requireRole(minRole)` across routes.                                              | SEC‑05                                                                                                 |               |                                                                                                                                   |             |
+| **CR‑22**                                                                                       | **Multi‑portal routing** (public, resident, cm, admin).                                                | I‑28          | React Router guards: `PrivateRoute role="cm"`, etc. Fallback to `/public`.                                                        | F‑28        |
+| **CR‑23**                                                                                       | **Resource Add** form + AI crawler every 48 h.                                                         | I‑29          | ➊ `AddResourceModal.jsx` fields per *Bay Area Housing Coalition* example.                                                         |             |
+| ➋ Cron `crawler.js` at `0 */48 * * *`.                                                          | F‑29, B‑JOB‑03                                                                                         |               |                                                                                                                                   |             |
+| **CR‑24**                                                                                       | **Refer Resident / Save Resource** buttons functional.                                                 | I‑30          | `ReferResidentModal.jsx` → email Julius + CM; create `referrals` row (default CM Julius if null).                                 |             |
+| `SaveResource` prompts for login if !auth.                                                      | F‑30                                                                                                   |               |                                                                                                                                   |             |
+| **CR‑25**                                                                                       | **Properties RBAC**; Add Property form.                                                                | I‑31          | Only `role≥admin` sees *Add Property*; form fields match *123 Main* example; POST `/properties`.                                  | F‑31, DB‑08 |
+| **CR‑26**                                                                                       | **Maintenance & Reports** pages finish.                                                                | I‑32          | ➊ `MaintenancePage.jsx` list + status filter; `NewTicketModal`.                                                                   |             |
+| ➋ `ReportsPage.jsx` checkboxes for data slices; PDF generator `reports/buildReport.js`.         | F‑32                                                                                                   |               |                                                                                                                                   |             |
+| **CR‑27**                                                                                       | **Touchpoint scheduler** books resident calendar + notify.                                             | I‑33          | FullCalendar component on resident + CM dashboards; POST `/events`.                                                               | F‑33        |
+| **CR‑28**                                                                                       | **Resident files**: consent PDF, handbook, interview.                                                  | I‑34          | S3 folder `/residents/{id}/docs/`; UI file list component.                                                                        | F‑34        |
+| **CR‑29**                                                                                       | **Avg Savings calc** + overdue notes watchdog.                                                         | I‑35          | `avgSavings` = Σ(savings.balance) ÷ activeResidents; cron `watchdog.js` weekly checks `notes` `due_at`; 3 overdue → email Julius. | B‑JOB‑04    |
+| **CR‑30**                                                                                       | **Report generation** bugfix.                                                                          | I‑32          | Debug `reports/buildReport.js` promise chain; add try/catch.                                                                      | F‑35        |
+| **CR‑31**                                                                                       | **Slack integration** finalize.                                                                        | I‑36          | Slack Bot token env; verify DM & channel posts; `/lifehouse ping`.                                                                | B‑INT‑07    |
+| **CR‑32**                                                                                       | **System Settings, email notifs, maintenance actions, logout**.                                        | I‑37          | ➊ `SettingsPage.jsx` form saves to `settings` table.                                                                              |             |
+| ➋ Email templates send on events.                                                               |                                                                                                        |               |                                                                                                                                   |             |
+| ➌ Fix `Logout` to clear JWT & redirect `/`.                                                     | F‑36                                                                                                   |               |                                                                                                                                   |             |
+
+*(CR‑1 → CR‑14 remain unchanged from v5.)*
+
+---
+
+## 2  Feature & UI Inventory (new IDs I‑22 → I‑37 added)
+
+*(See full table in canvas.)*
+
+---
+
+## 3  Database Schema Deltas (PostgreSQL)
+
+```sql
+-- users
+ALTER TABLE users ADD COLUMN role user_role_enum DEFAULT 'resident';
+
+-- profiles (already exists): add avatar_url
+ALTER TABLE profiles ADD COLUMN avatar_url text;
+
+-- residents
+ALTER TABLE residents ADD COLUMN application_id uuid DEFAULT gen_random_uuid();
+
+-- notes
+ALTER TABLE notes ADD COLUMN deleted_at timestamptz;
+
+-- attendance
+CREATE TABLE attendance (
+  id serial PRIMARY KEY,
+  resident_id int REFERENCES residents(id),
+  program_id int REFERENCES programs(id),
+  status text, -- in/out
+  verify_staff_id int REFERENCES users(id),
+  lat double precision,
+  lon double precision,
+  created_at timestamptz DEFAULT now()
+);
+
+-- properties (lat/long)
+ALTER TABLE properties ADD COLUMN lat double precision;
+ALTER TABLE properties ADD COLUMN lon double precision;
+
+-- settings
+CREATE TABLE settings (
+  id serial PRIMARY KEY,
+  key text UNIQUE,
+  value jsonb,
+  updated_at timestamptz DEFAULT now()
+);
+```
+
+---
+
+## 4  API Specs (new/changed)
+
+| Route         | Verb   | Auth        | Body                                                      | Returns                   |
+| ------------- | ------ | ----------- | --------------------------------------------------------- | ------------------------- |
+| `/signup`     | POST   | public      | {firstName,lastName,email,password}                       | 201 {token}               |
+| `/users/:id`  | PATCH  | self/admin  | profile fields                                            | 200 user                  |
+| `/attendance` | POST   | cm/resident | {residentId,programId,status,date,lat,lon,verifyStaffId?} | 201 row                   |
+| `/check‑in`   | POST   | resident    | {lat,lon}                                                 | 201 row / 400 if geo>91 m |
+| `/notes/:id`  | DELETE | cm/admin    | —                                                         | 204                       |
+| `/inquiry`    | POST   | public      | {...}                                                     | 202                       |
+| `/resource`   | POST   | cm/admin    | {...}                                                     | 201 row                   |
+| `/events`     | POST   | cm          | {residentId,title,start,end}                              | 201 row                   |
+
+*(Full Swagger YAML in `/docs/api.yaml`.)*
+
+---
+
+## 5  QA Checklist (Key add‑ons)
+
+*Total tests: 72 (see canvas).* New IDs: **F‑23 → F‑36, B‑API‑06 → 08, DB‑07 → 08, B‑JOB‑03 → 04, B‑INT‑06 → 07, SEC‑04‑05**.
+
+---
+
+## 6  Logo & Asset Plan  (unchanged from v5)
+
+---
+
+## 7  Role‑Based Portal Flow
+
+```mermaid
+graph TD
+Public-->Login
+Public-->About
+Public-->ProgramInquiry
+Login-->|role:resident|ResidentPortal
+Login-->|role:cm|CaseManagerDashboard
+Login-->|role:admin/super|AdminDashboard
+ResidentPortal-->MaintenanceTickets
+CaseManagerDashboard-->MyResidents
+AdminDashboard-->SystemSettings
+```
+
+*Skip‑login path:* Public → `#/public-portal` (read‑only resources, apply form).
+
+---
+
+## 8  Copy Deck & Pop‑Ups (new)
+
+### 8.1  Program Overview Modal (Home “Learn More”)
+
+> **Life House Reentry — Overview**
+> *Mission:* Provide safe, structured housing…  *(full text from user prompt, with added 7‑Stage blurbs)*
+> CTA buttons top & bottom: **Apply Now** (opens Unified Intake).
+
+### 8.2  Partner With Us Modal
+
+Fields: Org Name, Contact, Email, Partner Type \[`Housing`,`Employment`,`Health`,`Legal`,`Education`,`Other`], Message.
+
+---
+
+## 9  Dev Workflow
+
+1. **Branch per CR** (`feat/cr-15-profile`).
+2. **PR template** must list tests added/updated.
+3. **CI pipeline**: lint → Jest → Cypress → ZAP.
+4. **Merge into `develop`**, tag `v1.0.0-beta`.
+5. **Deploy to Replit preview**; QA runs full checklist.
+6. If ✅, merge to `main`, tag `v1.0.0`, production deploy.
+
+---
+
+## 10  Go‑Live Gates (add‑ons)
+
+13. ✔️ Geofence check‑in tested with GPS spoof ±150 m.
+14. ✔️ Overdue‑notes watchdog emails Julius on cron run.
+15. ✔️ System settings persisted round‑trip.
+16. ✔️ Logout clears JWT + redirects.
+17. ✔️ Maintenance tickets create/update/resolve statuses.
+
+---
+
+**Deliverables:**
+
+* Updated codebase on Replit.
+* Cypress + Jest reports.
+* ZAP scan report (0 highs).
+* Lighthouse JSON (≥90 all metrics).
+* Screenshot proof of Program Overview modal, Partner signup, geofence alert, logo variants.
+
+> 🔒 **Lock this doc in project root as `/README_REPLIT.md`.**
+
+---
+
+*Last updated: 2025‑07‑30*

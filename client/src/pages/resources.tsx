@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ResourceAddModal } from "@/components/resource-add-modal";
 import { 
   Search,
   Filter,
@@ -217,10 +218,7 @@ export default function Resources() {
                 <h1 className="text-2xl font-bold text-gray-900">Community Resources</h1>
                 <p className="text-sm text-gray-600">Find and manage community resources for Life House residents</p>
               </div>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Resource
-              </Button>
+              <ResourceAddModal />
             </div>
           </div>
         </header>

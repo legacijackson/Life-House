@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { GeofenceCheckinModal } from "@/components/geofence-checkin-modal";
 import { 
   Plus,
   Search,
@@ -143,6 +144,7 @@ export default function Attendance() {
   const [dateFilter, setDateFilter] = useState<string>('today');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+  const [showGeofenceModal, setShowGeofenceModal] = useState(false);
 
   // In a real app, this would fetch from API
   const { data: attendance = mockAttendance } = useQuery({
@@ -227,7 +229,7 @@ export default function Attendance() {
                 <h1 className="text-2xl font-bold text-gray-900">Program Attendance</h1>
                 <p className="text-sm text-gray-600">Track Life House workshop and coaching session attendance</p>
               </div>
-              <Button>
+              <Button onClick={() => setShowGeofenceModal(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Log Attendance
               </Button>
@@ -531,6 +533,22 @@ export default function Attendance() {
           </Tabs>
         </div>
       </main>
+      
+      {/* Geofence Check-in Modal */}
+      <GeofenceCheckinModal
+        isOpen={showGeofenceModal}
+        onClose={() => setShowGeofenceModal(false)}
+        propertyId="oak-avenue"
+        propertyName="Oak Avenue House"
+        propertyAddress="123 Oak Avenue, San Francisco, CA 94102"
+        onCheckinComplete={(success, overrideReason) => {
+          if (success) {
+            // In a real app, this would save to the database
+            console.log('Check-in successful', overrideReason ? `with override: ${overrideReason}` : '');
+            setShowGeofenceModal(false);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Sidebar } from "@/components/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ const mockResidents: Resident[] = [
 ];
 
 export default function Residents() {
+  const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
@@ -377,11 +379,20 @@ export default function Residents() {
                     </Tabs>
 
                     <div className="mt-6 flex space-x-3">
-                      <Button size="sm" className="flex-1">
+                      <Button 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => navigate(`/app/residents/${selectedResident.id}/case-notes`)}
+                      >
                         <FileText className="w-4 h-4 mr-2" />
                         View Case Notes
                       </Button>
-                      <Button size="sm" variant="outline" className="flex-1">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => navigate('/app/attendance')}
+                      >
                         <Calendar className="w-4 h-4 mr-2" />
                         Log Attendance
                       </Button>

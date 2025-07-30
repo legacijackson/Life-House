@@ -550,6 +550,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Staff Dashboard Routes
+  app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const dashboardData = {
+        totalResidents: 45,
+        activeResidents: 38,
+        pendingIntakes: 7,
+        overdueNotes: 3,
+        avgSavings: 1250,
+        touchPoints: 1,
+        reportStatus: 'ready'
+      };
+      res.json(dashboardData);
+    } catch (error) {
+      console.error('Staff dashboard error:', error);
+      res.status(500).json({ message: 'Failed to fetch dashboard data' });
+    }
+  }));
+
+  app.get('/api/staff/residents', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const residents = [
+        {
+          id: '1',
+          name: 'Marcus Johnson',
+          stage: 3,
+          caseManagerId: req.user.id,
+          nextAppointment: '2025-08-01'
+        },
+        {
+          id: '2',
+          name: 'David Rodriguez',
+          stage: 5,
+          caseManagerId: req.user.id,
+          nextAppointment: '2025-08-03'
+        }
+      ];
+      res.json(residents);
+    } catch (error) {
+      console.error('Staff residents error:', error);
+      res.status(500).json({ message: 'Failed to fetch residents' });
+    }
+  }));
+
+  app.post('/api/staff/monthly-report', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Generate monthly report data
+      const reportData = {
+        month: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+        totalResidents: 45,
+        newIntakes: 12,
+        graduations: 5,
+        avgStageProgress: 3.2,
+        touchPoints: 287,
+        savingsTotal: 56250,
+        programCompletionRate: 0.78,
+        housingRetentionRate: 0.92
+      };
+
+      // In production, this would generate an actual PDF
+      const fileName = `Life_House_Monthly_Report_${new Date().toISOString().slice(0, 7)}.pdf`;
+      const downloadUrl = `/api/reports/download/${Date.now()}`;
+
+      // Simulate PDF generation
+      console.log('Generating monthly report:', fileName);
+
+      res.json({
+        success: true,
+        downloadUrl,
+        fileName,
+        reportData
+      });
+    } catch (error) {
+      console.error('Monthly report generation error:', error);
+      res.status(500).json({ message: 'Failed to generate monthly report' });
+    }
+  }));
+
+  app.post('/api/staff/generate-pdf', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { residentId, type } = req.body;
+
+      if (!residentId || !type) {
+        return res.status(400).json({ message: 'Missing required parameters' });
+      }
+
+      // In production, generate actual PDF based on type
+      const fileName = `${type}_${residentId}_${Date.now()}.pdf`;
+      const downloadUrl = `/api/documents/download/${Date.now()}`;
+
+      console.log('Generating PDF:', { residentId, type, fileName });
+
+      res.json({
+        success: true,
+        downloadUrl,
+        fileName
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      res.status(500).json({ message: 'Failed to generate PDF' });
+    }
+  }));
+
   // Generic fallback routes
   app.get('/api/residents', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -581,6 +684,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get resident error:', error);
       res.status(500).json({ message: 'Failed to fetch resident' });
+    }
+  }));
+
+  // Properties Routes
+  app.get('/api/properties', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const properties = await storage.getProperties();
+      res.json(properties);
+    } catch (error) {
+      console.error('Get properties error:', error);
+      res.status(500).json({ message: 'Failed to fetch properties' });
+    }
+  }));
+
+  app.post('/api/properties', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const propertyData = req.body;
+      
+      // Validate required fields
+      if (!propertyData.address || !propertyData.city || !propertyData.state || !propertyData.zipCode) {
+        return res.status(400).json({ message: 'Missing required property information' });
+      }
+
+      // Create property object
+      const newProperty = {
+        ...propertyData,
+        createdBy: req.user.id
+      };
+
+      // Save to database
+      const created = await storage.createProperty(newProperty);
+
+      res.status(201).json({
+        success: true,
+        property: created
+      });
+    } catch (error) {
+      console.error('Create property error:', error);
+      res.status(500).json({ message: 'Failed to create property' });
+    }
+  }));
+
+  // Tickets Routes
+  app.get('/api/tickets', roleRoute(['CaseManager', 'Admin', 'Intake', 'Resident'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { status, priority } = req.query;
+      const filters: any = {};
+      if (status && status !== 'all') filters.status = status as string;
+      if (priority && priority !== 'all') filters.priority = priority as string;
+
+      const tickets = await storage.getTickets(filters);
+      
+      // Add property address to each ticket (in production, this would be a join)
+      const properties = await storage.getProperties();
+      const ticketsWithAddress = tickets.map((ticket: any) => {
+        const property = properties.find((p: any) => p.id === ticket.propertyId);
+        return {
+          ...ticket,
+          propertyAddress: property ? `${property.address}, ${property.city}` : 'Unknown Property'
+        };
+      });
+
+      res.json(ticketsWithAddress);
+    } catch (error) {
+      console.error('Get tickets error:', error);
+      res.status(500).json({ message: 'Failed to fetch tickets' });
+    }
+  }));
+
+  app.post('/api/tickets', roleRoute(['CaseManager', 'Admin', 'Resident'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const ticketData = req.body;
+      
+      // Validate required fields
+      if (!ticketData.propertyId || !ticketData.title || !ticketData.description) {
+        return res.status(400).json({ message: 'Missing required ticket information' });
+      }
+
+      const newTicket = {
+        ...ticketData,
+        status: 'new',
+        reportedBy: `${req.user.firstName} ${req.user.lastName}`,
+        createdBy: req.user.id
+      };
+
+      const created = await storage.createTicket(newTicket);
+
+      res.status(201).json({
+        success: true,
+        ticket: created
+      });
+    } catch (error) {
+      console.error('Create ticket error:', error);
+      res.status(500).json({ message: 'Failed to create ticket' });
+    }
+  }));
+
+  app.patch('/api/tickets/:id', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ message: 'Status is required' });
+      }
+
+      // In production, update ticket in database
+      const updatedTicket = {
+        id,
+        status,
+        updatedAt: new Date().toISOString(),
+        ...(status === 'resolved' ? { resolvedAt: new Date().toISOString() } : {})
+      };
+
+      console.log('Updating ticket:', updatedTicket);
+
+      res.json({
+        success: true,
+        ticket: updatedTicket
+      });
+    } catch (error) {
+      console.error('Update ticket error:', error);
+      res.status(500).json({ message: 'Failed to update ticket' });
     }
   }));
 

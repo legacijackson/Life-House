@@ -23,8 +23,11 @@ import {
   CheckCircle,
   AlertTriangle,
   Star,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react';
+import { CaseNoteModal } from "@/components/case-note-modal";
+import { toast } from "@/hooks/use-toast";
 
 interface CaseNote {
   id: string;
@@ -123,14 +126,60 @@ export default function CaseNotes() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedNote, setSelectedNote] = useState<CaseNote | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingNote, setEditingNote] = useState<CaseNote | null>(null);
+  const [notesList, setNotesList] = useState<CaseNote[]>(mockCaseNotes);
 
-  // In a real app, this would fetch from API
-  const { data: caseNotes = mockCaseNotes } = useQuery({
-    queryKey: ['/api/case-notes'],
-    enabled: false // Using mock data for now
-  });
+  // Mock residents data for the modal
+  const mockResidents = [
+    { id: 'res1', name: 'Marcus Johnson' },
+    { id: 'res2', name: 'David Rodriguez' },
+    { id: 'res3', name: 'James Wilson' }
+  ];
 
-  const filteredNotes = (caseNotes as CaseNote[]).filter((note: CaseNote) => {
+  const handleSaveNote = (note: CaseNote) => {
+    if (note.id) {
+      // Update existing note
+      setNotesList(prev => prev.map(n => n.id === note.id ? { ...n, ...note, updatedAt: new Date().toISOString() } : n));
+      toast({
+        title: "Case note updated",
+        description: "The case note has been updated successfully."
+      });
+    } else {
+      // Create new note
+      const newNote = {
+        ...note,
+        id: Date.now().toString(),
+        staffId: 'current-user',
+        staffName: 'Sarah Williams',
+        residentName: mockResidents.find(r => r.id === note.residentId)?.name || '',
+        status: 'final' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setNotesList(prev => [newNote, ...prev]);
+      toast({
+        title: "Case note created",
+        description: "The case note has been created successfully."
+      });
+    }
+    setIsCreating(false);
+    setEditingNote(null);
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    if (window.confirm('Are you sure you want to delete this case note?')) {
+      setNotesList(prev => prev.filter(n => n.id !== noteId));
+      if (selectedNote?.id === noteId) {
+        setSelectedNote(null);
+      }
+      toast({
+        title: "Case note deleted",
+        description: "The case note has been deleted successfully."
+      });
+    }
+  };
+
+  const filteredNotes = notesList.filter((note: CaseNote) => {
     const matchesSearch = note.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          note.residentName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -338,13 +387,22 @@ export default function CaseNotes() {
                         </p>
                       </div>
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setEditingNote(selectedNote)}
+                        >
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
                         </Button>
-                        <Button size="sm" variant="outline">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Full
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteNote(selectedNote.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
                         </Button>
                       </div>
                     </div>
@@ -492,6 +550,18 @@ export default function CaseNotes() {
           </div>
         </div>
       </main>
+      
+      {/* Case Note Modal */}
+      <CaseNoteModal
+        isOpen={isCreating || !!editingNote}
+        onClose={() => {
+          setIsCreating(false);
+          setEditingNote(null);
+        }}
+        onSave={handleSaveNote}
+        note={editingNote || undefined}
+        residents={mockResidents}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Sidebar } from "@/components/sidebar";
 import { 
   Users, 
   Clock, 
@@ -144,18 +145,27 @@ export default function Intake() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Intake & Referrals</h1>
-          <p className="text-gray-600">Manage referrals and resident onboarding</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-gray-500">
-            Total Referrals: {referrals?.length || 0}
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar />
+      
+      <main className="flex-1 overflow-y-auto">
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Intake & Referrals</h1>
+                <p className="text-sm text-gray-600">Manage referrals and resident onboarding</p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-gray-500">
+                  Total Referrals: {referrals?.length || 0}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </header>
+
+        <div className="p-6 space-y-6">
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList>
@@ -427,6 +437,8 @@ export default function Intake() {
           </Card>
         </TabsContent>
       </Tabs>
+        </div>
+      </main>
     </div>
   );
 }

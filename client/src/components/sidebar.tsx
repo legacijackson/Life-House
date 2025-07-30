@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useCurrentUser, filterSidebarItems } from "@/lib/rbac";
 import { 
   LayoutDashboard,
   Users,
@@ -34,6 +35,11 @@ const newPortalNavigation = [
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { data: user, isLoading } = useCurrentUser();
+  
+  // Filter navigation items based on user role
+  const filteredNavigation = user ? filterSidebarItems(navigation, user.role) : [];
+  const filteredPortalNavigation = user ? filterSidebarItems(newPortalNavigation, user.role) : [];
 
   return (
     <aside className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
@@ -64,8 +70,8 @@ export function Sidebar() {
             />
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-900">Sarah Williams</p>
-            <p className="text-xs text-gray-500">Senior Case Manager</p>
+            <p className="text-sm font-medium text-gray-900">{user?.name || 'Loading...'}</p>
+            <p className="text-xs text-gray-500">{user?.role || 'Loading...'}</p>
           </div>
         </div>
       </div>
@@ -73,7 +79,7 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4">
         <ul className="space-y-2">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = location === item.href;
             return (
               <li key={item.name}>
@@ -99,12 +105,13 @@ export function Sidebar() {
         </ul>
 
         {/* New Portal Features */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="px-3 py-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Portal Features</p>
-          </div>
-          <ul className="mt-2 space-y-2">
-            {newPortalNavigation.map((item) => {
+        {filteredPortalNavigation.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="px-3 py-2">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Portal Features</p>
+            </div>
+            <ul className="mt-2 space-y-2">
+            {filteredPortalNavigation.map((item) => {
               const isActive = location === item.href;
               return (
                 <li key={item.name}>
@@ -129,6 +136,7 @@ export function Sidebar() {
             })}
           </ul>
         </div>
+        )}
 
         {/* AI Assistant Section */}
         <div className="mt-6 pt-6 border-t border-gray-200">

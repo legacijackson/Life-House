@@ -23,6 +23,7 @@ import {
   Coffee,
   Shield
 } from 'lucide-react';
+import { AddPropertyModal } from "@/components/add-property-modal";
 
 interface Property {
   id: string;
@@ -129,6 +130,7 @@ const mockOccupants: Record<string, Occupant> = {
 
 export default function Properties() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] = useState(false);
 
   // In a real app, this would fetch from API
   const { data: properties = mockProperties, isLoading } = useQuery({
@@ -175,7 +177,7 @@ export default function Properties() {
                 <h1 className="text-2xl font-bold text-gray-900">Life House Properties</h1>
                 <p className="text-sm text-gray-600">Manage transitional housing properties and bed assignments</p>
               </div>
-              <Button>
+              <Button onClick={() => setIsAddPropertyModalOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Property
               </Button>
@@ -472,6 +474,12 @@ export default function Properties() {
           </div>
         </div>
       </main>
+
+      {/* Add Property Modal */}
+      <AddPropertyModal
+        isOpen={isAddPropertyModalOpen}
+        onClose={() => setIsAddPropertyModalOpen(false)}
+      />
     </div>
   );
 }

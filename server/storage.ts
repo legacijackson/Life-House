@@ -82,6 +82,7 @@ export interface IStorage {
 
   // Properties and tickets
   getProperties(): Promise<any[]>;
+  createProperty(property: any): Promise<any>;
   getTickets(filters?: { propertyId?: string; status?: string }): Promise<Ticket[]>;
   createTicket(ticket: InsertTicket): Promise<Ticket>;
 
@@ -409,6 +410,14 @@ export class DatabaseStorage implements IStorage {
 
   async getProperties(): Promise<any[]> {
     return await db.select().from(properties);
+  }
+
+  async createProperty(property: any): Promise<any> {
+    const [created] = await db
+      .insert(properties)
+      .values(property)
+      .returning();
+    return created;
   }
 
   async getTickets(filters?: { propertyId?: string; status?: string }): Promise<Ticket[]> {
