@@ -15,9 +15,9 @@ export function ProgramOverviewModal({ isOpen, onClose }: ProgramOverviewModalPr
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0" aria-describedby="program-overview-description">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Life House Reentry Program Overview</DialogTitle>
-          <DialogDescription id="program-overview-description">
+        <DialogHeader>
+          <DialogTitle className="sr-only">Life House Reentry Program Overview</DialogTitle>
+          <DialogDescription className="sr-only">
             Comprehensive information about Life House Reentry services, programs, and mission
           </DialogDescription>
         </DialogHeader>

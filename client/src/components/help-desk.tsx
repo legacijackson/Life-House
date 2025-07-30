@@ -38,7 +38,7 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const setIsOpen = externalIsOpen !== undefined && onClose ? onClose : () => setInternalIsOpen(!internalIsOpen);
-  
+
   const [selectedCategory, setSelectedCategory] = useState<'faq' | 'contact'>('faq');
   const [searchTerm, setSearchTerm] = useState('');
   const [contactForm, setContactForm] = useState({
@@ -77,10 +77,10 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
 
   const handleSubmitContact = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // In a real app, this would send the support request
     toast.success("Support request submitted! We'll get back to you within 24 hours.");
-    
+
     setContactForm({ subject: '', message: '' });
     if (onClose) {
       onClose();
@@ -115,7 +115,7 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
               Help & Support
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent className="p-0">
             {/* Category Tabs */}
             <div className="flex border-b">
@@ -168,7 +168,7 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
                       className="pl-10"
                     />
                   </div>
-                  
+
                   {faqsLoading ? (
                     <div className="text-center py-4">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mx-auto"></div>
@@ -247,7 +247,7 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
                   <p className="text-sm text-gray-600 mb-4">
                     Send us a message and we'll respond within 24 hours
                   </p>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Subject
