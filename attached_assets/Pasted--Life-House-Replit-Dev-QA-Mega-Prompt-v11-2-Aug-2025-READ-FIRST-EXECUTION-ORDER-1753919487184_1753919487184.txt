@@ -1,0 +1,125 @@
+# Life House – **Replit Dev & QA Mega‑Prompt**  (v11 – 2 Aug 2025)
+
+> **READ FIRST — EXECUTION ORDER**
+> **Step 0 » Comprehensive Pre‑Flight Script** (added in v11)
+> **Step 1 » Implement Change‑Requests (CR‑1→CR‑51)**
+> **Step 2 » Run Full Automated & Manual QA Matrix (110 + tests)**
+> **Step 3 » Resolve *all* failures, rerun until 100 % Pass**
+> **Step 4 » Attach Artifacts & Ship v1.3.0**
+>
+> This doc now contains **every dev task, DB migration, API spec, RBAC rule, UI component, and test** required to finish the Life House app. Follow the exact order; do not skip any item.
+
+---
+
+## 0  Comprehensive Pre‑Flight Script (to be executed by Replit Assistant)
+
+### 0.1  Data Sanitisation
+
+1. **DROP** all seed/fake rows from `users`, `residents`, `case_notes`, `attendance`, `resources`, `maintenance`, `checkins`, `reports`.
+2. **VERIFY** each table now `COUNT(*) = 0` or only system/admin records.
+3. **Run migration** `2025_08_02_seed_admin.sql` which inserts only:
+
+   * Super Admins → `julius@lifehousereentry.com`, `brittney@lifehousereentry.com`, `kairia@lifehousereentry.com`, `juliusdjackson@gmail.com`.
+4. Output SQL dump `/artifacts/preflight/clean_schema.sql`.
+
+### 0.2  Integration Smoke Test
+
+| Service                                                           | CLI / API Call                                     | Expected               |
+| ----------------------------------------------------------------- | -------------------------------------------------- | ---------------------- |
+| **Stripe**                                                        | `stripe prices list --limit 3`                     | returns ≥3 tier prices |
+| **SendGrid**                                                      | `curl -I https://api.sendgrid.com/v3/user/account` | 200 OK                 |
+| **Slack Bot**                                                     | `curl -X POST chat.postMessage` to #lifehouse‑ops  | 200 OK                 |
+| **OpenAI**                                                        | `curl completions` test                            | 200 OK                 |
+| Upload console output to `/artifacts/preflight/integrations.txt`. |                                                    |                        |
+
+### 0.3  Security Sweep
+
+* Run **OWASP ZAP full scan** against `.replit.dev`; export HTML report `/artifacts/security/zap.html`.
+* Run **npm audit --production**; auto‑fix minor, fail on high/critical.
+* Lint for secrets `git-secrets --scan`.
+
+### 0.4  Notification Hook
+
+* Create Cloud‑function `healthPing` that pings `/health` every 5 min; on non‑200 sends Slack DM to SuperAdmin with stack‑trace.
+* Store function source `/monitor/healthPing.js`; prove with test failure screenshot.
+
+> **Proceed to Step 1 only after all Pre‑Flight artifacts uploaded and validated.**
+
+---
+
+## 1  Change‑Request Matrix (CR‑41 → CR‑51)
+
+*(unchanged from v10.1 but renumbered—CR‑51 already included)*
+
+\[Matrix table retained here…]
+
+---
+
+## 2  RBAC Summary Table
+
+*(unchanged)*
+
+---
+
+## 3  Key DB Migrations
+
+*(unchanged)*
+
+---
+
+## 4  API Additions / Modifications
+
+*(unchanged)*
+
+---
+
+## 5  Front‑End Components
+
+*(unchanged)*
+
+---
+
+## 6  Automated Test Inventory  (now **120 tests**)
+
+We extend previous suites with **10 new Pre‑Flight & Security tests**.
+
+| Suite                     | New Tests                                                   |
+| ------------------------- | ----------------------------------------------------------- |
+| `preflight.cy.js`         | PF‑01 (tables empty), PF‑02 (admins seeded)                 |
+| `integration.cy.js`       | INT‑01 Stripe, INT‑02 SendGrid, INT‑03 Slack, INT‑04 OpenAI |
+| `security.cy.js`          | SEC‑11 ZAP 0 highs, SEC‑12 npm audit 0 highs                |
+| `portal_visibility.cy.js` | F‑61 Resident hides Staff btn, F‑62 CM hides Admin btn      |
+
+All tests must run green in CI.
+
+---
+
+## 7  Manual QA Matrix (unchanged 30 checks)
+
+Add **MQ‑31** — Admin banner appears in View‑As.
+
+---
+
+## 8  Artifacts Folders (added)
+
+```
+/artifacts/preflight/
+  clean_schema.sql
+  integrations.txt
+/artifacts/security/
+  zap.html
+```
+
+---
+
+## 9  Go‑Live Gates (expanded)
+
+28. ✔️ Pre‑Flight artifacts present & verified.
+29. ✔️ ZAP & npm audit show 0 high/critical.
+30. ✔️ HealthPing alert tested (simulate 500).
+
+---
+
+*Save this file as `/README_REPLIT.md`; CI must show **120/120** tests passed.*
+
+*Last updated: 2025‑08‑02*
