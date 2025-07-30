@@ -40,7 +40,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
           {isOpen ? (
             <X className="h-7 w-7" />
           ) : (
-            <img src="/house-icon.png" alt="Life House" className="h-8 w-8" />
+            <Logo variant="white" layout="icon" className="h-8 w-8" />
           )}
         </Button>
       </motion.div>
