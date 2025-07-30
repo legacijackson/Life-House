@@ -900,7 +900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const property = properties.find((p: any) => p.id === ticket.propertyId);
         return {
           ...ticket,
-          propertyAddress: property ? `${property.address}, ${property.city}` : 'Unknown Property'```tool_code
+          propertyAddress: property ? `${property.address}, ${property.city}` : 'Unknown Property'
         };
       });
 
