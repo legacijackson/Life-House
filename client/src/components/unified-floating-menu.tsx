@@ -37,7 +37,6 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
         transition={{ delay: 0.3 }}
       >
         <div className="relative">
-          <WaveHand />
           <Button
             onClick={() => setIsOpen(!isOpen)}
             size="lg"
@@ -49,6 +48,8 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
               <Logo variant="white" layout="icon" className="h-8 w-8" />
             )}
           </Button>
+          {/* Waving hand animation centered on top of button */}
+          <WaveHand />
           {/* Small overlay image for custom logo */}
           {!isOpen && (
             <div 
