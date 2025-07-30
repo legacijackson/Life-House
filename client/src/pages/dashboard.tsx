@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Sidebar } from "@/components/sidebar";
+import { MobileSidebar } from "@/components/mobile-sidebar";
 import { StatsCards } from "@/components/stats-cards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,10 +87,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      
-      <main className="flex-1 overflow-y-auto">
+    <MobileSidebar>
+      <div className="h-full overflow-y-auto">
         {/* Top Bar */}
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="px-6 py-4">
@@ -321,14 +319,15 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      </main>
 
-      {selectedResident && (
-        <ResidentModal 
-          resident={selectedResident} 
-          onClose={() => setSelectedResident(null)} 
-        />
-      )}
-    </div>
+        {/* Resident Modal */}
+        {selectedResident && (
+          <ResidentModal 
+            resident={selectedResident} 
+            onClose={() => setSelectedResident(null)} 
+          />
+        )}
+      </div>
+    </MobileSidebar>
   );
 }
