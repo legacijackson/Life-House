@@ -37,7 +37,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Housing application submission
   app.post('/api/public/apply', async (req: Request, res: Response) => {
     try {
-      const validatedData = insertApplicationSchema.parse(req.body);
+      // Transform date strings to Date objects for validation
+      const transformedData = {
+        ...req.body,
+        dateOfBirth: new Date(req.body.dateOfBirth),
+        releaseDate: new Date(req.body.releaseDate)
+      };
+      const validatedData = insertApplicationSchema.parse(transformedData);
       const application = await storage.createApplication(validatedData);
       
       // In production, you'd send confirmation emails here

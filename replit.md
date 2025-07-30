@@ -4,6 +4,8 @@
 
 This is a full-stack web application designed for transitional housing case management. The system provides a secure portal for case managers, administrators, intake staff, and other stakeholders to manage residents, track progress, document interactions, and maintain compliance with housing programs.
 
+**Recent Major Update (July 2025):** Added comprehensive public-facing functionality including a modern landing page with authentic cultural photography, fully functional housing application system, referral portal for community organizations, and donation processing platform. All forms now have complete backend API integration with database storage.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -47,9 +49,10 @@ The application follows a monorepo architecture with clear separation of concern
 - **Future OAuth Integration**: Prepared for Google/Microsoft SSO for staff
 
 ### Database Schema
-- **Comprehensive Schema**: Covers users, residents, case notes, attendance, resources, properties, tickets, and donations
+- **Comprehensive Schema**: Covers users, residents, case notes, attendance, resources, properties, tickets, applications, and donations
+- **Public Forms Integration**: New applications and enhanced donations tables for public form submissions
 - **Audit Logging**: Built-in audit trail for compliance
-- **Flexible Enums**: Extensive use of PostgreSQL enums for data integrity
+- **Flexible Enums**: Extensive use of PostgreSQL enums for data integrity including justice status options
 - **Drizzle ORM**: Type-safe database operations with automatic type generation
 
 ### AI Integration
@@ -133,5 +136,13 @@ The application follows a monorepo architecture with clear separation of concern
 - **Caching Strategy**: TanStack Query provides client-side caching
 - **Code Splitting**: Vite automatically splits bundles for optimal loading
 - **Database Indexing**: Strategic indexes on frequently queried columns
+
+### Recent Changes (July 2025)
+- **Public Landing Page**: Modern, culturally authentic design with professional photography
+- **Housing Applications**: Complete application processing system with database storage
+- **Referral Portal**: CBO referral system with structured data collection
+- **Donation Platform**: Donation processing with donor management capabilities
+- **Backend APIs**: Public endpoints for form submissions with validation and error handling
+- **Database Updates**: Enhanced schema with applications table and updated donations structure
 
 The architecture prioritizes developer experience, type safety, and maintainability while providing a solid foundation for a production transitional housing management system.

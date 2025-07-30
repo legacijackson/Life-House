@@ -178,8 +178,7 @@ export default function Apply() {
                         <SelectContent>
                           <SelectItem value="parole">Parole</SelectItem>
                           <SelectItem value="probation">Probation</SelectItem>
-                          <SelectItem value="stop">STOP Program</SelectItem>
-                          <SelectItem value="ecm">Enhanced Care Management</SelectItem>
+                          <SelectItem value="formerly_incarcerated">Formerly Incarcerated</SelectItem>
                           <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>

@@ -28,7 +28,7 @@ export const roleEnum = pgEnum("role", [
 
 export const languageEnum = pgEnum("language", ["en", "es"]);
 export const readingLevelEnum = pgEnum("reading_level", ["resident_5th", "professional"]);
-export const justiceStatusEnum = pgEnum("justice_status", ["parole", "probation", "other"]);
+export const justiceStatusEnum = pgEnum("justice_status", ["parole", "probation", "formerly_incarcerated", "other"]);
 export const referralSourceEnum = pgEnum("referral_source", ["self", "parole", "probation", "CBO"]);
 export const referralStatusEnum = pgEnum("referral_status", ["new", "in_review", "accepted", "waitlist", "declined"]);
 export const eventTypeEnum = pgEnum("event_type", ["workshop", "one_on_one", "coaching", "check_in"]);
