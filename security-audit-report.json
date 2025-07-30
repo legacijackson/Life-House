@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-07-30T19:41:12.370Z",
+  "summary": {
+    "total": 3,
+    "highSeverity": 0,
+    "mediumSeverity": 3,
+    "lowSeverity": 0
+  },
+  "vulnerabilities": [],
+  "warnings": [
+    {
+      "severity": "MEDIUM",
+      "type": "Security Configuration",
+      "file": "server",
+      "issue": "Security headers not configured",
+      "recommendation": "Add helmet middleware for security headers"
+    },
+    {
+      "severity": "MEDIUM",
+      "type": "Security Configuration",
+      "file": "server",
+      "issue": "CORS not configured",
+      "recommendation": "Configure CORS properly for production"
+    },
+    {
+      "severity": "MEDIUM",
+      "type": "Transport Security",
+      "file": "server",
+      "issue": "HTTPS not configured",
+      "recommendation": "Configure HTTPS for production deployment"
+    }
+  ],
+  "info": [
+    "✓ Sensitive data exposure check completed",
+    "✓ Authentication security check completed",
+    "✓ Injection vulnerability check completed",
+    "✓ RBAC system implemented",
+    "✓ Access control check completed",
+    "✓ Security configuration check completed",
+    "✓ Checked 114 dependencies",
+    "✓ Dependency vulnerability check completed",
+    "✓ Transport security check completed",
+    "✓ Audit logging system detected",
+    "✓ Logging and monitoring check completed"
+  ]
+}
