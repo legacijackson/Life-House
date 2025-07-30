@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Home, Heart, DollarSign, Users, Shield, Target } from "lucide-react";
 import { Link } from "wouter";
+import { Logo } from "@/components/logo";
 
 export default function Donate() {
   const [donationType, setDonationType] = useState('monthly');
@@ -24,8 +25,8 @@ export default function Donate() {
   });
 
   const predefinedAmounts = {
-    monthly: ['25', '50', '100', '250', 'custom'],
-    oneTime: ['50', '100', '250', '500', 'custom']
+    monthly: ['50', '100', '250', '500', 'custom'],
+    oneTime: ['50', '400', '1000', '2500', 'custom']
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,36 +34,61 @@ export default function Donate() {
     const finalAmount = amount === 'custom' ? customAmount : amount;
     
     try {
-      const response = await fetch('/api/public/donate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          amount: finalAmount,
-          frequency: donationType === 'monthly' ? 'monthly' : 'one_time'
-        }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        alert(`Thank you for your ${donationType} donation of $${finalAmount}! Your submission has been received and will be processed.`);
-        // Reset form
-        setFormData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          dedication: '',
-          isAnonymous: false,
-          mailingList: true
+      // For monthly donations, redirect to Stripe
+      if (donationType === 'monthly') {
+        const response = await fetch('/api/create-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...formData,
+            amount: finalAmount,
+            frequency: 'monthly'
+          }),
         });
-        setAmount('50');
-        setCustomAmount('');
+
+        const result = await response.json();
+
+        if (response.ok && result.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = result.url;
+        } else {
+          throw new Error(result.message || 'Failed to create subscription');
+        }
       } else {
-        throw new Error(result.message || 'Failed to process donation');
+        // Handle one-time donations through existing flow
+        const response = await fetch('/api/public/donate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...formData,
+            amount: finalAmount,
+            frequency: 'one_time'
+          }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          alert(`Thank you for your donation of $${finalAmount}! Your submission has been received and will be processed.`);
+          // Reset form
+          setFormData({
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            dedication: '',
+            isAnonymous: false,
+            mailingList: true
+          });
+          setAmount('50');
+          setCustomAmount('');
+        } else {
+          throw new Error(result.message || 'Failed to process donation');
+        }
       }
     } catch (error) {
       console.error('Donation submission error:', error);
@@ -78,9 +104,7 @@ export default function Donate() {
           <div className="flex items-center justify-between">
             <Link href="/">
               <div className="flex items-center space-x-3 cursor-pointer">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E6F40' }}>
-                  <Home className="w-5 h-5 text-white" />
-                </div>
+                <Logo variant="color" layout="icon" className="w-8 h-8" />
                 <span className="text-xl font-bold text-gray-900">Life House Reentry</span>
               </div>
             </Link>
@@ -111,20 +135,20 @@ export default function Donate() {
                 <CardContent className="p-4 text-center">
                   <Shield className="w-8 h-8 mx-auto mb-2 text-green-600" />
                   <p className="font-bold text-2xl text-green-800">$50/month</p>
-                  <p className="text-sm text-green-700">Provides 1 week of stable housing</p>
+                  <p className="text-sm text-green-700">Supports stable housing</p>
                 </CardContent>
               </Card>
               <Card className="border-0 bg-gradient-to-br from-blue-100 to-blue-50">
                 <CardContent className="p-4 text-center">
                   <Target className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                  <p className="font-bold text-2xl text-blue-800">$100/month</p>
-                  <p className="text-sm text-blue-700">Funds job training & certification</p>
+                  <p className="font-bold text-2xl text-blue-800">$400</p>
+                  <p className="text-sm text-blue-700">Helps with job training and certification</p>
                 </CardContent>
               </Card>
               <Card className="border-0 bg-gradient-to-br from-purple-100 to-purple-50">
                 <CardContent className="p-4 text-center">
                   <Heart className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-                  <p className="font-bold text-2xl text-purple-800">$250/month</p>
+                  <p className="font-bold text-2xl text-purple-800">$2,500</p>
                   <p className="text-sm text-purple-700">Sponsors a resident's full support</p>
                 </CardContent>
               </Card>

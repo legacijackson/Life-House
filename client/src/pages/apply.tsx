@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Home, User, Phone, Mail, Calendar } from "lucide-react";
 import { Link } from "wouter";
+import { Logo } from "@/components/logo";
 
 export default function Apply() {
   const [formData, setFormData] = useState({
@@ -72,9 +73,7 @@ export default function Apply() {
           <div className="flex items-center justify-between">
             <Link href="/">
               <div className="flex items-center space-x-3 cursor-pointer">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E6F40' }}>
-                  <Home className="w-5 h-5 text-white" />
-                </div>
+                <Logo variant="color" layout="icon" className="w-8 h-8" />
                 <span className="text-xl font-bold text-gray-900">Life House Reentry</span>
               </div>
             </Link>

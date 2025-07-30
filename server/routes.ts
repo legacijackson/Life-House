@@ -15,6 +15,7 @@ import {
   insertPartnerSchema
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
+import Stripe from "stripe";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -234,6 +235,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ message: 'Failed to login' });
+    }
+  });
+
+  // Create Stripe subscription for monthly donations
+  app.post('/api/create-subscription', async (req: Request, res: Response) => {
+    try {
+      const { firstName, lastName, email, amount, frequency } = req.body;
+      
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(500).json({ message: 'Stripe not configured' });
+      }
+
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2023-10-16',
+      });
+      
+      // Create Stripe Checkout session for subscription
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'subscription',
+        customer_email: email,
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: 'Life House Reentry Monthly Donation',
+                description: 'Supporting housing stability and life transformation',
+              },
+              unit_amount: Math.round(parseFloat(amount) * 100), // Convert to cents
+              recurring: {
+                interval: 'month',
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${req.headers.origin || 'http://localhost:5000'}/donate?success=true`,
+        cancel_url: `${req.headers.origin || 'http://localhost:5000'}/donate?canceled=true`,
+        metadata: {
+          donor_name: `${firstName} ${lastName}`,
+          frequency: frequency,
+        },
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Stripe subscription error:', error);
+      res.status(500).json({ message: 'Failed to create subscription' });
     }
   });
 

@@ -14,6 +14,7 @@ import {
   LogOut,
   UserPlus
 } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 const navigation = [
   { name: "Dashboard", href: "/app", icon: LayoutDashboard },
@@ -49,11 +50,9 @@ export function Sidebar() {
           className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
           onClick={() => window.location.href = '/'}
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2E6F40' }}>
-            <Building className="w-5 h-5 text-white" />
-          </div>
+          <Logo variant="color" layout="icon" className="w-10 h-10" />
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">Life House Portal</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Life House Reentry</h1>
             <p className="text-sm text-gray-500">← Back to Home</p>
           </div>
         </div>

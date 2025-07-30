@@ -449,7 +449,7 @@ export default function Landing() {
               <Button 
                 variant="outline" 
                 className="w-full border-purple-600 text-purple-600 hover:bg-purple-50 transform hover:scale-105 transition-all duration-200"
-                onClick={() => window.open('mailto:info@lifehousereentry.org?subject=Partnership Inquiry', '_blank')}
+                onClick={() => setIsPartnerModalOpen(true)}
               >
                 <Heart className="w-4 h-4 mr-2" />
                 Partner with Us
@@ -465,7 +465,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Home className="w-6 h-6" />
+                <Logo variant="white" layout="icon" className="w-6 h-6" />
                 <span className="text-xl font-bold">Life House Reentry</span>
               </div>
               <p className="text-green-100 text-sm">
