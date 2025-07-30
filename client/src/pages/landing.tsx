@@ -41,7 +41,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section id="about" className="container mx-auto px-4 py-20">
         <div className="grid lg:grid-cols-2 gap-16 items-center grid-rows-[auto_minmax(0,1fr)]">
-          <div className="text-left">
+          <div className="text-left pl-[5px] pr-[5px]">
             <Badge className="mb-6 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 border-0 px-4 py-2 text-sm font-semibold">
               ✨ 7-Stage Reentry Program
             </Badge>
