@@ -84,7 +84,7 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       loginForm.reset();
       onClose();
-      window.location.href = "/app/dashboard";
+      window.location.href = "/app";
     },
     onError: (error: any) => {
       toast.error(error.message || "Invalid email or password. Please try again.");
@@ -110,7 +110,7 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       signupForm.reset();
       onClose();
-      window.location.href = "/app/dashboard";
+      window.location.href = "/app";
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create account. Please try again.");

@@ -87,7 +87,7 @@ export default function Refer() {
             <Link href="/">
               <div className="flex items-center space-x-3 cursor-pointer">
                 <Logo variant="color" layout="icon" className="w-8 h-8" />
-                <span className="text-xl font-bold text-gray-900">Life House Reentry</span>
+                
               </div>
             </Link>
             <Link href="/">
