@@ -13,6 +13,19 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+// Type-safe handler for authenticated routes
+type AuthenticatedHandler = (req: AuthenticatedRequest, res: Response, next?: NextFunction) => void | Promise<void>;
+
+// Helper to properly type authenticated routes
+function authRoute(handler: AuthenticatedHandler) {
+  return handler as any;
+}
+
+// Helper for role-based routes
+function roleRoute(roles: string[], handler: AuthenticatedHandler) {
+  return requireRole(roles)(handler as any);
+}
+
 // Simple auth middleware (in production, implement proper JWT validation)
 const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   // Mock user for development - in production, validate JWT token
@@ -27,7 +40,7 @@ const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunctio
 
 const requireRole = (roles: string[]) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (!roles.includes(req.user?.role)) {
-    return res.status(403).json({ message: "Insufficient permissions" });
+    return res.status(403).json({ message: "Insufficient permissions" }));
   }
   next();
 };
@@ -53,15 +66,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         message: 'Application submitted successfully',
         applicationId: application.id 
-      });
+      }));
     } catch (error) {
       console.error('Application submission error:', error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors }));
       }
-      res.status(500).json({ message: 'Failed to submit application' });
+      res.status(500).json({ message: 'Failed to submit application' }));
     }
-  });
+  }));
 
   // Referral submission
   app.post('/api/public/refer', async (req: Request, res: Response) => {
@@ -82,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           urgency: req.body.urgency
         },
         notes: `Current Situation: ${req.body.currentSituation}\n\nWhy Referred: ${req.body.whyReferred}\n\nSpecial Needs: ${req.body.specialNeeds || 'None specified'}`
-      });
+      }));
       
       const referral = await storage.createReferral(validatedData);
       
@@ -93,15 +106,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         message: 'Referral submitted successfully',
         referralId: referral.id 
-      });
+      }));
     } catch (error) {
       console.error('Referral submission error:', error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors }));
       }
-      res.status(500).json({ message: 'Failed to submit referral' });
+      res.status(500).json({ message: 'Failed to submit referral' }));
     }
-  });
+  }));
 
   // Donation submission
   app.post('/api/public/donate', async (req: Request, res: Response) => {
@@ -116,37 +129,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         message: 'Donation submitted successfully',
         donationId: donation.id 
-      });
+      }));
     } catch (error) {
       console.error('Donation submission error:', error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors }));
       }
-      res.status(500).json({ message: 'Failed to process donation' });
+      res.status(500).json({ message: 'Failed to process donation' }));
     }
-  });
+  }));
 
   // Apply auth middleware to all API routes
   app.use('/api', requireAuth);
 
   // Dashboard stats
-  app.get('/api/dashboard/stats', async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/dashboard/stats', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const stats = await storage.getDashboardStats(req.user.id, req.user.role);
       res.json(stats);
     } catch (error) {
       console.error('Dashboard stats error:', error);
-      res.status(500).json({ message: 'Failed to fetch dashboard stats' });
+      res.status(500).json({ message: 'Failed to fetch dashboard stats' }));
     }
-  });
+  }));
 
   // Current user
-  app.get('/api/auth/user', async (req: AuthenticatedRequest, res) => {
+  app.get('/api/auth/user', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     res.json(req.user);
-  });
+  }));
 
   // Residents
-  app.get('/api/residents', requireRole(['CaseManager', 'Admin', 'Intake']), async (req: any, res) => {
+  app.get('/api/residents', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       // For case managers, return their assigned residents
       // For now, return all residents with role=Resident
@@ -154,15 +167,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json([]); // Placeholder - implement proper resident fetching
     } catch (error) {
       console.error('Get residents error:', error);
-      res.status(500).json({ message: 'Failed to fetch residents' });
+      res.status(500).json({ message: 'Failed to fetch residents' }));
     }
-  });
+  }));
 
-  app.get('/api/residents/:id', requireRole(['CaseManager', 'Admin', 'Intake']), async (req, res) => {
+  app.get('/api/residents/:id', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const resident = await storage.getUser(req.params.id);
       if (!resident) {
-        return res.status(404).json({ message: 'Resident not found' });
+        return res.status(404).json({ message: 'Resident not found' }));
       }
 
       const profile = await storage.getResidentProfile(resident.id);
@@ -174,24 +187,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profile,
         caseNotes,
         resources,
-      });
+      }));
     } catch (error) {
       console.error('Get resident error:', error);
-      res.status(500).json({ message: 'Failed to fetch resident' });
+      res.status(500).json({ message: 'Failed to fetch resident' }));
     }
-  });
+  }));
 
   // Referrals
-  app.get('/api/referrals', requireRole(['Intake', 'Admin']), async (req, res) => {
+  app.get('/api/referrals', roleRoute(['Intake', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { status } = req.query;
-      const referrals = await storage.getReferrals({ status: status as string });
+      const referrals = await storage.getReferrals({ status: status as string }));
       res.json(referrals);
     } catch (error) {
       console.error('Get referrals error:', error);
-      res.status(500).json({ message: 'Failed to fetch referrals' });
+      res.status(500).json({ message: 'Failed to fetch referrals' }));
     }
-  });
+  }));
 
   app.post('/api/referrals', async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -204,16 +217,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity: 'referral',
         entityId: referral.id,
         ip: req.ip,
-      });
+      }));
 
       res.json(referral);
     } catch (error) {
       console.error('Create referral error:', error);
-      res.status(500).json({ message: 'Failed to create referral' });
+      res.status(500).json({ message: 'Failed to create referral' }));
     }
-  });
+  }));
 
-  app.patch('/api/referrals/:id', requireRole(['Intake', 'Admin']), async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/referrals/:id', roleRoute(['Intake', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const updateData = req.body;
@@ -225,17 +238,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity: 'referral',
         entityId: id,
         ip: req.ip,
-      });
+      }));
 
       res.json(referral);
     } catch (error) {
       console.error('Update referral error:', error);
-      res.status(500).json({ message: 'Failed to update referral' });
+      res.status(500).json({ message: 'Failed to update referral' }));
     }
-  });
+  }));
 
   // Intake system endpoints
-  app.post('/api/intake/create-resident', requireRole(['Intake', 'Admin']), async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/intake/create-resident', roleRoute(['Intake', 'Admin']], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { referralId } = req.body;
       const resident = await storage.createResidentFromReferral(referralId, req.user.id);
@@ -246,16 +259,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity: 'resident',
         entityId: resident.id,
         ip: req.ip,
-      });
+      }));
 
       res.json(resident);
     } catch (error) {
       console.error('Create resident from referral error:', error);
-      res.status(500).json({ message: 'Failed to create resident' });
+      res.status(500).json({ message: 'Failed to create resident' }));
     }
-  });
+  }));
 
-  app.post('/api/intake/:residentId/checklist', requireRole(['Intake', 'Admin']), async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/intake/:residentId/checklist', roleRoute(['Intake', 'Admin']], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { residentId } = req.params;
       const checklistData = req.body;
@@ -264,11 +277,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(checklist);
     } catch (error) {
       console.error('Update intake checklist error:', error);
-      res.status(500).json({ message: 'Failed to update checklist' });
+      res.status(500).json({ message: 'Failed to update checklist' }));
     }
-  });
+  }));
 
-  app.post('/api/intake/:residentId/assign-bed', requireRole(['Intake', 'Admin']), async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/intake/:residentId/assign-bed', roleRoute(['Intake', 'Admin']], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { residentId } = req.params;
       const { propertyId, roomId } = req.body;
@@ -280,17 +293,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity: 'bed_assignment',
         entityId: `${residentId}-${roomId}`,
         ip: req.ip,
-      });
+      }));
 
       res.json(assignment);
     } catch (error) {
       console.error('Bed assignment error:', error);
-      res.status(500).json({ message: 'Failed to assign bed' });
+      res.status(500).json({ message: 'Failed to assign bed' }));
     }
-  });
+  }));
 
   // Attendance
-  app.get('/api/attendance', requireRole(['CaseManager', 'Admin']), async (req: AuthenticatedRequest, res) => {
+  app.get('/api/attendance', roleRoute(['CaseManager', 'Admin']], async (req: AuthenticatedRequest, res) => {
     try {
       const { residentId, startDate, endDate } = req.query;
       const filters: any = {};
@@ -307,16 +320,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(attendance);
     } catch (error) {
       console.error('Get attendance error:', error);
-      res.status(500).json({ message: 'Failed to fetch attendance' });
+      res.status(500).json({ message: 'Failed to fetch attendance' }));
     }
-  });
+  }));
 
-  app.post('/api/attendance', requireRole(['CaseManager', 'Admin']), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/attendance', roleRoute(['CaseManager', 'Admin']], async (req: AuthenticatedRequest, res) => {
     try {
       const attendanceData = insertAttendanceSchema.parse({
         ...req.body,
         staffId: req.user.id,
-      });
+      }));
       
       const attendance = await storage.createAttendance(attendanceData);
       
@@ -326,36 +339,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity: 'attendance',
         entityId: attendance.id,
         ip: req.ip,
-      });
+      }));
 
       res.json(attendance);
     } catch (error) {
       console.error('Create attendance error:', error);
-      res.status(500).json({ message: 'Failed to create attendance record' });
+      res.status(500).json({ message: 'Failed to create attendance record' }));
     }
-  });
+  }));
 
   // Service Events
-  app.get('/api/services', requireRole(['CaseManager', 'Admin']), async (req: AuthenticatedRequest, res) => {
+  app.get('/api/services', roleRoute(['CaseManager', 'Admin']], async (req: AuthenticatedRequest, res) => {
     try {
       const { residentId, fundingStream } = req.query;
       const services = await storage.getServiceEvents({
         residentId: residentId as string,
         fundingStream: fundingStream as string,
-      });
+      }));
       res.json(services);
     } catch (error) {
       console.error('Get services error:', error);
-      res.status(500).json({ message: 'Failed to fetch service events' });
+      res.status(500).json({ message: 'Failed to fetch service events' }));
     }
-  });
+  }));
 
-  app.post('/api/services', requireRole(['CaseManager', 'Admin']), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/services', roleRoute(['CaseManager', 'Admin']], async (req: AuthenticatedRequest, res) => {
     try {
       const serviceData = insertServiceEventSchema.parse({
         ...req.body,
         staffId: req.user.id,
-      });
+      }));
       
       const service = await storage.createServiceEvent(serviceData);
       
@@ -365,37 +378,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity: 'service',
         entityId: service.id,
         ip: req.ip,
-      });
+      }));
 
       res.json(service);
     } catch (error) {
       console.error('Create service error:', error);
-      res.status(500).json({ message: 'Failed to create service event' });
+      res.status(500).json({ message: 'Failed to create service event' }));
     }
-  });
+  }));
 
   // Case Notes
-  app.get('/api/casenotes', requireRole(['CaseManager', 'Admin']), async (req: AuthenticatedRequest, res) => {
+  app.get('/api/casenotes', roleRoute(['CaseManager', 'Admin']], async (req: AuthenticatedRequest, res) => {
     try {
       const { residentId } = req.query;
       if (!residentId) {
-        return res.status(400).json({ message: 'residentId is required' });
+        return res.status(400).json({ message: 'residentId is required' }));
       }
 
       const notes = await storage.getCaseNotes(residentId as string);
       res.json(notes);
     } catch (error) {
       console.error('Get case notes error:', error);
-      res.status(500).json({ message: 'Failed to fetch case notes' });
+      res.status(500).json({ message: 'Failed to fetch case notes' }));
     }
-  });
+  }));
 
-  app.post('/api/casenotes', requireRole(['CaseManager', 'Admin']), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/casenotes', roleRoute(['CaseManager', 'Admin']], async (req: AuthenticatedRequest, res) => {
     try {
       const noteData = insertCaseNoteSchema.parse({
         ...req.body,
         createdBy: req.user.id,
-      });
+      }));
       
       const note = await storage.createCaseNote(noteData);
       
@@ -405,14 +418,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity: 'case_note',
         entityId: note.id,
         ip: req.ip,
-      });
+      }));
 
       res.json(note);
     } catch (error) {
       console.error('Create case note error:', error);
-      res.status(500).json({ message: 'Failed to create case note' });
+      res.status(500).json({ message: 'Failed to create case note' }));
     }
-  });
+  }));
 
   // Resources
   app.get('/api/resources', async (req: AuthenticatedRequest, res) => {
@@ -421,40 +434,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const resources = await storage.getResources({
         category: category as string,
         status: (status as string) || 'active',
-      });
+      }));
       res.json(resources);
     } catch (error) {
       console.error('Get resources error:', error);
-      res.status(500).json({ message: 'Failed to fetch resources' });
+      res.status(500).json({ message: 'Failed to fetch resources' }));
     }
-  });
+  }));
 
   // Properties and Tickets
-  app.get('/api/properties', requireRole(['Admin', 'CaseManager', 'Intake']), async (req: AuthenticatedRequest, res) => {
+  app.get('/api/properties', roleRoute(['Admin', 'CaseManager', 'Intake']], async (req: AuthenticatedRequest, res) => {
     try {
       const properties = await storage.getProperties();
       res.json(properties);
     } catch (error) {
       console.error('Get properties error:', error);
-      res.status(500).json({ message: 'Failed to fetch properties' });
+      res.status(500).json({ message: 'Failed to fetch properties' }));
     }
-  });
+  }));
 
-  app.get('/api/tickets', requireRole(['Admin', 'CaseManager']), async (req: AuthenticatedRequest, res) => {
+  app.get('/api/tickets', roleRoute(['Admin', 'CaseManager']], async (req: AuthenticatedRequest, res) => {
     try {
       const { propertyId, status } = req.query;
       const tickets = await storage.getTickets({
         propertyId: propertyId as string,
         status: status as string,
-      });
+      }));
       res.json(tickets);
     } catch (error) {
       console.error('Get tickets error:', error);
-      res.status(500).json({ message: 'Failed to fetch tickets' });
+      res.status(500).json({ message: 'Failed to fetch tickets' }));
     }
-  });
+  }));
 
-  app.post('/api/tickets', requireRole(['Admin', 'CaseManager', 'Resident']), async (req: AuthenticatedRequest, res) => {
+  app.post('/api/tickets', roleRoute(['Admin', 'CaseManager', 'Resident']], async (req: AuthenticatedRequest, res) => {
     try {
       const ticketData = insertTicketSchema.parse(req.body);
       const ticket = await storage.createTicket(ticketData);
@@ -465,27 +478,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entity: 'ticket',
         entityId: ticket.id,
         ip: req.ip,
-      });
+      }));
 
       res.json(ticket);
     } catch (error) {
       console.error('Create ticket error:', error);
-      res.status(500).json({ message: 'Failed to create ticket' });
+      res.status(500).json({ message: 'Failed to create ticket' }));
     }
-  });
+  }));
 
   // AI Assistant endpoints - temporarily disabled until AI service is ready
-  app.post('/api/ai/draft-note', requireRole(['CaseManager', 'Admin']), async (req: AuthenticatedRequest, res) => {
-    res.status(503).json({ message: 'AI service temporarily unavailable' });
-  });
+  app.post('/api/ai/draft-note', roleRoute(['CaseManager', 'Admin']], async (req: AuthenticatedRequest, res) => {
+    res.status(503).json({ message: 'AI service temporarily unavailable' }));
+  }));
 
-  app.post('/api/ai/recommend-resources', requireRole(['CaseManager', 'Admin']), async (req: AuthenticatedRequest, res) => {
-    res.status(503).json({ message: 'AI service temporarily unavailable' });
-  });
+  app.post('/api/ai/recommend-resources', roleRoute(['CaseManager', 'Admin']], async (req: AuthenticatedRequest, res) => {
+    res.status(503).json({ message: 'AI service temporarily unavailable' }));
+  }));
 
-  app.post('/api/ai/form-helper', requireRole(['CaseManager', 'Admin', 'Intake']), async (req: AuthenticatedRequest, res) => {
-    res.status(503).json({ message: 'AI service temporarily unavailable' });
-  });
+  app.post('/api/ai/form-helper', roleRoute(['CaseManager', 'Admin', 'Intake']], async (req: AuthenticatedRequest, res) => {
+    res.status(503).json({ message: 'AI service temporarily unavailable' }));
+  }));
 
   const httpServer = createServer(app);
   return httpServer;

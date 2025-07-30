@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { UnifiedIntakeModal } from "@/components/unified-intake-modal";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
 export default function Landing() {
+  const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-cream-50" style={{ background: 'linear-gradient(to bottom, #f0fdf4, #fffaeb)' }}>
       {/* Header */}
@@ -44,10 +48,10 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 className="text-lg px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg transform hover:scale-105 transition-all duration-200"
-                onClick={() => window.location.href = '/apply'}
+                onClick={() => setIsIntakeModalOpen(true)}
               >
                 <Home className="w-5 h-5 mr-2" />
-                Apply for Housing
+                Apply Now
               </Button>
               <Button 
                 size="lg" 
@@ -496,6 +500,12 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Unified Intake Modal */}
+      <UnifiedIntakeModal 
+        isOpen={isIntakeModalOpen} 
+        onClose={() => setIsIntakeModalOpen(false)} 
+      />
     </div>
   );
 }
