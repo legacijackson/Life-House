@@ -21,7 +21,7 @@ export default function Landing() {
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
           <div className="flex items-center">
-            <Logo variant="color" layout="horizontal" className="h-12" />
+            <Logo variant="main" className="h-12" />
           </div>
           <div className="flex items-center space-x-6">
             <a href="#about" className="text-gray-600 hover:text-green-700">About</a>
@@ -470,7 +470,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Logo variant="white" layout="icon" className="w-6 h-6" />
+                <Logo variant="white" className="w-6 h-6" />
                 <span className="text-xl font-bold">Life House Reentry</span>
               </div>
               <p className="text-green-100 text-sm">

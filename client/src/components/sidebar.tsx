@@ -50,7 +50,7 @@ export function Sidebar() {
           className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors"
           onClick={() => window.location.href = '/'}
         >
-          <Logo variant="color" layout="icon" className="w-10 h-10" />
+          <Logo variant="blue" className="w-10 h-10" />
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Life House Reentry</h1>
             <p className="text-sm text-gray-500">← Back to Home</p>
