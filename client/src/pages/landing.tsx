@@ -27,7 +27,12 @@ export default function Landing() {
             <a href="#about" className="text-gray-600 hover:text-green-700">About</a>
             <a href="#programs" className="text-gray-600 hover:text-green-700">Programs</a>
             <a href="#contact" className="text-gray-600 hover:text-green-700">Contact</a>
-            <Button variant="outline" onClick={() => setIsSignupModalOpen(true)} className="border-green-600 text-green-600 hover:bg-green-50">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsSignupModalOpen(true)} 
+              className="border-green-600 text-green-600 hover:bg-green-50"
+              data-testid="staff-login-button"
+            >
               Portal Login
             </Button>
           </div>
