@@ -1,0 +1,36 @@
+[
+  {
+    "id": "resident-1",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "phone": "555-0101",
+    "dateOfBirth": "1985-03-15",
+    "admissionDate": "2024-01-15",
+    "status": "Active",
+    "justiceStatus": "Formerly Incarcerated",
+    "emergencyContact": {
+      "name": "Jane Doe",
+      "phone": "555-0102",
+      "relationship": "Sister"
+    },
+    "caseManagerId": "cm-1"
+  },
+  {
+    "id": "resident-2", 
+    "firstName": "Maria",
+    "lastName": "Rodriguez",
+    "email": "maria.rodriguez@example.com",
+    "phone": "555-0201",
+    "dateOfBirth": "1990-07-22",
+    "admissionDate": "2024-02-01",
+    "status": "Active",
+    "justiceStatus": "Pre-Trial",
+    "emergencyContact": {
+      "name": "Carlos Rodriguez",
+      "phone": "555-0202",
+      "relationship": "Brother"
+    },
+    "caseManagerId": "cm-1"
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "resource-1",
+    "name": "Job Training Center",
+    "category": "Employment",
+    "description": "Comprehensive job training and placement services",
+    "location": "Downtown Community Center",
+    "contactInfo": {
+      "phone": "555-1001",
+      "email": "jobs@training.org",
+      "website": "https://training.org"
+    },
+    "availability": "Mon-Fri 9AM-5PM",
+    "isAvailable": true
+  },
+  {
+    "id": "resource-2",
+    "name": "Mental Health Counseling",
+    "category": "Healthcare",
+    "description": "Individual and group counseling services",
+    "location": "Health Services Building",
+    "contactInfo": {
+      "phone": "555-2001",
+      "email": "counseling@health.org"
+    },
+    "availability": "Mon-Sat 8AM-6PM",
+    "isAvailable": true
+  }
+]
