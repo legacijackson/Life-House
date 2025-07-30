@@ -1,5 +1,5 @@
 import Life_house_logo_ from "@assets/Life house logo .png";
-import Untitled_design__3_ from "@assets/3_1753914452311.png";
+import Untitled_design__3_ from "@assets/Untitled design (3).png";
 import NewLifeHouseLogo from "@assets/12_1753911136397.png";
 import LifeHouseHorizontal from "@assets/Untitled design (4)_1753911268257.png";
 interface LogoProps {
