@@ -3,6 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster as HotToaster } from "react-hot-toast";
+import { AIChatbotWidget } from "@/components/ai-chatbot-widget";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
 import Apply from "@/pages/apply";
@@ -50,7 +52,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
+        <HotToaster position="top-right" />
         <Router />
+        <AIChatbotWidget />
       </TooltipProvider>
     </QueryClientProvider>
   );

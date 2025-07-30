@@ -14,6 +14,8 @@ import {
   tickets,
   applications,
   donations,
+  inquiries,
+  partners,
   auditLog,
   documents,
   type User,
@@ -36,6 +38,10 @@ import {
   type InsertApplication,
   type Donation,
   type InsertDonation,
+  type Inquiry,
+  type InsertInquiry,
+  type Partner,
+  type InsertPartner,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
@@ -90,6 +96,16 @@ export interface IStorage {
   // Donations
   createDonation(donation: InsertDonation): Promise<Donation>;
   getDonations(filters?: { frequency?: string }): Promise<Donation[]>;
+
+  // Inquiries
+  createInquiry(inquiry: InsertInquiry): Promise<Inquiry>;
+  getInquiries(filters?: { status?: string }): Promise<Inquiry[]>;
+  updateInquiry(id: string, updates: Partial<Inquiry>): Promise<Inquiry>;
+
+  // Partners
+  createPartner(partner: InsertPartner): Promise<Partner>;
+  getPartners(filters?: { status?: string; serviceType?: string }): Promise<Partner[]>;
+  updatePartner(id: string, updates: Partial<Partner>): Promise<Partner>;
 
   // Audit logging
   logAudit(entry: any): Promise<void>;
@@ -511,6 +527,71 @@ export class DatabaseStorage implements IStorage {
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(donations.createdAt));
     return results;
+  }
+
+  async createInquiry(inquiry: InsertInquiry): Promise<Inquiry> {
+    const [created] = await db
+      .insert(inquiries)
+      .values(inquiry)
+      .returning();
+    return created;
+  }
+
+  async getInquiries(filters?: { status?: string }): Promise<Inquiry[]> {
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(inquiries.status, filters.status));
+    }
+    
+    const results = await db
+      .select()
+      .from(inquiries)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(inquiries.createdAt));
+    return results;
+  }
+
+  async updateInquiry(id: string, updates: Partial<Inquiry>): Promise<Inquiry> {
+    const [updated] = await db
+      .update(inquiries)
+      .set(updates)
+      .where(eq(inquiries.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createPartner(partner: InsertPartner): Promise<Partner> {
+    const [created] = await db
+      .insert(partners)
+      .values(partner)
+      .returning();
+    return created;
+  }
+
+  async getPartners(filters?: { status?: string; serviceType?: string }): Promise<Partner[]> {
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(partners.status, filters.status));
+    }
+    if (filters?.serviceType) {
+      conditions.push(eq(partners.serviceType, filters.serviceType));
+    }
+    
+    const results = await db
+      .select()
+      .from(partners)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(partners.createdAt));
+    return results;
+  }
+
+  async updatePartner(id: string, updates: Partial<Partner>): Promise<Partner> {
+    const [updated] = await db
+      .update(partners)
+      .set(updates)
+      .where(eq(partners.id, id))
+      .returning();
+    return updated;
   }
 
   async logAudit(entry: any): Promise<void> {

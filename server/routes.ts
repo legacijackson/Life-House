@@ -10,8 +10,11 @@ import {
   insertCaseNoteSchema, 
   insertTicketSchema, 
   insertApplicationSchema, 
-  insertDonationSchema 
+  insertDonationSchema,
+  insertInquirySchema,
+  insertPartnerSchema
 } from "@shared/schema";
+import bcrypt from "bcryptjs";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -41,9 +44,9 @@ function roleRoute(roles: string[], handler: AuthenticatedHandler) {
 }
 
 // Simple auth middleware (in production, implement proper JWT validation)
-const requireAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   // Mock user for development - in production, validate JWT token
-  req.user = {
+  (req as AuthenticatedRequest).user = {
     id: "550e8400-e29b-41d4-a716-446655440000", // Valid UUID format
     role: "CaseManager",
     name: "Sarah Martinez",
@@ -144,6 +147,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
       }
       res.status(500).json({ message: 'Failed to process donation' });
+    }
+  });
+
+  // User signup/registration
+  app.post('/api/signup', async (req: Request, res: Response) => {
+    try {
+      const { firstName, lastName, email, password } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Create user
+      const user = await storage.createUser({
+        name: `${firstName} ${lastName}`,
+        email,
+        passwordHash,
+        role: 'Resident', // Default role for self-registrations
+      });
+      
+      // In production, generate proper JWT token
+      const token = `mock-token-${user.id}`;
+      
+      res.status(201).json({
+        success: true,
+        message: 'Account created successfully',
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error('Signup error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create account' });
+    }
+  });
+
+  // Program inquiry submission
+  app.post('/api/inquiry', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertInquirySchema.parse(req.body);
+      const inquiry = await storage.createInquiry(validatedData);
+      
+      // In production, you'd send notification emails here
+      console.log('New program inquiry:', inquiry.id);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Thank you for your inquiry! We\'ll be in touch soon.',
+        inquiryId: inquiry.id,
+      });
+    } catch (error) {
+      console.error('Inquiry submission error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to submit inquiry' });
+    }
+  });
+
+  // Partner signup
+  app.post('/api/partners', async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertPartnerSchema.parse(req.body);
+      const partner = await storage.createPartner(validatedData);
+      
+      // In production, you'd send notification emails here
+      console.log('New partner signup:', partner.id);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Thank you for partnering with Life House! We\'ll be in touch within 24 hours.',
+        partnerId: partner.id,
+      });
+    } catch (error) {
+      console.error('Partner signup error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to submit partner request' });
     }
   });
 
@@ -489,6 +583,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch resident' });
     }
   }));
+
+  // AI Chat endpoint (public access for widget)
+  app.post('/api/ai/chat', async (req: Request, res: Response) => {
+    try {
+      const { message, context } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: 'Message is required' });
+      }
+
+      // Import the AI helper
+      const { generateAIResponse } = await import('./ai');
+      
+      const systemPrompt = context === 'public_assistant' 
+        ? `You are a helpful assistant for Life House Reentry, a transitional housing program for formerly incarcerated individuals. 
+           Provide accurate information about:
+           - Housing application process and requirements
+           - Eligibility criteria (must be on parole/probation, release date within 30 days)
+           - Required documents (ID, release papers, etc.)
+           - Program benefits (90-day initial stay, case management, job support)
+           - Contact information: (855) 4-LIFEUP or (855) 454-3387
+           - Location: 8399 Folsom Blvd, Ste 1, Sacramento, CA 95826
+           
+           Be empathetic, supportive, and professional. Keep responses concise and helpful.`
+        : 'You are a helpful assistant.';
+
+      const response = await generateAIResponse(message, systemPrompt);
+      
+      res.json({ response });
+    } catch (error: any) {
+      console.error('AI chat error:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate response',
+        error: error.message 
+      });
+    }
+  });
 
   // Create HTTP server
   const httpServer = createServer(app);

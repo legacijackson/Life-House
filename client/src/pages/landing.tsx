@@ -3,25 +3,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UnifiedIntakeModal } from "@/components/unified-intake-modal";
+import { Logo } from "@/components/logo";
+import { SignupModal } from "@/components/signup-modal";
+import { ProgramInquiryModal } from "@/components/program-inquiry-modal";
+import { PartnerSignupModal } from "@/components/partner-signup-modal";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
 export default function Landing() {
   const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-cream-50" style={{ background: 'linear-gradient(to bottom, #f0fdf4, #fffaeb)' }}>
       {/* Header */}
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Home className="w-8 h-8" style={{ color: '#2E6F40' }} />
-            <span className="text-2xl font-bold text-gray-900">Life House Reentry</span>
+          <div className="flex items-center">
+            <Logo variant="color" layout="horizontal" className="h-12" />
           </div>
           <div className="flex items-center space-x-6">
             <a href="#about" className="text-gray-600 hover:text-green-700">About</a>
             <a href="#programs" className="text-gray-600 hover:text-green-700">Programs</a>
             <a href="#contact" className="text-gray-600 hover:text-green-700">Contact</a>
-            <Button variant="outline" onClick={() => window.location.href = '/app'} className="border-green-600 text-green-600 hover:bg-green-50">
+            <Button variant="outline" onClick={() => setIsSignupModalOpen(true)} className="border-green-600 text-green-600 hover:bg-green-50">
               Portal Login
             </Button>
           </div>
@@ -29,8 +35,8 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <section id="about" className="container mx-auto px-4 py-20">
+        <div className="grid lg:grid-cols-2 gap-16 items-center grid-rows-[auto_minmax(0,1fr)]">
           <div className="text-left">
             <Badge className="mb-6 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 border-0 px-4 py-2 text-sm font-semibold">
               ✨ 7-Stage Reentry Program
@@ -207,7 +213,7 @@ export default function Landing() {
             <p className="text-gray-600 mb-4">
               Initial 90-day term with extensions based on progress (up to 24 months when appropriate)
             </p>
-            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" onClick={() => setIsInquiryModalOpen(true)}>
               Learn More About Our Programs
             </Button>
           </div>
@@ -477,10 +483,10 @@ export default function Landing() {
             <div>
               <h3 className="font-semibold mb-4">Get Involved</h3>
               <ul className="space-y-2 text-sm text-green-100">
-                <li>• Apply for Housing</li>
-                <li>• Refer a Resident</li>
-                <li>• Partner With Us</li>
-                <li>• Donate Monthly</li>
+                <li className="cursor-pointer hover:text-white" onClick={() => setIsIntakeModalOpen(true)}>• Apply for Housing</li>
+                <li className="cursor-pointer hover:text-white" onClick={() => window.location.href = '/refer'}>• Refer a Resident</li>
+                <li className="cursor-pointer hover:text-white" onClick={() => setIsPartnerModalOpen(true)}>• Partner With Us</li>
+                <li className="cursor-pointer hover:text-white" onClick={() => window.location.href = '/donate'}>• Donate Monthly</li>
               </ul>
             </div>
             
@@ -501,10 +507,22 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/* Unified Intake Modal */}
+      {/* Modals */}
       <UnifiedIntakeModal 
         isOpen={isIntakeModalOpen} 
         onClose={() => setIsIntakeModalOpen(false)} 
+      />
+      <SignupModal
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
+      />
+      <ProgramInquiryModal
+        isOpen={isInquiryModalOpen}
+        onClose={() => setIsInquiryModalOpen(false)}
+      />
+      <PartnerSignupModal
+        isOpen={isPartnerModalOpen}
+        onClose={() => setIsPartnerModalOpen(false)}
       />
     </div>
   );

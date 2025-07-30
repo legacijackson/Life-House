@@ -83,6 +83,7 @@ export const users = pgTable("users", {
 export const residentProfiles = pgTable("resident_profiles", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").references(() => users.id).notNull(),
+  applicationId: uuid("application_id").references(() => applications.id), // Track original application
   dateOfBirth: timestamp("date_of_birth"),
   justiceStatus: justiceStatusEnum("justice_status"),
   agentName: varchar("agent_name"),
@@ -328,6 +329,37 @@ export const auditLog = pgTable("audit_log", {
   index("audit_log_ts_idx").on(table.ts),
 ]);
 
+// Inquiries table for program information requests
+export const inquiries = pgTable("inquiries", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone").notNull(),
+  question: text("question").notNull(),
+  status: varchar("status").default("new"), // new | contacted | resolved
+  createdAt: timestamp("created_at").defaultNow(),
+  contactedAt: timestamp("contacted_at"),
+  resolvedAt: timestamp("resolved_at"),
+}, (table) => [
+  index("inquiries_status_idx").on(table.status),
+  index("inquiries_created_at_idx").on(table.createdAt),
+]);
+
+// Partners table for community organizations
+export const partners = pgTable("partners", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationName: varchar("organization_name").notNull(),
+  contactName: varchar("contact_name").notNull(),
+  email: varchar("email").notNull(),
+  serviceType: varchar("service_type").notNull(), // parole, probation, stop, ecm, cbo
+  status: varchar("status").default("pending"), // pending | approved | inactive
+  createdAt: timestamp("created_at").defaultNow(),
+  approvedAt: timestamp("approved_at"),
+}, (table) => [
+  index("partners_status_idx").on(table.status),
+  index("partners_service_type_idx").on(table.serviceType),
+]);
+
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   ownerType: varchar("owner_type").notNull(), // resident | org
@@ -517,6 +549,21 @@ export const insertDonationSchema = createInsertSchema(donations).omit({
   createdAt: true,
 });
 
+export const insertInquirySchema = createInsertSchema(inquiries).omit({
+  id: true,
+  status: true,
+  createdAt: true,
+  contactedAt: true,
+  resolvedAt: true,
+});
+
+export const insertPartnerSchema = createInsertSchema(partners).omit({
+  id: true,
+  status: true,
+  createdAt: true,
+  approvedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -544,3 +591,7 @@ export type Donation = typeof donations.$inferSelect;
 export type InsertDonation = z.infer<typeof insertDonationSchema>;
 export type AuditLog = typeof auditLog.$inferSelect;
 export type Document = typeof documents.$inferSelect;
+export type Inquiry = typeof inquiries.$inferSelect;
+export type InsertInquiry = z.infer<typeof insertInquirySchema>;
+export type Partner = typeof partners.$inferSelect;
+export type InsertPartner = z.infer<typeof insertPartnerSchema>;
