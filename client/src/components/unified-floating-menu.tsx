@@ -4,9 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, MessageCircle, HelpCircle, Brain } from 'lucide-react';
 import { Logo } from "@/components/logo";
 import WaveHand from "@/components/ui/wave-hand";
-import _3 from "@assets/3.png";
-
-import _1 from "@assets/1.png";
+import _3 from "@assets/3_1753913716669.png";
 
 interface UnifiedFloatingMenuProps {
   onOpenChat: () => void;
