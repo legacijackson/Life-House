@@ -46,14 +46,32 @@ function roleRoute(roles: string[], handler: AuthenticatedHandler) {
 
 // Simple auth middleware (in production, implement proper JWT validation)
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  // Mock user for development - in production, validate JWT token
-  (req as AuthenticatedRequest).user = {
-    id: "550e8400-e29b-41d4-a716-446655440000", // Valid UUID format
-    role: "CaseManager",
-    name: "Sarah Martinez",
-    email: "sarah.martinez@example.com"
-  };
-  next();
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  // For development, accept mock tokens
+  if (token.startsWith('mock-token-')) {
+    const userId = token.replace('mock-token-', '');
+    // Mock user for development - in production, validate JWT token
+    (req as AuthenticatedRequest).user = {
+      id: userId,
+      role: "CaseManager",
+      name: "Sarah Martinez",
+      email: "sarah.martinez@example.com"
+    };
+    return next();
+  }
+
+  // In production, validate JWT here
+  try {
+    // TODO: Replace with actual JWT validation
+    return res.status(401).json({ message: 'Invalid token' });
+  } catch (error) {
+    return res.status(401).json({ message: 'Invalid token' });
+  }
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -330,6 +348,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
       }
       res.status(500).json({ message: 'Failed to submit partner request' });
+    }
+  });
+
+  // Geofence check-in endpoint
+  app.post('/api/check-in', async (req: Request, res: Response) => {
+    try {
+      const { propertyId, latitude, longitude, distance } = req.body;
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      
+      if (!token) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // For development, extract user ID from mock token
+      const userId = token.replace('mock-token-', '');
+      
+      // Validate distance (should be ≤ 91 meters)
+      if (distance > 91) {
+        return res.status(400).json({ 
+          message: 'Out of range',
+          distance,
+          maxDistance: 91
+        });
+      }
+
+      // In production, save to database
+      const checkIn = {
+        id: `checkin_${Date.now()}`,
+        userId,
+        propertyId,
+        latitude,
+        longitude,
+        distance,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log('Geofence check-in:', checkIn);
+      
+      // TODO: Send Slack notification to case manager
+      
+      res.status(201).json({
+        success: true,
+        checkIn,
+        message: 'Check-in successful'
+      });
+    } catch (error) {
+      console.error('Check-in error:', error);
+      res.status(500).json({ message: 'Check-in failed' });
     }
   });
 
