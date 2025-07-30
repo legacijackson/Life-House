@@ -34,7 +34,7 @@ export default function Landing() {
             <Button 
               onClick={() => window.location.href = '/resources'}
               id="resources-btn"
-              className="border border-blue-600 text-blue-600 hover:bg-[#2563eb] hover:text-white transition px-4 py-2"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 border border-blue-600 text-blue-600 hover:bg-[#2563eb] hover:text-white transition px-4 py-2 bg-[#2563eb00]"
               data-testid="resources-button"
             >
               Resources
