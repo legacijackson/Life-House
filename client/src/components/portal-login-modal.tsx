@@ -10,8 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
+import { useLocation } from "wouter";
 
 // Login schema
 const loginSchema = z.object({
@@ -24,6 +26,7 @@ const signupSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
+  role: z.enum(["Resident", "CaseManager", "Admin", "Partner"]),
   password: z.string()
     .min(12, "Password must be at least 12 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
@@ -44,10 +47,22 @@ interface PortalLoginModalProps {
   onClose: () => void;
 }
 
+// Portal routing based on user role
+const getPortalRoute = (role: string) => {
+  const routes: Record<string, string> = {
+    Resident: "/app/resident-portal",
+    CaseManager: "/app/staff-dashboard",
+    Admin: "/app/admin-panel",
+    Partner: "/app/partner-portal",
+  };
+  return routes[role] || "/app/resident-portal";
+};
+
 export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const [, setLocation] = useLocation();
 
   // Login form
   const loginForm = useForm<LoginFormData>({
@@ -65,6 +80,7 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
       firstName: "",
       lastName: "",
       email: "",
+      role: "Resident",
       password: "",
       confirmPassword: "",
     },
@@ -80,11 +96,16 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
       if (data.token) {
         localStorage.setItem("token", data.token);
       }
+      if (data.user?.role) {
+        localStorage.setItem("userRole", data.user.role);
+      }
       toast.success("Welcome back to Life House!");
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       loginForm.reset();
       onClose();
-      window.location.href = "/app";
+      // Navigate to appropriate portal based on role
+      const portalRoute = getPortalRoute(data.user?.role || "Resident");
+      setLocation(portalRoute);
     },
     onError: (error: any) => {
       toast.error(error.message || "Invalid email or password. Please try again.");
@@ -98,6 +119,7 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
+        role: data.role,
         password: data.password,
       });
       return response.json();
@@ -106,11 +128,16 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
       if (data.token) {
         localStorage.setItem("token", data.token);
       }
-      toast.success("Welcome to Life House! Check your email for confirmation.");
+      if (data.user?.role) {
+        localStorage.setItem("userRole", data.user.role);
+      }
+      toast.success("Welcome to Life House! Your account has been created.");
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       signupForm.reset();
       onClose();
-      window.location.href = "/app";
+      // Navigate to appropriate portal based on role
+      const portalRoute = getPortalRoute(data.user?.role || signupForm.getValues("role"));
+      setLocation(portalRoute);
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create account. Please try again.");
@@ -266,6 +293,30 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
                       <FormControl>
                         <Input type="email" placeholder="john.doe@example.com" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={signupForm.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select account type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Resident">Resident</SelectItem>
+                          <SelectItem value="CaseManager">Case Manager</SelectItem>
+                          <SelectItem value="Admin">Administrator</SelectItem>
+                          <SelectItem value="Partner">Partner Organization</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

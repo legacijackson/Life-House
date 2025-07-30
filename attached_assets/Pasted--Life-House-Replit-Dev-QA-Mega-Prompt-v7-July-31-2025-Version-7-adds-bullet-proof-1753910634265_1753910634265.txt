@@ -1,0 +1,103 @@
+# Life House – **Replit Dev & QA Mega‑Prompt**  (v7 – July 31 2025)
+
+> **Version 7 adds bullet‑proof auth**
+> *Self‑service password reset, role selection at signup, portal auto‑routing, and admin reset tools.*  All previous CR‑1 → CR‑33 remain; CR‑34 → CR‑37 are new and **blocking** for v1.1.0.
+
+---
+
+## 1  Change‑Request Matrix (CR‑34 → CR‑37)
+
+| #                                                                                          | New Request                                                                  | Feature ID | Dev Tasks                                                                         | QA ID |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------- | ----- |
+| **CR‑34**                                                                                  | **Role picker at signup** (Resident, Case Mgr, Admin, Partner)               | I‑38       | • Add `<Select>` in `SignupModal.jsx` with those four options                     |       |
+| • Enforce one role per user; default Resident                                              |                                                                              |            |                                                                                   |       |
+| • Save to `users.role` enum                                                                |                                                                              |            |                                                                                   |       |
+| • If role==Admin allow only if inviter is SuperAdmin                                       | F‑37                                                                         |            |                                                                                   |       |
+| **CR‑35**                                                                                  | **Self‑service password reset** with email + DOB + releaseDate + 4‑digit PIN | I‑39       | • Add `ForgotPassword.jsx` flow:  *step 1* email,  *step 2* DOB, releaseDate, PIN |       |
+| • POST `/auth/reset/request` → email token                                                 |                                                                              |            |                                                                                   |       |
+| • `/auth/reset/confirm` → verify token & secondary fields, hash new pwd                    | F‑38, SEC‑06                                                                 |            |                                                                                   |       |
+| **CR‑36**                                                                                  | **Admin reset tool**                                                         | I‑40       | • Admin dashboard table: button “Reset Pwd” ⇒ modal to set random pwd; fire email |       |
+| • Route `/admin/users/:id/reset` (admin                                                    | super role)                                                                  | F‑39       |                                                                                   |       |
+| **CR‑37**                                                                                  | **Portal auto‑routing** after login/signup                                   | I‑41       | • After JWT set, `router.push(roleHome[role])`                                    |       |
+| • roleHome map: resident→`/portal`, cm→`/case-manager`, admin→`/admin`, partner→`/partner` | F‑40                                                                         |            |                                                                                   |       |
+
+---
+
+## 2  DB Schema Δ
+
+```sql
+-- add extra identity fields
+ALTER TABLE profiles ADD COLUMN dob            date;
+ALTER TABLE profiles ADD COLUMN release_date   date;
+ALTER TABLE users    ADD COLUMN security_pin   char(4);
+-- ensure role enum already exists (resident,cm,admin,partner,super)
+```
+
+---
+
+## 3  API Routes – Auth Suite
+
+| Route                    | Verb  | Body                                                 | Notes                    |
+| ------------------------ | ----- | ---------------------------------------------------- | ------------------------ |
+| `/auth/signup`           | POST  | {first,last,email,password,role,dob,releaseDate,pin} | Returns JWT + portal URL |
+| `/auth/login`            | POST  | {email,password}                                     | Returns JWT + portal URL |
+| `/auth/reset/request`    | POST  | {email}                                              | emails token; 200 always |
+| `/auth/reset/confirm`    | POST  | {token,dob,releaseDate,pin,newPwd}                   | 200 JWT                  |
+| `/admin/users/:id/reset` | PATCH | {newPwd?}                                            | admin‑only               |
+
+---
+
+## 4  Front‑End Components
+
+| Component              | Key Points                                                            |
+| ---------------------- | --------------------------------------------------------------------- |
+| **SignupModal**        | adds Role select + PIN field + two date pickers (DOB, release)        |
+| **ForgotPasswordFlow** | 3‑step wizard; step 2 validates fields client side; step 3 new pwd    |
+| **AdminUserTable**     | “Reset Pwd” button opens modal; calls admin route                     |
+| **RoleRouter**         | Utility mapping role→home URL; used after login/signup and on refresh |
+
+---
+
+## 5  Cypress / Jest Additions
+
+| Test ID    | Scenario                            | Expected                                  |
+| ---------- | ----------------------------------- | ----------------------------------------- |
+| **F‑37**   | Signup pick “Partner”               | Redirect `/partner`; JWT role=partner     |
+| **F‑38**   | Forgot pwd with wrong DOB           | 400 error “identity mismatch”             |
+| **F‑39**   | Admin resets CaseMgr pwd            | Email “Your password was reset” delivered |
+| **F‑40**   | Login as CM goes to `/case-manager` | 200 & sidebar visible                     |
+| **SEC‑06** | Attempt reset with wrong PIN        | 429 after 5 attempts                      |
+
+Include Jest unit tests for `/auth/reset` token expiry.
+
+---
+
+## 6  Manual QA Checklist Add‑Ons
+
+| #    | Action                                             | Proof |
+| ---- | -------------------------------------------------- | ----- |
+| 8‑9  | Signup Resident → logout → login → lands `/portal` | video |
+| 8‑10 | Signup Admin by Super → admin navbar               | png   |
+| 8‑11 | Partner role view limited (no Residents tab)       | png   |
+
+---
+
+## 7  Evidence Bundle Updates
+
+```
+/artifacts/auth/
+  signup_partner.mp4
+  forgot_pwd_mismatch.png
+  admin_reset_email.png
+```
+
+---
+
+## 8  Go‑Live Gate Addition
+
+18. ✔️ Self‑service reset flow end‑to‑end passes (F‑38).
+19. ✔️ Portal routing verified for all four roles.
+
+---
+
+*Last updated: 2025‑07‑31*

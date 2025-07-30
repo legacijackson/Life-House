@@ -20,10 +20,8 @@ import { z } from "zod";
 export const roleEnum = pgEnum("role", [
   "Resident",
   "CaseManager", 
-  "Intake",
   "Admin",
-  "Referrer",
-  "Auditor"
+  "Partner"
 ]);
 
 export const languageEnum = pgEnum("language", ["en", "es"]);
