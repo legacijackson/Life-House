@@ -1,216 +1,265 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Home, Users, Calendar, FileText, CheckCircle } from "lucide-react";
+import { X, Home, Users, GraduationCap, Briefcase, DollarSign, Heart, Phone, Mail, MapPin } from "lucide-react";
+// Using direct path to the logo in public directory
 
 interface ProgramOverviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApplyNow: () => void;
 }
 
-export function ProgramOverviewModal({ isOpen, onClose, onApplyNow }: ProgramOverviewModalProps) {
+export function ProgramOverviewModal({ isOpen, onClose }: ProgramOverviewModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center mb-4">
-            Life House Reentry Program Overview
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-6">
-          {/* Hero Section */}
-          <div className="text-center bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg">
-            <h3 className="text-xl font-semibold mb-2">
-              Stable Housing • Life Transformation • Community Support
-            </h3>
-            <p className="text-gray-600">
-              A comprehensive 90-day transitional housing program designed to help formerly incarcerated individuals 
-              successfully reintegrate into society with dignity and support.
-            </p>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+        <div className="relative">
+          {/* Header with Life House Branding */}
+          <div className="bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="flex items-center space-x-4 mb-4">
+              <img src="/lifehouse-logo.png" alt="Life House Logo" className="w-16 h-16" />
+              <div>
+                <h1 className="text-3xl font-bold">Life House Reentry</h1>
+                <p className="text-green-100">Program Overview & Services</p>
+              </div>
+            </div>
           </div>
 
-          {/* Program Stages */}
-          <div className="grid md:grid-cols-3 gap-4">
-            <Card className="border-l-4 border-l-blue-500">
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Mission Statement */}
+            <Card className="border-green-100 bg-gradient-to-br from-green-50 to-blue-50">
               <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <Home className="w-5 h-5 mr-2 text-blue-500" />
-                  Stage 1: Stabilization
+                <CardTitle className="text-green-800 flex items-center">
+                  <Heart className="w-6 h-6 mr-2" />
+                  Our Mission & Vision
                 </CardTitle>
-                <CardDescription>Days 1-30</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm space-y-1">
-                  <li>• Immediate safe housing</li>
-                  <li>• Basic needs assessment</li>
-                  <li>• Case management intake</li>
-                  <li>• Emergency services coordination</li>
-                  <li>• Initial goal setting</li>
-                </ul>
+                <div className="space-y-3">
+                  <p className="text-gray-700">
+                    <strong>Mission:</strong> Provide safe, structured housing and holistic life-design support for formerly incarcerated individuals, 
+                    empowering reintegration with dignity, purpose, and financial independence.
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Vision:</strong> Break cycles of incarceration so every person returning home has access to healing, housing, work, 
+                    and the opportunity to design a fulfilling life.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-green-500">
+            {/* 7-Stage Transformation Model */}
+            <Card className="border-purple-100">
               <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <Users className="w-5 h-5 mr-2 text-green-500" />
-                  Stage 2: Development
+                <CardTitle className="text-purple-800 flex items-center">
+                  <GraduationCap className="w-6 h-6 mr-2" />
+                  7-Stage Resident Transformation Model
                 </CardTitle>
-                <CardDescription>Days 31-60</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm space-y-1">
-                  <li>• Skills development programs</li>
-                  <li>• Employment preparation</li>
-                  <li>• Financial literacy training</li>
-                  <li>• Mental health support</li>
-                  <li>• Community integration</li>
-                </ul>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Badge className="bg-green-100 text-green-800">Stage 1</Badge>
+                    <h4 className="font-semibold text-green-800">Intake</h4>
+                    <p className="text-sm text-gray-600">Assessment, stabilization, documents, benefits, initial plan</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Badge className="bg-blue-100 text-blue-800">Stage 2</Badge>
+                    <h4 className="font-semibold text-blue-800">Design</h4>
+                    <p className="text-sm text-gray-600">Individualized goals, services map, accountability schedule</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Badge className="bg-purple-100 text-purple-800">Stage 3</Badge>
+                    <h4 className="font-semibold text-purple-800">Training</h4>
+                    <p className="text-sm text-gray-600">Life skills, CBT-informed groups, education/certifications, financial literacy</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Badge className="bg-green-100 text-green-800">Stage 4</Badge>
+                    <h4 className="font-semibold text-green-800">Working</h4>
+                    <p className="text-sm text-gray-600">Job placement, income stabilization, 30% contribution (25% reimbursable savings)</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Badge className="bg-blue-100 text-blue-800">Stage 5</Badge>
+                    <h4 className="font-semibold text-blue-800">Overflow</h4>
+                    <p className="text-sm text-gray-600">Step-down independence, continued coaching, housing search</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Badge className="bg-purple-100 text-purple-800">Stage 6</Badge>
+                    <h4 className="font-semibold text-purple-800">Transition</h4>
+                    <p className="text-sm text-gray-600">Permanent housing secured; move-out readiness</p>
+                  </div>
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                    <Badge className="bg-yellow-100 text-yellow-800">Stage 7</Badge>
+                    <h4 className="font-semibold text-yellow-800">Legacy</h4>
+                    <p className="text-sm text-gray-600">Alumni network, mentoring, aftercare check-ins</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-purple-500">
+            {/* Core Services */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="border-blue-100">
+                <CardHeader>
+                  <CardTitle className="text-blue-800 flex items-center">
+                    <Home className="w-6 h-6 mr-2" />
+                    Core Services (Non-Clinical)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li>• <strong>Transitional housing</strong> (90–730 days)</li>
+                    <li>• <strong>Case management</strong> and life design planning</li>
+                    <li>• <strong>Documents & benefits</strong> (ID/SSN, Medi-Cal, CalFresh, GA, SSI/SSDI)</li>
+                    <li>• <strong>Financial literacy</strong> and credit repair</li>
+                    <li>• <strong>Job readiness</strong>, employer partnerships, apprenticeships/trades</li>
+                    <li>• <strong>Education</strong> (GED/credentials)</li>
+                    <li>• <strong>Reentry basics</strong> (transportation, clothing, digital literacy)</li>
+                    <li>• <strong>Permanent housing</strong> navigation</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card className="border-green-100">
+                <CardHeader>
+                  <CardTitle className="text-green-800 flex items-center">
+                    <Users className="w-6 h-6 mr-2" />
+                    Referral Pathways & Funding
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-green-800 mb-2">Referrals Welcome From:</h4>
+                      <ul className="space-y-1 text-sm text-gray-700">
+                        <li>• Parole/Probation departments</li>
+                        <li>• STOP prime contractors</li>
+                        <li>• Medi-Cal Managed Care Plans (CalAIM ECM & Community Supports)</li>
+                        <li>• Community-based organizations (CBOs)</li>
+                      </ul>
+                    </div>
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Note:</strong> Clinical care is coordinated via licensed external providers; 
+                        Life House is non-clinical.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Leadership & Contact */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="border-purple-100">
+                <CardHeader>
+                  <CardTitle className="text-purple-800 flex items-center">
+                    <Briefcase className="w-6 h-6 mr-2" />
+                    Leadership Team
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-purple-800">Julius Deshon Jackson</h4>
+                      <p className="text-sm text-gray-600">CEO/Board Chair</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-purple-800">Kairia Shariff</h4>
+                      <p className="text-sm text-gray-600">CFO/Board Treasurer</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-purple-800">Brittney Jackson</h4>
+                      <p className="text-sm text-gray-600">COO/Board Secretary</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-green-100">
+                <CardHeader>
+                  <CardTitle className="text-green-800 flex items-center">
+                    <Phone className="w-6 h-6 mr-2" />
+                    Contact Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <Phone className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">(855) 4-LIFEUP (855-454-3387)</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Mail className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">info@lifehousereentry.org</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="w-4 h-4 text-green-600 mt-0.5" />
+                      <div className="text-sm">
+                        <p>8399 Folsom Blvd, STE 1 #4014</p>
+                        <p>Sacramento, CA 95826</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Compliance & Governance */}
+            <Card className="border-gray-200 bg-gray-50">
               <CardHeader>
-                <CardTitle className="flex items-center text-lg">
-                  <CheckCircle className="w-5 h-5 mr-2 text-purple-500" />
-                  Stage 3: Transition
-                </CardTitle>
-                <CardDescription>Days 61-90</CardDescription>
+                <CardTitle className="text-gray-800">Governance & Compliance</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm space-y-1">
-                  <li>• Independent living preparation</li>
-                  <li>• Permanent housing search</li>
-                  <li>• Employment placement</li>
-                  <li>• Ongoing support planning</li>
-                  <li>• Program graduation</li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Key Services */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Comprehensive Support Services</CardTitle>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold mb-2">Housing & Basic Needs</h4>
-                <ul className="text-sm space-y-1 text-gray-600">
-                  <li>• Safe, furnished private rooms</li>
-                  <li>• Shared common areas and kitchen</li>
-                  <li>• Utilities and Wi-Fi included</li>
-                  <li>• Basic furnishings provided</li>
-                  <li>• Food assistance programs</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Professional Development</h4>
-                <ul className="text-sm space-y-1 text-gray-600">
-                  <li>• Job readiness training</li>
-                  <li>• Resume building workshops</li>
-                  <li>• Interview preparation</li>
-                  <li>• Skills assessment</li>
-                  <li>• Employer partnerships</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Case Management</h4>
-                <ul className="text-sm space-y-1 text-gray-600">
-                  <li>• Individual case planning</li>
-                  <li>• Weekly check-ins</li>
-                  <li>• Goal tracking and support</li>
-                  <li>• Crisis intervention</li>
-                  <li>• Resource coordination</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Life Skills & Wellness</h4>
-                <ul className="text-sm space-y-1 text-gray-600">
-                  <li>• Financial literacy education</li>
-                  <li>• Mental health counseling</li>
-                  <li>• Substance abuse support</li>
-                  <li>• Health and wellness programs</li>
-                  <li>• Peer support groups</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Eligibility Requirements */}
-          <Card className="bg-blue-50">
-            <CardHeader>
-              <CardTitle>Eligibility Requirements</CardTitle>
-              <CardDescription>To qualify for the Life House program, applicants must meet:</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-semibold mb-2 text-blue-800">Required Criteria</h4>
-                  <ul className="text-sm space-y-1">
-                    <li>• Currently on parole or probation</li>
-                    <li>• Release date within 30 days of application</li>
-                    <li>• Valid California ID or documentation</li>
-                    <li>• Commitment to program participation</li>
-                    <li>• Willingness to follow house rules</li>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    <li>• California Nonprofit Public Benefit Corporation</li>
+                    <li>• 501(c)(3) compliant</li>
+                    <li>• Conflict-of-interest controls for related-party leases</li>
+                    <li>• HIPAA-grade privacy</li>
+                  </ul>
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    <li>• ADA/Fair Housing compliance</li>
+                    <li>• Data tracking for attendance, services, outcomes</li>
+                    <li>• Audit-ready reporting</li>
+                    <li>• Evidence-informed programming</li>
                   </ul>
                 </div>
-                <div>
-                  <h4 className="font-semibold mb-2 text-green-800">Preferred Background</h4>
-                  <ul className="text-sm space-y-1">
-                    <li>• Motivation for positive change</li>
-                    <li>• Interest in employment or education</li>
-                    <li>• Stable mental health status</li>
-                    <li>• No active substance abuse</li>
-                    <li>• Sacramento County connection</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Success Metrics */}
-          <div className="grid md:grid-cols-3 gap-4 text-center">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">85%</div>
-              <div className="text-sm text-gray-600">Program Completion Rate</div>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">92%</div>
-              <div className="text-sm text-gray-600">Housing Retention</div>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">78%</div>
-              <div className="text-sm text-gray-600">Employment Placement</div>
-            </div>
-          </div>
-
-          {/* Call to Action */}
-          <div className="text-center space-y-4 bg-gradient-to-r from-green-600 to-blue-600 text-white p-6 rounded-lg">
-            <h3 className="text-xl font-bold">Ready to Start Your Journey?</h3>
-            <p className="mb-4">
-              Take the first step toward stable housing and a fresh start. Our team is here to support you every step of the way.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-4 pt-4 border-t">
               <Button 
-                onClick={onApplyNow}
-                size="lg" 
-                className="bg-white text-green-600 hover:bg-gray-100"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => window.location.href = '/apply'}
               >
-                Apply Now
+                <Home className="w-4 h-4 mr-2" />
+                Apply for Housing
               </Button>
               <Button 
-                onClick={() => window.open('tel:+18554543387')}
-                size="lg" 
                 variant="outline"
-                className="border-white text-white hover:bg-white hover:text-green-600"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                onClick={() => window.location.href = '/refer'}
               >
-                Call (855) 4-LIFEUP
+                <Users className="w-4 h-4 mr-2" />
+                Refer a Resident
+              </Button>
+              <Button 
+                variant="outline"
+                className="border-purple-600 text-purple-600 hover:bg-purple-50"
+                onClick={() => window.location.href = '/donate'}
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                Support Our Mission
               </Button>
             </div>
           </div>

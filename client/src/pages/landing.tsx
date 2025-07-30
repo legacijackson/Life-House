@@ -7,6 +7,7 @@ import { Logo } from "@/components/logo";
 import { PortalLoginModal } from "@/components/portal-login-modal";
 import { ProgramInquiryModal } from "@/components/program-inquiry-modal";
 import { PartnerSignupModal } from "@/components/partner-signup-modal";
+import { ProgramOverviewModal } from "@/components/program-overview-modal";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
 import _3 from "@assets/3.png";
@@ -16,6 +17,7 @@ export default function Landing() {
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
+  const [isProgramOverviewModalOpen, setIsProgramOverviewModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-cream-50" style={{ background: 'linear-gradient(to bottom, #f0fdf4, #fffaeb)' }}>
@@ -216,7 +218,7 @@ export default function Landing() {
             <p className="text-gray-600 mb-4">
               Initial 90-day term with extensions based on progress (up to 24 months when appropriate)
             </p>
-            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" onClick={() => setIsInquiryModalOpen(true)}>
+            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" onClick={() => setIsProgramOverviewModalOpen(true)}>
               Learn More About Our Programs
             </Button>
           </div>
@@ -521,6 +523,10 @@ export default function Landing() {
       <PartnerSignupModal
         isOpen={isPartnerModalOpen}
         onClose={() => setIsPartnerModalOpen(false)}
+      />
+      <ProgramOverviewModal
+        isOpen={isProgramOverviewModalOpen}
+        onClose={() => setIsProgramOverviewModalOpen(false)}
       />
     </div>
   );
