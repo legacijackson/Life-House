@@ -5,6 +5,8 @@ import { X, MessageCircle, HelpCircle, Brain } from 'lucide-react';
 import { Logo } from "@/components/logo";
 import _3 from "@assets/3.png";
 
+import _1 from "@assets/1.png";
+
 interface UnifiedFloatingMenuProps {
   onOpenChat: () => void;
   onOpenHelp: () => void;
@@ -51,7 +53,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
               onClick={() => setIsOpen(!isOpen)}
             >
               <img 
-                src="/house-icon.png" 
+                src={_1} 
                 alt="Life House Logo" 
                 className="w-4 h-4 object-contain"
               />
@@ -59,7 +61,6 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
           )}
         </div>
       </motion.div>
-
       {/* Menu options */}
       <AnimatePresence>
         {isOpen && (
