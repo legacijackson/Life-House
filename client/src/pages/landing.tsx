@@ -10,7 +10,7 @@ import { PartnerSignupModal } from "@/components/partner-signup-modal";
 import { ProgramOverviewModal } from "@/components/program-overview-modal";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
-import _3 from "@assets/3.png";
+import _3 from "@assets/3_1753914027346.png";
 
 export default function Landing() {
   const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
