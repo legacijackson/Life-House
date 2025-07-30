@@ -62,7 +62,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
                 className="rounded-full h-14 w-14 shadow-lg bg-green-700 hover:bg-green-800 group"
                 title="AI Assistant"
               >
-                <MessageCircle className="h-6 w-6" />
+                <img src="/lifehouse-icon.png" alt="Life House" className="h-6 w-6" />
               </Button>
               <motion.span
                 initial={{ opacity: 0, x: 10 }}
