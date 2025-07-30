@@ -38,7 +38,6 @@ export default function Landing() {
           </div>
         </nav>
       </header>
-
       {/* Hero Section */}
       <section id="about" className="container mx-auto px-4 py-20">
         <div className="grid lg:grid-cols-2 gap-16 items-center grid-rows-[auto_minmax(0,1fr)]">
@@ -49,7 +48,7 @@ export default function Landing() {
             <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
               <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Home for</span><br />
               <span className="bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Good.</span><br />
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-4xl">Forever.</span>
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-4xl">Life House</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed font-medium">
               Safe, structured housing and <span className="font-bold text-green-700">life-design support</span> for people returning from incarceration — 
@@ -116,7 +115,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* What We Do Cards */}
       <section className="container mx-auto px-4 py-16">
         <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
@@ -185,7 +183,6 @@ export default function Landing() {
           </Card>
         </div>
       </section>
-
       {/* 7-Stage Program Overview */}
       <section id="programs" className="py-16" style={{ backgroundColor: '#fffaeb' }}>
         <div className="container mx-auto px-4">
@@ -224,7 +221,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Team & Community Section */}
       <section className="container mx-auto px-4 py-16">
         <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Our Community</h2>
@@ -343,7 +339,6 @@ export default function Landing() {
           </Card>
         </div>
       </section>
-
       {/* For Caseworkers & Referrers */}
       <section className="py-16" style={{ backgroundColor: '#f0fdf4' }}>
         <div className="container mx-auto px-4">
@@ -398,7 +393,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Contact Section */}
       <section id="contact" className="container mx-auto px-4 py-16">
         <div className="grid md:grid-cols-2 gap-12">
@@ -463,7 +457,6 @@ export default function Landing() {
           </Card>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="text-white py-12" style={{ backgroundColor: '#2E6F40' }}>
         <div className="container mx-auto px-4">
@@ -511,7 +504,6 @@ export default function Landing() {
           </div>
         </div>
       </footer>
-
       {/* Modals */}
       <UnifiedIntakeModal 
         isOpen={isIntakeModalOpen} 
