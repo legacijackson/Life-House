@@ -28,6 +28,13 @@ export default function Landing() {
             <a href="#programs" className="text-gray-600 hover:text-green-700">Programs</a>
             <a href="#contact" className="text-gray-600 hover:text-green-700">Contact</a>
             <Button 
+              onClick={() => setIsIntakeModalOpen(true)}
+              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-2 shadow-md transform hover:scale-105 transition-all duration-200"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Apply Now
+            </Button>
+            <Button 
               variant="outline" 
               onClick={() => setIsSignupModalOpen(true)} 
               className="border-green-600 text-green-600 hover:bg-green-50"
@@ -55,14 +62,6 @@ export default function Landing() {
               so they can rebuild with <span className="font-bold text-blue-700">dignity, purpose</span>, and a path to <span className="font-bold text-purple-700">financial independence</span>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <Button 
-                size="lg" 
-                className="text-lg px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg transform hover:scale-105 transition-all duration-200"
-                onClick={() => setIsIntakeModalOpen(true)}
-              >
-                <Home className="w-5 h-5 mr-2" />
-                Apply Now
-              </Button>
               <Button 
                 size="lg" 
                 variant="outline" 
