@@ -16,6 +16,9 @@ import Resources from "@/pages/resources";
 import Properties from "@/pages/properties";
 import Maintenance from "@/pages/maintenance";
 import Reports from "@/pages/reports";
+import { ResidentPortal } from "@/components/resident-portal";
+import { StaffDashboard } from "@/components/staff-dashboard";
+import { AdminPanel } from "@/components/admin-panel";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -34,6 +37,9 @@ function Router() {
       <Route path="/app/properties" component={Properties} />
       <Route path="/app/maintenance" component={Maintenance} />
       <Route path="/app/reports" component={Reports} />
+      <Route path="/app/resident-portal" component={ResidentPortal} />
+      <Route path="/app/staff-dashboard" component={StaffDashboard} />
+      <Route path="/app/admin-panel" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>
   );

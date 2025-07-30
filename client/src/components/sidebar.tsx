@@ -26,6 +26,12 @@ const navigation = [
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
 ];
 
+const newPortalNavigation = [
+  { name: "Resident Portal", href: "/app/resident-portal", icon: Users, badge: "New" },
+  { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: BarChart3, badge: "New" },
+  { name: "Admin Panel", href: "/app/admin-panel", icon: Settings, badge: "New" },
+];
+
 export function Sidebar() {
   const [location] = useLocation();
 
@@ -92,18 +98,50 @@ export function Sidebar() {
           })}
         </ul>
 
-        {/* AI Assistant Section */}
+        {/* New Portal Features */}
         <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="px-3 py-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Portal Features</p>
+          </div>
+          <ul className="mt-2 space-y-2">
+            {newPortalNavigation.map((item) => {
+              const isActive = location === item.href;
+              return (
+                <li key={item.name}>
+                  <Link href={item.href}>
+                    <span className={cn(
+                      "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer",
+                      isActive 
+                        ? "text-primary bg-primary/10" 
+                        : "text-gray-700 hover:text-primary hover:bg-primary/5"
+                    )}>
+                      <item.icon className="w-5 h-5 mr-3" />
+                      {item.name}
+                      {item.badge && (
+                        <span className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* AI Assistant Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
           <div className="px-3 py-2">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">AI Assistant</p>
           </div>
           <ul className="mt-2 space-y-1">
             <li>
               <Link href="/ai-assistant">
-                <a className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
+                <span className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors cursor-pointer">
                   <MessageSquare className="w-5 h-5 mr-3" />
                   AI Notes Helper
-                </a>
+                </span>
               </Link>
             </li>
           </ul>
