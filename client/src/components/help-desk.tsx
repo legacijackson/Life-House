@@ -49,8 +49,16 @@ const faqs: FAQItem[] = [
   }
 ];
 
-export function HelpDesk() {
-  const [isOpen, setIsOpen] = useState(false);
+interface HelpDeskProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = externalIsOpen !== undefined && onClose ? onClose : () => setInternalIsOpen(!internalIsOpen);
+  
   const [selectedCategory, setSelectedCategory] = useState<'faq' | 'contact'>('faq');
   const [contactForm, setContactForm] = useState({
     subject: '',
@@ -64,23 +72,29 @@ export function HelpDesk() {
     toast.success("Support request submitted! We'll get back to you within 24 hours.");
     
     setContactForm({ subject: '', message: '' });
-    setIsOpen(false);
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalIsOpen(false);
+    }
   };
 
   return (
     <>
-      {/* Floating Help Button */}
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 z-50"
-        size="icon"
-      >
-        {isOpen ? (
-          <X className="h-6 w-6" />
-        ) : (
-          <HelpCircle className="h-6 w-6" />
-        )}
-      </Button>
+      {/* Floating Help Button - only show if not controlled externally */}
+      {externalIsOpen === undefined && (
+        <Button
+          onClick={() => setInternalIsOpen(!internalIsOpen)}
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 z-50"
+          size="icon"
+        >
+          {isOpen ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <HelpCircle className="h-6 w-6" />
+          )}
+        </Button>
+      )}
 
       {/* Help Desk Panel */}
       {isOpen && (

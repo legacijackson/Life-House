@@ -15,8 +15,16 @@ interface Message {
   timestamp: Date;
 }
 
-export function AIChatbotWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+interface AIChatbotWidgetProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function AIChatbotWidget({ isOpen: externalIsOpen, onClose }: AIChatbotWidgetProps = {}) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = externalIsOpen !== undefined && onClose ? onClose : () => setInternalIsOpen(!internalIsOpen);
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -99,25 +107,27 @@ export function AIChatbotWidget() {
 
   return (
     <>
-      {/* Floating button */}
-      <AnimatePresence>
-        {!isOpen && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-50"
-          >
-            <Button
-              onClick={() => setIsOpen(true)}
-              size="lg"
-              className="rounded-full h-14 w-14 shadow-lg bg-green-700 hover:bg-green-800"
+      {/* Floating button - only show if not controlled externally */}
+      {externalIsOpen === undefined && (
+        <AnimatePresence>
+          {!isOpen && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="fixed bottom-6 right-6 z-50"
             >
-              <MessageCircle className="h-6 w-6" />
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <Button
+                onClick={() => setInternalIsOpen(true)}
+                size="lg"
+                className="rounded-full h-14 w-14 shadow-lg bg-green-700 hover:bg-green-800"
+              >
+                <MessageCircle className="h-6 w-6" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Chat window */}
       <AnimatePresence>
@@ -139,7 +149,13 @@ export function AIChatbotWidget() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => {
+                    if (onClose) {
+                      onClose();
+                    } else {
+                      setInternalIsOpen(false);
+                    }
+                  }}
                   className="h-8 w-8 p-0 hover:bg-green-600"
                 >
                   <X className="h-4 w-4" />

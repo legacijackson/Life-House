@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster as HotToaster } from "react-hot-toast";
 import { AIChatbotWidget } from "@/components/ai-chatbot-widget";
 import { HelpDesk } from "@/components/help-desk";
+import { UnifiedFloatingMenu } from "@/components/unified-floating-menu";
+import { useState } from "react";
 import { RouteGuard } from "@/components/route-guard";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
@@ -67,14 +69,27 @@ function Router() {
 }
 
 function App() {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <HotToaster position="top-right" />
         <Router />
-        <AIChatbotWidget />
-        <HelpDesk />
+        <UnifiedFloatingMenu 
+          onOpenChat={() => setIsChatOpen(true)}
+          onOpenHelp={() => setIsHelpOpen(true)}
+        />
+        <AIChatbotWidget 
+          isOpen={isChatOpen} 
+          onClose={() => setIsChatOpen(false)} 
+        />
+        <HelpDesk 
+          isOpen={isHelpOpen} 
+          onClose={() => setIsHelpOpen(false)} 
+        />
       </TooltipProvider>
     </QueryClientProvider>
   );
