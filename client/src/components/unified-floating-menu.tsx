@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MessageCircle, HelpCircle } from 'lucide-react';
+import { X, MessageCircle, HelpCircle, Brain } from 'lucide-react';
 import { Logo } from "@/components/logo";
 import _3 from "@assets/3.png";
 
@@ -40,7 +40,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
           {isOpen ? (
             <X className="h-7 w-7" />
           ) : (
-            <img src={_3} alt="Life House" className="h-8 w-8" />
+            <img src="/house-icon.png" alt="Life House" className="h-8 w-8" />
           )}
         </Button>
       </motion.div>
@@ -63,7 +63,7 @@ export function UnifiedFloatingMenu({ onOpenChat, onOpenHelp }: UnifiedFloatingM
                 className="rounded-full h-14 w-14 shadow-lg bg-green-700 hover:bg-green-800 group"
                 title="AI Assistant"
               >
-                <img src={_3} alt="Life House" className="h-6 w-6" />
+                <Brain className="h-6 w-6" />
               </Button>
               <motion.span
                 initial={{ opacity: 0, x: 10 }}

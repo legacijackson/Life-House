@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,13 @@ interface ProgramOverviewModalProps {
 export function ProgramOverviewModal({ isOpen, onClose }: ProgramOverviewModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0" aria-describedby="program-overview-description">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Life House Reentry Program Overview</DialogTitle>
+          <DialogDescription id="program-overview-description">
+            Comprehensive information about Life House Reentry services, programs, and mission
+          </DialogDescription>
+        </DialogHeader>
         <div className="relative">
           {/* Header with Life House Branding */}
           <div className="bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
