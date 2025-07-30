@@ -37,7 +37,13 @@ interface HelpDeskProps {
 export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
-  const setIsOpen = externalIsOpen !== undefined && onClose ? onClose : () => setInternalIsOpen(!internalIsOpen);
+  const setIsOpen = (value?: boolean) => {
+    if (externalIsOpen !== undefined && onClose) {
+      onClose();
+    } else {
+      setInternalIsOpen(value === undefined ? !internalIsOpen : value);
+    }
+  };
 
   const [selectedCategory, setSelectedCategory] = useState<'faq' | 'contact'>('faq');
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,7 +59,7 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
   // Fetch contextual FAQs based on user role and current page
   const { data: faqs = [], isLoading: faqsLoading } = useQuery({
     queryKey: ['/api/support', (user as any)?.role, location],
-    queryFn: () => apiRequest(`/api/support?page=${encodeURIComponent(location)}`),
+    queryFn: () => apiRequest('GET', `/api/support?page=${encodeURIComponent(location)}`),
     enabled: !!user && isOpen,
   });
 
@@ -110,10 +116,20 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
       {isOpen && (
         <Card className="fixed bottom-24 right-6 w-96 max-h-[600px] shadow-xl z-40 overflow-hidden">
           <CardHeader className="bg-primary text-white pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              Help & Support
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Help & Support
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(false)}
+                className="h-8 w-8 text-white hover:bg-white/20"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
 
           <CardContent className="p-0">
