@@ -61,6 +61,9 @@ export default function Dashboard() {
     pendingNotes: number; 
     avgStage: number;
     openTickets: number;
+    totalCaseNotes: number;
+    totalResources: number;
+    totalReferrals: number;
   }>({
     queryKey: ['/api/dashboard/stats'],
   });

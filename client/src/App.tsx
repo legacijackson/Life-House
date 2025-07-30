@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster as HotToaster } from "react-hot-toast";
 import { AIChatbotWidget } from "@/components/ai-chatbot-widget";
+import { HelpDesk } from "@/components/help-desk";
 import { RouteGuard } from "@/components/route-guard";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
@@ -71,6 +72,7 @@ function App() {
         <HotToaster position="top-right" />
         <Router />
         <AIChatbotWidget />
+        <HelpDesk />
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -1,6 +1,6 @@
 import { useLocation, useRoute } from 'wouter';
 import { hasPermission, getAccessibleRoutes, useCurrentUser } from '@/lib/rbac';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Loader2 } from 'lucide-react';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner className="h-8 w-8" />
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -62,7 +62,7 @@ export function PortalGuard({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner className="h-8 w-8" />
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }

@@ -47,11 +47,11 @@ export function ReferResidentModal({
   const [open, setOpen] = useState(false);
 
   // Fetch residents and resources for dropdowns
-  const { data: residents = [] } = useQuery({
+  const { data: residents = [] } = useQuery<any[]>({
     queryKey: ['/api/residents'],
   });
 
-  const { data: resources = [] } = useQuery({
+  const { data: resources = [] } = useQuery<any[]>({
     queryKey: ['/api/resources'],
   });
 

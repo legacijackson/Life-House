@@ -1,0 +1,567 @@
+ Full App Implementation & QA Checklist  (v1 – July 30 2025)
+
+Read this once—build once—ship once.  This single checklist aggregates every feature, fix, asset‑swap, integration, database migration, API route, UI element, test, and go‑live gate discussed to date.  Follow it line‑by‑line and the Life House platform will pass audit, user‑acceptance, and production readiness in a single sprint.
+
+Legend• [DEV] – Code you must write• [DB] – Schema changes / seed data• [QA] – Automated or manual verification• [ASSET] – Static file swap• [OPS] – Cron, environment, or deployment step
+
+0  Prep
+
+#
+
+Task
+
+Type
+
+Done
+
+0‑1
+
+Pull main, merge all feature branches
+
+[DEV]
+
+☐
+
+0‑2
+
+.env contains SENDGRID, STRIPE (test), OPENAI, JWT_SECRET
+
+[OPS]
+
+☐
+
+0‑3
+
+npm i, npm run dev with 0 warnings
+
+[DEV]
+
+☐
+
+1  Database & Schema
+
+#
+
+Task
+
+Type
+
+Done
+
+1‑1
+
+Execute SQL in /migrations/2025_07_30.sql (roles, attendance, settings, lat/long, avatar)
+
+[DB]
+
+☐
+
+1‑2
+
+Seed super‑admin emails (Julius, Brittney, Kairia)
+
+[DB]
+
+☐
+
+1‑3
+
+Seed properties with lat/long for each house
+
+[DB]
+
+☐
+
+2  Assets & Branding
+
+#
+
+Task
+
+Type
+
+File
+
+Done
+
+2‑1
+
+Copy 10 logo PNGs → public/assets/brand
+
+[ASSET]
+
+✓ filenames list
+
+☐
+
+2‑2
+
+Generate favicons/PWA icons from lifehouse_color_vertical.png
+
+[ASSET]
+
+
+
+☐
+
+2‑3
+
+Update OG image meta to lifehouse_color_large_icon.png
+
+[ASSET]
+
+
+
+☐
+
+2‑4
+
+Verify dark‑mode CSS swaps to white logo
+
+[QA]
+
+F‑20b
+
+☐
+
+3  Front‑End Components
+
+#
+
+Component
+
+Source File
+
+Key Details
+
+Done
+
+3‑1
+
+ProfilePage
+
+ProfilePage.jsx
+
+Formik, PATCH /users/:id, avatar upload
+
+☐
+
+3‑2
+
+SidebarLayout
+
+layouts/SidebarLayout.jsx
+
+Import on Intake & Referrals
+
+☐
+
+3‑3
+
+CaseNotesPage
+
+Residents/CaseNotes.jsx
+
+Fetch notes, print w/ @media print
+
+☐
+
+3‑4
+
+AttendanceModal
+
+AttendanceModal.jsx
+
+Program dropdown, date, verifyStaff
+
+☐
+
+3‑5
+
+GeofenceCheckIn
+
+components/CheckInButton.jsx
+
+Haversine ≤ 91 m
+
+☐
+
+3‑6
+
+EditableNoteCard
+
+notes/EditableNoteCard.jsx
+
+TipTap editor, soft‑delete
+
+☐
+
+3‑7
+
+AddResourceModal
+
+resources/AddResource.jsx
+
+Fields per BAHC example
+
+☐
+
+3‑8
+
+ReferResidentModal
+
+referrals/ReferResident.jsx
+
+Email + DB row
+
+☐
+
+3‑9
+
+PartnerSignupModal
+
+partners/Signup.jsx
+
+Org Name, Partner Type
+
+☐
+
+3‑10
+
+PropertyForm
+
+properties/PropertyForm.jsx
+
+Only role≥admin
+
+☐
+
+3‑11
+
+MaintenancePage
+
+maintenance/MaintenancePage.jsx
+
+Filter, NewTicketModal
+
+☐
+
+3‑12
+
+ReportsPage
+
+reports/ReportsPage.jsx
+
+Data checkbox matrix → PDF
+
+☐
+
+3‑13
+
+TouchpointCalendar
+
+calendar/ResidentCalendar.jsx
+
+FullCalendar, POST /events
+
+☐
+
+3‑14
+
+ProgramOverviewModal
+
+home/ProgramOverview.jsx
+
+Pop‑up, overview copy, top+bottom CTA
+
+☐
+
+3‑15
+
+ChatWidget
+
+components/ChatWidget.jsx
+
+OpenAI, branded CSS
+
+☐
+
+4  API Routes & Services
+
+#
+
+Route
+
+Details
+
+Done
+
+4‑1
+
+POST /signup
+
+Return JWT
+
+☐
+
+4‑2
+
+PATCH /users/:id
+
+Auth = self
+
+admin
+
+☐
+
+4‑3
+
+POST /attendance
+
+Inserts attendance row
+
+☐
+
+4‑4
+
+POST /check‑in
+
+Geofence validation
+
+☐
+
+4‑5
+
+DELETE /notes/:id
+
+Soft delete
+
+☐
+
+4‑6
+
+POST /resource
+
+Add resource row
+
+☐
+
+4‑7
+
+POST /inquiry
+
+SendGrid template d‑inquiry‑01
+
+☐
+
+4‑8
+
+POST /events
+
+Create calendar event
+
+☐
+
+4‑9
+
+POST /donate
+
+Stripe checkout session (test)
+
+☐
+
+5  Cron & Background Jobs
+
+#
+
+Job
+
+Schedule
+
+Behaviour
+
+Done
+
+5‑1
+
+Resource Crawler
+
+0 */48 * * *
+
+Scrape, de‑dup, CSV, Slack diff
+
+☐
+
+5‑2
+
+Nightly Resource Diff
+
+02:00 PT
+
+Already in 5‑1
+
+☐
+
+5‑3
+
+STOP ARMS Reminder
+
+hourly
+
+48 h / 24 h alerts
+
+☐
+
+5‑4
+
+Overdue Notes Watchdog
+
+weekly
+
+>3 overdue → email Julius
+
+☐
+
+6  Role‑Based Access Control
+
+Role
+
+Abilities
+
+Verification
+
+Resident
+
+Dashboard, Check‑In, View Files
+
+login role=resident
+
+Case Mgr
+
+All resident CRUD, Attendance, Notes
+
+login role=cm
+
+Admin
+
+Add Property, Reports, Settings
+
+role=admin
+
+Super
+
+Add/Remove Admins
+
+email in superAdmin table
+
+7  Cypress / Jest Suites
+
+Run: npm run test && npx cypress run  → Must be 0 failures
+
+Total tests expected: 72  (IDs F‑01 … F‑36, DB‑07 … DB‑08, etc.)
+
+8  Manual QA & Visuals
+
+#
+
+Scenario
+
+Expected
+
+Done
+
+8‑1
+
+Light‑mode nav
+
+Color horizontal logo
+
+☐
+
+8‑2
+
+Dark‑mode nav
+
+White horizontal logo
+
+☐
+
+8‑3
+
+Mobile nav
+
+Color icon logo
+
+☐
+
+8‑4
+
+Program Overview pop‑up
+
+Copy matches deck, CTA works
+
+☐
+
+8‑5
+
+Partner signup
+
+Row in DB + email Julius
+
+☐
+
+8‑6
+
+Case note full view
+
+Modal width 600 px shows full JSON
+
+☐
+
+8‑7
+
+Geofence fail >150 m
+
+Toast error “Out of range”
+
+☐
+
+8‑8
+
+Reports PDF
+
+Download opens, correct slices
+
+☐
+
+9  Security & Performance
+
+Tool
+
+Target
+
+Done
+
+OWASP ZAP
+
+0 high severities
+
+☐
+
+Lighthouse
+
+≥90 perf, a11y, best‑pract, SEO
+
+☐
+
+10  Go‑Live Gates
+
+All checklist boxes ☑️
+
+Cypress + Jest + ZAP + Lighthouse reports archived in /artifacts/
+
+Version tag v1.0.0 pushed & Replit deployment green
+
+Julius approves production cut‑over
+
+Save this file as /README_REPLIT.md in the repo root.  When every checkbox is ticked, the app is DONE.

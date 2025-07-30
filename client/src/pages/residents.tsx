@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Sidebar } from "@/components/sidebar";
+import { ReferResidentModal } from "@/components/refer-resident-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,8 @@ import {
   AlertCircle,
   TrendingUp,
   FileText,
-  Bed
+  Bed,
+  ExternalLink
 } from 'lucide-react';
 
 interface Resident {
@@ -97,12 +99,12 @@ export default function Residents() {
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
 
   // In a real app, this would fetch from API
-  const { data: residents = mockResidents, isLoading } = useQuery({
+  const { data: residents = mockResidents, isLoading } = useQuery<Resident[]>({
     queryKey: ['/api/residents'],
     enabled: false // Using mock data for now
   });
 
-  const filteredResidents = residents.filter((resident: Resident) => {
+  const filteredResidents = residents.filter((resident) => {
     const matchesSearch = resident.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          resident.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStage = stageFilter === 'all' || resident.stage.toString() === stageFilter;
@@ -189,7 +191,19 @@ export default function Residents() {
                 Residents ({filteredResidents.length})
               </h2>
               
-              {filteredResidents.map((resident: Resident) => (
+              {filteredResidents.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+                    <Users className="h-12 w-12 text-gray-300 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">No residents found</h3>
+                    <p className="text-sm text-gray-500 max-w-sm">
+                      {searchTerm || stageFilter !== 'all' 
+                        ? "Try adjusting your search criteria or filters" 
+                        : "No residents have been added to the system yet"}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : filteredResidents.map((resident: Resident) => (
                 <Card 
                   key={resident.id}
                   className={`cursor-pointer transition-all hover:shadow-md ${
@@ -396,6 +410,12 @@ export default function Residents() {
                         <Calendar className="w-4 h-4 mr-2" />
                         Log Attendance
                       </Button>
+                      <ReferResidentModal residentId={selectedResident.id}>
+                        <Button size="sm" variant="outline" className="flex-1">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Refer to Service
+                        </Button>
+                      </ReferResidentModal>
                     </div>
                   </CardContent>
                 </Card>

@@ -261,7 +261,19 @@ export default function Resources() {
                 Resources ({filteredResources.length})
               </h2>
               
-              {filteredResources.map((resource: Resource) => {
+              {filteredResources.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+                    <Heart className="h-12 w-12 text-gray-300 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">No resources found</h3>
+                    <p className="text-sm text-gray-500 max-w-sm">
+                      {searchTerm || categoryFilter !== 'all' 
+                        ? "Try adjusting your search criteria or filters" 
+                        : "No resources have been added to the system yet. Click 'Add Resource' to get started."}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : filteredResources.map((resource: Resource) => {
                 const IconComponent = getCategoryIcon(resource.category);
                 return (
                   <Card 

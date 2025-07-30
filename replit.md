@@ -155,5 +155,13 @@ The application follows a monorepo architecture with clear separation of concern
 - **Program Inquiry Modal** (CR-6): Built inquiry form for potential residents with backend storage
 - **Partner Signup Modal** (CR-10): Developed partner organization registration with service integration
 - **AI Chatbot Widget** (CR-13): Integrated floating AI assistant with Life House-specific knowledge base
+- **Role-Based Access Control** (CR-21): Implemented comprehensive RBAC system with permission-based route filtering and RouteGuard component
+- **Multi-Portal Routing** (CR-22): Created protected route system with role-based access for different user types
+- **Resource Add Modal** (CR-23): Built ResourceAddModal component for adding new community resources
+- **Refer Resident Modal** (CR-24): Implemented ReferResidentModal for referring residents to services with integrated buttons in resident profiles
+- **Generate Report System** (CR-27): Created comprehensive reports page with multiple report types, date selection, and download functionality
+- **Dashboard Counters** (CR-28, CR-29, CR-30): Added case notes, resources, and referrals counters to the main dashboard stats
+- **Empty State UI** (CR-31): Implemented "No results found" states for residents and resources lists with helpful guidance
+- **Help Desk Widget** (CR-32): Created floating help desk with FAQs and contact support form for user assistance
 
 The architecture prioritizes developer experience, type safety, and maintainability while providing a solid foundation for a production transitional housing management system.
