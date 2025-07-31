@@ -100,7 +100,7 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
         localStorage.setItem("userRole", data.user.role);
       }
       toast.success("Welcome back to Life House!");
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       loginForm.reset();
       onClose();
       // Navigate to appropriate portal based on role
@@ -132,7 +132,7 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
         localStorage.setItem("userRole", data.user.role);
       }
       toast.success("Welcome to Life House! Your account has been created.");
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       signupForm.reset();
       onClose();
       // Navigate to appropriate portal based on role

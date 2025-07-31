@@ -49,16 +49,7 @@ const rolePermissions: Record<UserRole, Permission[]> = {
 // Hook to get current user from authentication
 export function useCurrentUser() {
   return useQuery({
-    queryKey: ['currentUser'],
-    queryFn: async () => {
-      const response = await fetch('/api/auth/user', {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error('Not authenticated');
-      }
-      return response.json();
-    },
+    queryKey: ['/api/auth/user'],
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false
   });
