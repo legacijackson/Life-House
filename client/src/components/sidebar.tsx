@@ -50,7 +50,7 @@ export function Sidebar() {
           <Logo className="w-10 h-10" />
           <div>
             
-            <p className="text-sm text-gray-500">← Back to Home</p>
+            
           </div>
         </div>
       </div>
