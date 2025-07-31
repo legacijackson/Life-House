@@ -15,6 +15,7 @@ import {
   insertDonationSchema,
   insertInquirySchema,
   insertPartnerSchema,
+  users,
   faqs,
   faqRoles,
   faqPages,
@@ -888,7 +889,6 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   }));
 
   // Homepage Content Management
-  ```text
   app.get('/api/admin/homepage-content', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const content = await storage.getHomepageContent();
@@ -1750,8 +1750,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
           weight: faqs.weight
         })
         .from(faqs)
-        .innerJoin(faqRoles, eq(faqs.id,```text
- faqRoles.faqId))
+        .innerJoin(faqRoles, eq(faqs.id, faqRoles.faqId))
         .leftJoin(faqPages, eq(faqs.id, faqPages.faqId))
         .where(
           and(
