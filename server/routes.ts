@@ -729,6 +729,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Homepage Content Management
+  app.get('/api/admin/homepage-content', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const content = await storage.getHomepageContent();
+      res.json(content);
+    } catch (error) {
+      console.error('Homepage content fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch homepage content' });
+    }
+  }));
+
+  app.put('/api/admin/homepage-content/:section', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { section } = req.params;
+      const contentData = req.body;
+      
+      const updatedContent = await storage.updateHomepageContent(section, {
+        ...contentData,
+        lastUpdatedBy: req.user.id,
+        updatedAt: new Date(),
+      });
+      
+      res.json(updatedContent);
+    } catch (error) {
+      console.error('Homepage content update error:', error);
+      res.status(500).json({ message: 'Failed to update homepage content' });
+    }
+  }));
+
   // Resident Portal Routes
   app.get('/api/resident/dashboard', roleRoute(['Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {

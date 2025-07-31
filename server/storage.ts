@@ -18,6 +18,7 @@ import {
   partners,
   auditLog,
   documents,
+  homepageContent,
   type User,
   type InsertUser,
   type ResidentProfile,
@@ -42,6 +43,8 @@ import {
   type InsertInquiry,
   type Partner,
   type InsertPartner,
+  type HomepageContent,
+  type InsertHomepageContent,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
@@ -112,6 +115,10 @@ export interface IStorage {
 
   // Audit logging
   logAudit(entry: any): Promise<void>;
+
+  // Homepage content management
+  getHomepageContent(): Promise<HomepageContent[]>;
+  updateHomepageContent(section: string, data: Partial<HomepageContent>): Promise<HomepageContent>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -626,6 +633,43 @@ export class DatabaseStorage implements IStorage {
 
   async logAudit(entry: any): Promise<void> {
     await db.insert(auditLog).values(entry);
+  }
+
+  async getHomepageContent(): Promise<HomepageContent[]> {
+    const content = await db
+      .select()
+      .from(homepageContent)
+      .where(eq(homepageContent.isActive, true))
+      .orderBy(homepageContent.section);
+    return content;
+  }
+
+  async updateHomepageContent(section: string, data: Partial<HomepageContent>): Promise<HomepageContent> {
+    // Try to update existing content first
+    const existing = await db
+      .select()
+      .from(homepageContent)
+      .where(eq(homepageContent.section, section));
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(homepageContent)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(homepageContent.section, section))
+        .returning();
+      return updated;
+    } else {
+      // Create new content if it doesn't exist
+      const [created] = await db
+        .insert(homepageContent)
+        .values({ 
+          section, 
+          ...data,
+          isActive: true 
+        } as any)
+        .returning();
+      return created;
+    }
   }
 }
 

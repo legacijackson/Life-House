@@ -458,6 +458,23 @@ export const documents = pgTable("documents", {
   checksum: varchar("checksum"),
 });
 
+// Homepage Content table for editable copy
+export const homepageContent = pgTable("homepage_content", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  section: varchar("section", { length: 50 }).notNull().unique(), // "hero", "about", "programs", "impact", "cta"
+  title: text("title"),
+  subtitle: text("subtitle"),
+  content: text("content"),
+  buttonText: text("button_text"),
+  buttonUrl: text("button_url"),
+  isActive: boolean("is_active").default(true),
+  lastUpdatedBy: uuid("last_updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("homepage_content_section_idx").on(table.section),
+]);
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   residentProfile: one(residentProfiles, {
@@ -691,6 +708,12 @@ export const insertFaqFeedbackSchema = createInsertSchema(faqFeedback).omit({
   createdAt: true,
 });
 
+export const insertHomepageContentSchema = createInsertSchema(homepageContent).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -728,3 +751,5 @@ export type FAQPage = typeof faqPages.$inferSelect;
 export type FAQRole = typeof faqRoles.$inferSelect;
 export type FAQFeedback = typeof faqFeedback.$inferSelect;
 export type InsertFAQFeedback = z.infer<typeof insertFaqFeedbackSchema>;
+export type HomepageContent = typeof homepageContent.$inferSelect;
+export type InsertHomepageContent = z.infer<typeof insertHomepageContentSchema>;

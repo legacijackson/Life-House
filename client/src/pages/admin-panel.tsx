@@ -49,6 +49,20 @@ interface SystemSetting {
   updatedAt: string;
 }
 
+interface HomepageContent {
+  id: string;
+  section: string;
+  title?: string;
+  subtitle?: string;
+  content?: string;
+  buttonText?: string;
+  buttonUrl?: string;
+  isActive: boolean;
+  lastUpdatedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface AuditLogEntry {
   id: string;
   action: string;
@@ -68,6 +82,9 @@ export default function AdminPanel() {
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isSettingModalOpen, setIsSettingModalOpen] = useState(false);
   const [selectedSetting, setSelectedSetting] = useState<SystemSetting | null>(null);
+  const [isContentModalOpen, setIsContentModalOpen] = useState(false);
+  const [selectedContent, setSelectedContent] = useState<HomepageContent | null>(null);
+  const [editingContent, setEditingContent] = useState<Record<string, any>>({});
 
   // Fetch admin data
   const { data: users = [], isLoading: usersLoading } = useQuery({
@@ -93,6 +110,11 @@ export default function AdminPanel() {
   const { data: auditLogs = [], isLoading: logsLoading } = useQuery({
     queryKey: ['/api/admin/audit-logs'],
     enabled: activeTab === 'logs'
+  });
+
+  const { data: homepageContent = [], isLoading: contentLoading } = useQuery({
+    queryKey: ['/api/admin/homepage-content'],
+    enabled: activeTab === 'content'
   });
 
   // Photo management mutations
@@ -151,6 +173,21 @@ export default function AdminPanel() {
     }
   });
 
+  // Homepage content mutation
+  const updateContentMutation = useMutation({
+    mutationFn: async ({ section, data }: { section: string; data: Partial<HomepageContent> }) => {
+      return apiRequest('PUT', `/api/admin/homepage-content/${section}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/homepage-content'] });
+      toast({ title: "Homepage content updated successfully" });
+      setIsContentModalOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to update homepage content", variant: "destructive" });
+    }
+  });
+
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -173,6 +210,27 @@ export default function AdminPanel() {
     setIsSettingModalOpen(true);
   };
 
+  const handleContentEdit = (content: HomepageContent) => {
+    setSelectedContent(content);
+    setEditingContent({
+      title: content.title || '',
+      subtitle: content.subtitle || '',
+      content: content.content || '',
+      buttonText: content.buttonText || '',
+      buttonUrl: content.buttonUrl || ''
+    });
+    setIsContentModalOpen(true);
+  };
+
+  const handleContentSave = () => {
+    if (!selectedContent) return;
+    
+    updateContentMutation.mutate({
+      section: selectedContent.section,
+      data: editingContent
+    });
+  };
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-8">
@@ -183,7 +241,7 @@ export default function AdminPanel() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Users
@@ -191,6 +249,10 @@ export default function AdminPanel() {
           <TabsTrigger value="properties" className="flex items-center gap-2">
             <Home className="h-4 w-4" />
             Properties
+          </TabsTrigger>
+          <TabsTrigger value="content" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Homepage
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -416,6 +478,111 @@ export default function AdminPanel() {
           </Card>
         </TabsContent>
 
+        {/* Homepage Content Tab */}
+        <TabsContent value="content" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Homepage Content Management</span>
+                <Badge variant="secondary">Live Content</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {contentLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-700 h-20 rounded" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Default content sections if none exist */}
+                  {homepageContent.length === 0 && (
+                    <div className="grid gap-4">
+                      {['hero', 'about', 'programs', 'impact', 'cta'].map(section => (
+                        <Card key={section} className="border-2 border-dashed border-gray-300">
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h3 className="font-semibold capitalize">{section} Section</h3>
+                                <p className="text-sm text-gray-600">Click to add content for this section</p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleContentEdit({
+                                  id: '',
+                                  section,
+                                  title: '',
+                                  subtitle: '',
+                                  content: '',
+                                  buttonText: '',
+                                  buttonUrl: '',
+                                  isActive: true,
+                                  createdAt: new Date().toISOString(),
+                                  updatedAt: new Date().toISOString()
+                                })}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Content
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Existing content sections */}
+                  {homepageContent.map((content: HomepageContent) => (
+                    <Card key={content.id} className="border">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold capitalize">{content.section} Section</h3>
+                              {content.isActive && <Badge variant="default" className="text-xs">Active</Badge>}
+                            </div>
+                            {content.title && (
+                              <p className="font-medium text-gray-900 dark:text-white mb-1">{content.title}</p>
+                            )}
+                            {content.subtitle && (
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{content.subtitle}</p>
+                            )}
+                            {content.content && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{content.content}</p>
+                            )}
+                            {content.buttonText && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Badge variant="outline">{content.buttonText}</Badge>
+                                {content.buttonUrl && (
+                                  <span className="text-xs text-gray-400">→ {content.buttonUrl}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleContentEdit(content)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t text-xs text-gray-500 flex items-center justify-between">
+                          <span>Last updated: {new Date(content.updatedAt).toLocaleDateString()}</span>
+                          {content.lastUpdatedBy && <span>by User {content.lastUpdatedBy.slice(0, 8)}...</span>}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Logs Tab */}
         <TabsContent value="logs" className="space-y-6">
           <Card>
@@ -561,6 +728,104 @@ export default function AdminPanel() {
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Homepage Content Edit Modal */}
+      <Dialog open={isContentModalOpen} onOpenChange={setIsContentModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit {selectedContent?.section} Section</DialogTitle>
+          </DialogHeader>
+          {selectedContent && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="content-title">Title</Label>
+                  <Input
+                    id="content-title"
+                    value={editingContent.title || ''}
+                    onChange={(e) => setEditingContent({...editingContent, title: e.target.value})}
+                    placeholder="Section title"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="content-subtitle">Subtitle</Label>
+                  <Input
+                    id="content-subtitle"
+                    value={editingContent.subtitle || ''}
+                    onChange={(e) => setEditingContent({...editingContent, subtitle: e.target.value})}
+                    placeholder="Section subtitle"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="content-main">Main Content</Label>
+                <Textarea
+                  id="content-main"
+                  value={editingContent.content || ''}
+                  onChange={(e) => setEditingContent({...editingContent, content: e.target.value})}
+                  placeholder="Main content text"
+                  rows={6}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="content-button-text">Button Text</Label>
+                  <Input
+                    id="content-button-text"
+                    value={editingContent.buttonText || ''}
+                    onChange={(e) => setEditingContent({...editingContent, buttonText: e.target.value})}
+                    placeholder="Button text (optional)"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="content-button-url">Button URL</Label>
+                  <Input
+                    id="content-button-url"
+                    value={editingContent.buttonUrl || ''}
+                    onChange={(e) => setEditingContent({...editingContent, buttonUrl: e.target.value})}
+                    placeholder="Button link (optional)"
+                  />
+                </div>
+              </div>
+
+              <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                <h4 className="font-medium mb-2">Preview</h4>
+                <div className="space-y-2">
+                  {editingContent.title && (
+                    <h3 className="text-lg font-semibold">{editingContent.title}</h3>
+                  )}
+                  {editingContent.subtitle && (
+                    <p className="text-gray-600 dark:text-gray-300">{editingContent.subtitle}</p>
+                  )}
+                  {editingContent.content && (
+                    <p className="text-sm">{editingContent.content}</p>
+                  )}
+                  {editingContent.buttonText && (
+                    <Button variant="outline" size="sm" className="pointer-events-none">
+                      {editingContent.buttonText}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsContentModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleContentSave}
+                  disabled={updateContentMutation.isPending}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateContentMutation.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </div>
