@@ -11,7 +11,7 @@ import { ProgramOverviewModal } from "@/components/program-overview-modal";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
 import _3 from "@assets/3.png";
-import lifeHouseLogo from "@assets/Life House large icon_1753856825753.png";
+import lifeHouseLogo from "@assets/image_1753975873459.png";
 
 import Untitled_design__4_ from "@assets/Untitled design (4).png";
 
