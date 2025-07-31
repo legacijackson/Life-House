@@ -74,7 +74,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
       (req as AuthenticatedRequest).user = {
         id: user.id,
         role: user.role,
-        name: user.name || 'Unknown User',
+        name: user.name || user.email || 'Unknown User',
         email: user.email
       };
       return next();
@@ -567,6 +567,31 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       });
     }
   }));
+
+  // AI Chat endpoint (public access for widget) - MUST be before auth middleware
+  app.post('/api/ai/chat', async (req: Request, res: Response) => {
+    try {
+      const { message, context } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ message: 'Message is required' });
+      }
+
+      // Import the AI helper
+      const { aiService } = await import('./ai');
+
+      const context_type = context === 'public_assistant' ? 'public_assistant' : 'case_management';
+      const aiResponse = await aiService.chatResponse(message, context_type);
+
+      res.json({ response: aiResponse.response });
+    } catch (error: any) {
+      console.error('AI chat error:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate response',
+        error: error.message 
+      });
+    }
+  });
 
   // Apply auth middleware to remaining API routes
   app.use('/api', requireAuth);
@@ -1516,31 +1541,6 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     } catch (error) {
       console.error('Webhook error:', error);
       res.status(500).json({ message: 'Webhook processing failed' });
-    }
-  });
-
-  // AI Chat endpoint (public access for widget)
-  app.post('/api/ai/chat', async (req: Request, res: Response) => {
-    try {
-      const { message, context } = req.body;
-
-      if (!message) {
-        return res.status(400).json({ message: 'Message is required' });
-      }
-
-      // Import the AI helper
-      const { aiService } = await import('./ai');
-
-      const context_type = context === 'public_assistant' ? 'public_assistant' : 'case_management';
-      const aiResponse = await aiService.chatResponse(message, context_type);
-
-      res.json({ response: aiResponse.response });
-    } catch (error: any) {
-      console.error('AI chat error:', error);
-      res.status(500).json({ 
-        message: 'Failed to generate response',
-        error: error.message 
-      });
     }
   });
 

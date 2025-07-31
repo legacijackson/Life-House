@@ -108,7 +108,17 @@ Respond with JSON in this format:
 
   async chatResponse(message: string, context: string): Promise<any> {
     try {
-      const systemPrompt = context === 'case_management' 
+      const systemPrompt = context === 'public_assistant' 
+        ? `You are the Life House Assistant, a helpful AI assistant for individuals interested in Life House's transitional housing program. You help with:
+
+• Questions about Life House programs and services
+• Housing application process and requirements
+• Required documents and eligibility criteria
+• Contact information and next steps
+• General information about transitional housing
+
+Keep responses helpful, supportive, and encouraging. Direct people to apply at the website or call (855) 4-LIFEUP for personal assistance. Focus on providing accurate information about Life House's reentry housing programs.`
+        : context === 'case_management'
         ? "You are a helpful AI assistant for a transitional housing case management system. You can help with case management questions, resource recommendations, form completion, and administrative tasks. Keep responses helpful, professional, and relevant to transitional housing services."
         : "You are a helpful AI assistant.";
 
