@@ -1214,19 +1214,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create resource
-  app.post('/api/resource', async (req: Request, res: Response) => {
+  app.post('/api/resources', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const validatedData = req.body; // TODO: Add resource schema validation
-      const resource = await storage.createResource(validatedData);
+      const resourceData = req.body;
+      
+      // Validate required fields
+      if (!resourceData.name || !resourceData.category) {
+        return res.status(400).json({ message: 'Name and category are required' });
+      }
+
+      // Transform form data to database format
+      const resource = {
+        category: resourceData.category,
+        name: resourceData.name,
+        description: resourceData.description || '',
+        eligibility: resourceData.eligibility || '',
+        geo: {
+          zip: resourceData.zip || '',
+          city: resourceData.city || '',
+          county: resourceData.county || '',
+          state: resourceData.state || 'CA'
+        },
+        url: resourceData.url || resourceData.website || '',
+        contact: {
+          phone: resourceData.phone || '',
+          email: resourceData.email || ''
+        },
+        address: resourceData.address || '',
+        phone: resourceData.phone || '',
+        website: resourceData.url || resourceData.website || '',
+        hours: resourceData.hours ? (typeof resourceData.hours === 'string' ? { general: resourceData.hours } : resourceData.hours) : {},
+        languages: resourceData.languages ? (Array.isArray(resourceData.languages) ? resourceData.languages : [resourceData.languages]) : ['en'],
+        status: 'active' as const,
+        tags: resourceData.tags ? (typeof resourceData.tags === 'string' ? resourceData.tags.split(',').map((t: string) => t.trim()) : resourceData.tags) : []
+      };
+
+      const created = await storage.createResource(resource);
+      
       res.status(201).json({
         success: true,
-        resource
+        resource: created
       });
     } catch (error) {
       console.error('Error creating resource:', error);
       res.status(500).json({ message: 'Failed to create resource' });
     }
-  });
+  }));
 
   // Donation checkout with Stripe
   app.post('/api/donate', async (req: Request, res: Response) => {
@@ -1613,9 +1646,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const searchQuery = req.query.q as string;
-      const resources = await storage.getResources();
+      const categoryFilter = req.query.category as string;
       
-      let filteredResources = resources.filter(r => r.status === 'active');
+      let filters: any = {};
+      if (categoryFilter && categoryFilter !== 'all') {
+        filters.category = categoryFilter;
+      }
+      
+      const allResources = await storage.getResources(filters);
+      
+      let filteredResources = allResources.filter(r => r.status === 'active');
       
       // Apply role-based filtering
       if (!user) {
@@ -1643,28 +1683,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filteredResources = filteredResources.filter(resource =>
           resource.name.toLowerCase().includes(query) ||
           (resource.description && resource.description.toLowerCase().includes(query)) ||
-          resource.category.toLowerCase().includes(query)
+          resource.category.toLowerCase().includes(query) ||
+          (resource.tags && Array.isArray(resource.tags) && 
+           resource.tags.some((tag: string) => tag.toLowerCase().includes(query)))
         );
       }
 
       // Transform resources based on authentication status
       const transformedResources = filteredResources.map(resource => {
+        // Parse geo field if it's a JSON object
+        let geoData = { zip: '', city: '', county: '', state: 'CA' };
+        if (resource.geo) {
+          try {
+            geoData = typeof resource.geo === 'string' ? JSON.parse(resource.geo) : resource.geo;
+          } catch (e) {
+            // Keep default if parsing fails
+          }
+        }
+
+        // Parse contact field if it's a JSON object
+        let contactData = { phone: '', email: '' };
+        if (resource.contact) {
+          try {
+            contactData = typeof resource.contact === 'string' ? JSON.parse(resource.contact) : resource.contact;
+          } catch (e) {
+            // Keep default if parsing fails
+          }
+        }
+
+        const baseResource = {
+          id: resource.id,
+          name: resource.name,
+          description: resource.description,
+          category: resource.category,
+          eligibility: resource.eligibility,
+          benefitAmount: resource.benefitAmount,
+          geo: geoData,
+          url: resource.url,
+          contact: contactData,
+          address: resource.address,
+          phone: resource.phone,
+          website: resource.website,
+          hours: resource.hours,
+          languages: resource.languages,
+          status: resource.status,
+          tags: resource.tags,
+          createdAt: resource.createdAt,
+          updatedAt: resource.updatedAt
+        };
+
         if (!user) {
           // Public view - remove sensitive data
           return {
-            id: resource.id,
-            name: resource.name,
-            description: resource.description,
-            category: resource.category,
-            address: resource.address,
-            phone: resource.phone,
-            website: resource.website,
-            eligibility: resource.eligibility,
-            hours: resource.hours,
+            ...baseResource,
+            contact: {
+              phone: contactData.phone,
+              // Hide email for public users
+            }
           };
         } else {
           // Authenticated view - include all data
-          return resource;
+          return baseResource;
         }
       });
 
@@ -1680,74 +1759,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Redirect to unified endpoint
     return app._router.handle(Object.assign(req, { url: '/api/resources' }), res, () => {});
   });
-
-  // Get Life House flagship resources (CR-52)
-  app.get('/api/resources/highlight', async (req: Request, res: Response) => {
-    try {
-      const highlightResources = await storage.getHighlightResources();
-      res.json(highlightResources);
-    } catch (error) {
-      console.error('Error fetching highlight resources:', error);
-      res.status(500).json({ message: 'Failed to fetch highlight resources' });
-    }
-  });
-
-  // CSV Upload endpoint for resources
-  app.post('/api/resources/upload-csv', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { csvData } = req.body;
-      
-      if (!csvData || !Array.isArray(csvData)) {
-        return res.status(400).json({ message: 'Invalid CSV data' });
-      }
-
-      // Transform CSV data to resource format
-      const resourcesToCreate = csvData.map(row => ({
-        name: row.name || row.title || 'Unnamed Resource',
-        description: row.description || row.summary || '',
-        category: (row.category || 'other').toLowerCase() as any,
-        address: row.address || '',
-        phone: row.phone || '',
-        website: row.website || row.url || '',
-        eligibility: row.eligibility || '',
-        hours: row.hours ? JSON.parse(row.hours) : null,
-        languages: row.languages ? row.languages.split(',').map((l: string) => l.trim()) : ['en'],
-        status: 'active' as const,
-        tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()) : [],
-        isLifehouse: row.isLifehouse === 'true' || row.is_lifehouse === 'true' || false,
-        image: row.image || null,
-        summary: row.summary || null,
-        categories: row.categories ? row.categories.split(',').map((c: string) => c.trim()) : null,
-        geo: row.zip || row.city ? {
-          zip: row.zip || null,
-          city: row.city || null,
-          county: row.county || null,
-          state: row.state || null
-        } : null,
-        contact: row.contact_name || row.contact_email ? {
-          name: row.contact_name || null,
-          phone: row.contact_phone || null,
-          email: row.contact_email || null
-        } : null,
-        benefitAmount: row.benefitAmount || null,
-      }));
-
-      // Bulk create resources
-      const created = await storage.bulkCreateResources(resourcesToCreate);
-
-      res.json({
-        success: true,
-        message: `Successfully imported ${created.length} resources`,
-        count: created.length
-      });
-    } catch (error) {
-      console.error('CSV upload error:', error);
-      res.status(500).json({ 
-        message: 'Failed to upload CSV', 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      });
-    }
-  }));
 
   // Admin Panel API Routes
   app.get('/api/admin/users', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {

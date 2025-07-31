@@ -109,20 +109,23 @@ export function ResourceAddModal({ onSuccess }: ResourceAddModalProps) {
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="housing">Housing</SelectItem>
                         <SelectItem value="employment">Employment</SelectItem>
-                        <SelectItem value="education">Education</SelectItem>
                         <SelectItem value="healthcare">Healthcare</SelectItem>
-                        <SelectItem value="legal">Legal Services</SelectItem>
-                        <SelectItem value="financial">Financial Assistance</SelectItem>
-                        <SelectItem value="food">Food Assistance</SelectItem>
-                        <SelectItem value="clothing">Clothing</SelectItem>
-                        <SelectItem value="transportation">Transportation</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="food">Food</SelectItem>
+                        <SelectItem value="legal">Legal</SelectItem>
+                        <SelectItem value="education">Education</SelectItem>
+                        <SelectItem value="training">Training</SelectItem>
+                        <SelectItem value="transport">Transportation</SelectItem>
+                        <SelectItem value="family">Family Services</SelectItem>
+                        <SelectItem value="money">Financial</SelectItem>
+                        <SelectItem value="emergency">Emergency</SelectItem>
+                        <SelectItem value="id_docs">ID/Documents</SelectItem>
+                        <SelectItem value="sud_mh_referral">Mental Health/SUD</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
