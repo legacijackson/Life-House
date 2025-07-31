@@ -70,12 +70,21 @@ export function AIChatbotWidget({ isOpen: externalIsOpen, onClose }: AIChatbotWi
         },
       ]);
     },
-    onError: () => {
+    onError: (error: any) => {
+      let errorMessage = "I'm sorry, I'm having trouble connecting right now. Please try again later or call us at (855) 4-LIFEUP.";
+      
+      // Check for specific error messages
+      if (error?.message?.includes('quota exceeded')) {
+        errorMessage = "I apologize, but our AI assistant is temporarily unavailable due to high demand. Please call us at (855) 4-LIFEUP for immediate assistance, or try again later.";
+      } else if (error?.message?.includes('Invalid OpenAI API key')) {
+        errorMessage = "Our AI assistant is currently being configured. Please call us at (855) 4-LIFEUP for assistance.";
+      }
+      
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
-          text: "I'm sorry, I'm having trouble connecting right now. Please try again later or call us at (855) 4-LIFEUP.",
+          text: errorMessage,
           sender: "ai",
           timestamp: new Date(),
         },

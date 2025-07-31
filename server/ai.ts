@@ -142,9 +142,19 @@ Keep responses helpful, supportive, and encouraging. Direct people to apply at t
         response: response.choices[0].message.content || "I'm sorry, I couldn't generate a response.",
         aiGenerated: true,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI chat error:', error);
-      throw new Error('Failed to generate chat response');
+      
+      // Handle specific OpenAI errors
+      if (error.code === 'insufficient_quota' || error.status === 429) {
+        throw new Error('OpenAI API quota exceeded. Please check your OpenAI account billing and usage limits.');
+      }
+      
+      if (error.code === 'invalid_api_key' || error.status === 401) {
+        throw new Error('Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.');
+      }
+      
+      throw new Error('Failed to generate chat response: ' + (error.message || 'Unknown error'));
     }
   }
 
