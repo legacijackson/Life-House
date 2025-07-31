@@ -410,11 +410,36 @@ export const faqFeedback = pgTable("faq_feedback", {
   faqId: uuid("faq_id").references(() => faqs.id).notNull(),
   userId: uuid("user_id").references(() => users.id).notNull(),
   helpful: boolean("helpful").notNull(),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const reports = pgTable("reports", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 100 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).default("pending"),
+  parameters: jsonb("parameters"),
+  filePath: varchar("file_path", { length: 500 }),
+  fileSize: integer("file_size"),
+  generatedBy: uuid("generated_by").references(() => users.id),
+  generatedAt: timestamp("generated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("faq_feedback_faq_id_idx").on(table.faqId),
-  index("faq_feedback_user_id_idx").on(table.userId),
-]);
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const reportTemplates = pgTable("report_templates", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 100 }).unique().notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }).notNull(),
+  frequency: varchar("frequency", { length: 50 }),
+  templateConfig: jsonb("template_config"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
 
 // Inquiries table for program information requests
 export const inquiries = pgTable("inquiries", {
@@ -681,7 +706,7 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   updatedAt: true,
 });
 
-export const insertDonationSchema = createInsertSchema(donations).omit({
+exportconst insertDonationSchema = createInsertSchema(donations).omit({
   id: true,
   stripePaymentId: true,
   receiptId: true,

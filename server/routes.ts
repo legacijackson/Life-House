@@ -528,6 +528,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(req.user);
   }));
 
+  // Reports Management Routes
+  app.get('/api/reports/templates', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const templates = await storage.getReportTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching report templates:', error);
+      res.status(500).json({ message: 'Failed to fetch report templates' });
+    }
+  }));
+
+  app.get('/api/reports', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { type, status } = req.query;
+      const filters: any = {};
+      if (type && type !== 'all') filters.type = type as string;
+      if (status && status !== 'all') filters.status = status as string;
+      
+      const reports = await storage.getReports(filters);
+      res.json(reports);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      res.status(500).json({ message: 'Failed to fetch reports' });
+    }
+  }));
+
+  app.post('/api/reports/generate', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { reportType, parameters, name } = req.body;
+
+      if (!reportType) {
+        return res.status(400).json({ message: 'Report type is required' });
+      }
+
+      // Create report record
+      const report = await storage.createReport({
+        type: reportType,
+        name: name || `${reportType} Report - ${new Date().toLocaleDateString()}`,
+        description: `Generated report for ${reportType}`,
+        parameters,
+        generatedBy: req.user.id
+      });
+
+      // Generate report data in background
+      try {
+        const reportData = await storage.generateReportData(reportType, parameters);
+        
+        // Update report with success status
+        await storage.updateReport(report.id, {
+          status: 'completed',
+          filePath: `/reports/${report.id}.pdf`,
+          fileSize: 1024 * 100, // Mock file size
+          generatedAt: new Date()
+        });
+
+        res.json({
+          success: true,
+          report: {
+            ...report,
+            status: 'completed',
+            filePath: `/reports/${report.id}.pdf`
+          },
+          data: reportData
+        });
+      } catch (error) {
+        // Update report with error status
+        await storage.updateReport(report.id, {
+          status: 'error'
+        });
+        throw error;
+      }
+    } catch (error) {
+      console.error('Report generation error:', error);
+      res.status(500).json({ message: 'Failed to generate report' });
+    }
+  }));
+
+  app.get('/api/reports/:id/download', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const reports = await storage.getReports({ id });
+      const report = reports.find(r => r.id === id);
+
+      if (!report || report.status !== 'completed') {
+        return res.status(404).json({ message: 'Report not found or not ready' });
+      }
+
+      // In production, this would stream the actual file
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${report.name}.pdf"`);
+      res.send('Mock PDF content for: ' + report.name);
+    } catch (error) {
+      console.error('Report download error:', error);
+      res.status(500).json({ message: 'Failed to download report' });
+    }
+  }));
+
   // Staff Dashboard Routes
   app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from "@/components/sidebar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "react-hot-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ReportType {
   id: string;
@@ -36,58 +38,71 @@ interface ReportType {
   status?: 'ready' | 'generating' | 'error';
 }
 
-const reportTypes: ReportType[] = [
-  {
-    id: 'stop-touchpoint',
-    name: 'STOP TouchPoint Report',
-    description: 'Monthly compliance report tracking resident interactions and services',
-    icon: CheckCircle,
-    category: 'compliance',
-    frequency: 'Monthly',
-    lastGenerated: '2024-01-15',
-    status: 'ready'
-  },
-  {
-    id: 'resident-progress',
-    name: 'Resident Progress Report',
-    description: 'Individual and aggregate progress tracking across all stages',
-    icon: TrendingUp,
-    category: 'outcomes',
-    frequency: 'Quarterly',
-    lastGenerated: '2024-01-10',
-    status: 'ready'
-  },
-  {
-    id: 'housing-occupancy',
-    name: 'Housing Occupancy Report',
-    description: 'Property utilization, vacancy rates, and bed availability',
-    icon: Home,
-    category: 'operations',
-    frequency: 'Weekly',
-    lastGenerated: '2024-01-18',
-    status: 'ready'
-  },
-  {
-    id: 'attendance-compliance',
-    name: 'Attendance Compliance Report',
-    description: 'Program attendance rates and compliance tracking',
-    icon: Users,
-    category: 'compliance',
-    frequency: 'Monthly',
-    lastGenerated: '2024-01-12',
-    status: 'ready'
-  },
-  {
-    id: 'financial-summary',
-    name: 'Financial Summary Report',
-    description: 'Donation tracking, resident fees, and financial overview',
-    icon: BarChart,
-    category: 'financial',
-    frequency: 'Monthly',
-    lastGenerated: '2024-01-05',
-    status: 'ready'
-  }
-];
+// Fetch report templates from database
+const useReportTemplates = () => {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: ['reportTemplates'],
+    queryFn: async () => {
+      const response = await fetch('/api/reports/templates', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch report templates');
+      return response.json();
+    },
+  });
+};
+
+// Fetch generated reports
+const useReports = () => {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: ['reports'],
+    queryFn: async () => {
+      const response = await fetch('/api/reports', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch reports');
+      return response.json();
+    },
+  });
+};
+
+// Generate report mutation
+const useGenerateReport = () => {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ reportType, parameters, name }: { reportType: string; parameters: any; name: string }) => {
+      const response = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          reportType,
+          parameters,
+          name
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to generate report');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      toast.success('Report generated successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to generate report');
+    },
+  });
+};
 
 export default function Reports() {
   const [selectedReportType, setSelectedReportType] = useState<string>('');
@@ -95,8 +110,11 @@ export default function Reports() {
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date()
   });
-  const [generatingReport, setGeneratingReport] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const { data: reportTemplates = [], isLoading: templatesLoading } = useReportTemplates();
+  const { data: generatedReports = [], isLoading: reportsLoading } = useReports();
+  const generateReportMutation = useGenerateReport();
 
   const handleGenerateReport = async () => {
     if (!selectedReportType) {
@@ -104,24 +122,66 @@ export default function Reports() {
       return;
     }
 
-    setGeneratingReport(true);
-    
-    // Simulate report generation
-    setTimeout(() => {
-      setGeneratingReport(false);
-      toast.success("Report generated successfully!");
-      
-      // In a real app, this would trigger a download
-      const link = document.createElement('a');
-      link.href = '#';
-      link.download = `${selectedReportType}-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-      link.click();
-    }, 2000);
+    if (!dateRange.from || !dateRange.to) {
+      toast.error("Please select a date range");
+      return;
+    }
+
+    const selectedTemplate = reportTemplates.find(t => t.type === selectedReportType);
+    if (!selectedTemplate) {
+      toast.error("Invalid report type selected");
+      return;
+    }
+
+    const parameters = {
+      startDate: dateRange.from.toISOString(),
+      endDate: dateRange.to.toISOString(),
+      category: selectedCategory !== 'all' ? selectedCategory : undefined
+    };
+
+    const reportName = `${selectedTemplate.name} - ${format(dateRange.from, 'MMM dd')} to ${format(dateRange.to, 'MMM dd, yyyy')}`;
+
+    await generateReportMutation.mutateAsync({
+      reportType: selectedReportType,
+      parameters,
+      name: reportName
+    });
   };
 
-  const filteredReports = reportTypes.filter(report => 
-    selectedCategory === 'all' || report.category === selectedCategory
+  const handleDownloadReport = async (reportId: string, reportName: string) => {
+    try {
+      const { token } = useAuth();
+      const response = await fetch(`/api/reports/${reportId}/download`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error('Failed to download report');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${reportName}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error('Failed to download report');
+    }
+  };
+
+  const filteredTemplates = reportTemplates.filter(template => 
+    selectedCategory === 'all' || template.category === selectedCategory
   );
+
+  const iconMap = {
+    'stop-touchpoint': CheckCircle,
+    'resident-progress': TrendingUp,
+    'housing-occupancy': Home,
+    'attendance-compliance': Users,
+    'financial-summary': BarChart
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -137,10 +197,10 @@ export default function Reports() {
               </div>
               <Button 
                 onClick={handleGenerateReport}
-                disabled={!selectedReportType || generatingReport}
+                disabled={!selectedReportType || generateReportMutation.isPending}
                 className="gap-2"
               >
-                {generatingReport ? (
+                {generateReportMutation.isPending ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin" />
                     Generating...
@@ -266,52 +326,54 @@ export default function Reports() {
 
             <TabsContent value={selectedCategory} className="space-y-4">
               <div className="grid gap-4">
-                {filteredReports.map(report => {
-                  const IconComponent = report.icon;
-                  return (
-                    <Card 
-                      key={report.id}
-                      className={cn(
-                        "cursor-pointer transition-all hover:shadow-md",
-                        selectedReportType === report.id && "ring-2 ring-primary"
-                      )}
-                      onClick={() => setSelectedReportType(report.id)}
-                    >
-                      <CardHeader className="pb-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                              <IconComponent className="h-5 w-5 text-primary" />
+                {templatesLoading ? (
+                  <div className="text-center py-8">Loading report templates...</div>
+                ) : (
+                  filteredTemplates.map(template => {
+                    const IconComponent = iconMap[template.type as keyof typeof iconMap] || FileText;
+                    return (
+                      <Card 
+                        key={template.id}
+                        className={cn(
+                          "cursor-pointer transition-all hover:shadow-md",
+                          selectedReportType === template.type && "ring-2 ring-primary"
+                        )}
+                        onClick={() => setSelectedReportType(template.type)}
+                      >
+                        <CardHeader className="pb-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-primary/10 rounded-lg">
+                                <IconComponent className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <CardTitle className="text-lg">{template.name}</CardTitle>
+                                <CardDescription className="mt-1">
+                                  {template.description}
+                                </CardDescription>
+                              </div>
                             </div>
-                            <div>
-                              <CardTitle className="text-lg">{report.name}</CardTitle>
-                              <CardDescription className="mt-1">
-                                {report.description}
-                              </CardDescription>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge variant="outline">{template.frequency}</Badge>
+                              {template.isActive && (
+                                <Badge className="bg-green-100 text-green-800">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Ready
+                                </Badge>
+                              )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-2">
-                            <Badge variant="outline">{report.frequency}</Badge>
-                            {report.status === 'ready' && (
-                              <Badge className="bg-green-100 text-green-800">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Ready
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      {report.lastGenerated && (
+                        </CardHeader>
                         <CardContent className="pt-0">
                           <div className="flex items-center text-sm text-gray-500">
                             <Clock className="h-4 w-4 mr-1" />
-                            Last generated: {new Date(report.lastGenerated).toLocaleDateString()}
+                            Template updated: {new Date(template.updatedAt).toLocaleDateString()}
                           </div>
                         </CardContent>
-                      )}
-                    </Card>
-                  );
-                })}
+                      </Card>
+                    );
+                  })
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -324,20 +386,49 @@ export default function Reports() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="font-medium text-sm">STOP TouchPoint Report - January 2024</p>
-                        <p className="text-xs text-gray-500">Generated on Jan 15, 2024</p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="ghost">
-                      <Download className="h-4 w-4" />
-                    </Button>
+                {reportsLoading ? (
+                  <div className="text-center py-4">Loading reports...</div>
+                ) : generatedReports.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    No reports generated yet. Create your first report above.
                   </div>
-                ))}
+                ) : (
+                  generatedReports.slice(0, 10).map((report: any) => (
+                    <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="font-medium text-sm">{report.name}</p>
+                          <p className="text-xs text-gray-500">
+                            Generated on {new Date(report.generatedAt).toLocaleDateString()}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge 
+                              variant={report.status === 'completed' ? 'default' : 
+                                      report.status === 'generating' ? 'secondary' : 'destructive'}
+                              className="text-xs"
+                            >
+                              {report.status}
+                            </Badge>
+                            {report.fileSize && (
+                              <span className="text-xs text-gray-400">
+                                {(report.fileSize / 1024).toFixed(1)} KB
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        disabled={report.status !== 'completed'}
+                        onClick={() => handleDownloadReport(report.id, report.name)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

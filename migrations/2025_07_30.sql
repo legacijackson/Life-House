@@ -132,3 +132,56 @@ CREATE TABLE IF NOT EXISTS "resources" (
 
 -- Add hours column if it doesn't exist (for existing databases)
 ALTER TABLE "resources" ADD COLUMN IF NOT EXISTS "hours" jsonb;
+
+-- Create reports table for storing generated reports
+CREATE TABLE IF NOT EXISTS reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type VARCHAR(100) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  status VARCHAR(50) DEFAULT 'pending',
+  parameters JSONB,
+  file_path VARCHAR(500),
+  file_size INTEGER,
+  generated_by UUID REFERENCES users(id),
+  generated_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create report templates table
+CREATE TABLE IF NOT EXISTS report_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type VARCHAR(100) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  category VARCHAR(100) NOT NULL,
+  frequency VARCHAR(50),
+  template_config JSONB,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Insert default report templates
+INSERT INTO report_templates (type, name, description, category, frequency, template_config) VALUES
+('stop-touchpoint', 'STOP TouchPoint Report', 'Monthly compliance report tracking resident interactions and services', 'compliance', 'Monthly', '{"fields": ["resident_id", "touchpoint_date", "interaction_type", "case_manager", "notes"], "groupBy": "month"}'),
+('resident-progress', 'Resident Progress Report', 'Individual and aggregate progress tracking across all stages', 'outcomes', 'Quarterly', '{"fields": ["resident_id", "stage", "progress_percentage", "goals_completed", "savings"], "groupBy": "stage"}'),
+('housing-occupancy', 'Housing Occupancy Report', 'Property utilization, vacancy rates, and bed availability', 'operations', 'Weekly', '{"fields": ["property_id", "capacity", "occupied", "vacancy_rate", "waitlist"], "groupBy": "property"}'),
+('attendance-compliance', 'Attendance Compliance Report', 'Program attendance rates and compliance tracking', 'compliance', 'Monthly', '{"fields": ["resident_id", "program_id", "attendance_rate", "sessions_attended", "sessions_total"], "groupBy": "program"}'),
+('financial-summary', 'Financial Summary Report', 'Donation tracking, resident fees, and financial overview', 'financial', 'Monthly', '{"fields": ["donation_total", "fees_collected", "expenses", "savings_total"], "groupBy": "month"}')
+ON CONFLICT (type) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  updated_at = NOW();
+
+-- Create indexes for reports
+CREATE INDEX IF NOT EXISTS idx_reports_type ON reports(type);
+CREATE INDEX IF NOT EXISTS idx_reports_generated_by ON reports(generated_by);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
+CREATE INDEX IF NOT EXISTS idx_reports_generated_at ON reports(generated_at);
+
+-- Fix any missing foreign key constraints
+ALTER TABLE case_notes ADD COLUMN IF NOT EXISTS attachments JSONB;
+ALTER TABLE residents ADD COLUMN IF NOT EXISTS current_stage INTEGER DEFAULT 1;
+ALTER TABLE residents ADD COLUMN IF NOT EXISTS savings_amount DECIMAL(10,2) DEFAULT 0.00;

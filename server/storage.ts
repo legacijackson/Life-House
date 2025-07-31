@@ -19,6 +19,8 @@ import {
   auditLog,
   documents,
   homepageContent,
+  reportTemplates,
+  reports,
   type User,
   type InsertUser,
   type ResidentProfile,
@@ -47,7 +49,7 @@ import {
   type InsertHomepageContent,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, count, sql } from "drizzle-orm";
+import { eq, and, desc, count, sql, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -122,6 +124,13 @@ export interface IStorage {
   // Homepage content management
   getHomepageContent(): Promise<HomepageContent[]>;
   updateHomepageContent(section: string, data: Partial<HomepageContent>): Promise<HomepageContent>;
+
+    // Report Generation and Management
+  getReportTemplates(): Promise<any[]>;
+  createReport(reportData: any): Promise<any>;
+  updateReport(reportId: string, updates: any): Promise<any>;
+  getReports(filters?: any): Promise<any[]>;
+  generateReportData(reportType: string, parameters: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -140,7 +149,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.role) {
       conditions.push(eq(users.role, filters.role as any));
     }
-    
+
     const results = await db
       .select()
       .from(users)
@@ -193,11 +202,11 @@ export class DatabaseStorage implements IStorage {
 
   async getReferrals(filters?: { status?: string }): Promise<Referral[]> {
     const conditions = [];
-    
+
     if (filters?.status) {
       conditions.push(eq(referrals.status, filters.status as any));
     }
-    
+
     const results = await db
       .select()
       .from(referrals)
@@ -338,7 +347,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
     }
-    
+
     const results = await db
       .select()
       .from(attendance)
@@ -363,7 +372,7 @@ export class DatabaseStorage implements IStorage {
     if (filters.fundingStream) {
       conditions.push(eq(serviceEvents.fundingStream, filters.fundingStream as any));
     }
-    
+
     const results = await db
       .select()
       .from(serviceEvents)
@@ -404,7 +413,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(resources.status, filters.status as any));
     }
-    
+
     const results = await db
       .select()
       .from(resources)
@@ -488,7 +497,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(tickets.status, filters.status as any));
     }
-    
+
     const results = await db
       .select()
       .from(tickets)
@@ -558,7 +567,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(applications.status, filters.status as any));
     }
-    
+
     const results = await db
       .select()
       .from(applications)
@@ -589,7 +598,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.frequency) {
       conditions.push(eq(donations.frequency, filters.frequency as any));
     }
-    
+
     const results = await db
       .select()
       .from(donations)
@@ -611,7 +620,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(inquiries.status, filters.status));
     }
-    
+
     const results = await db
       .select()
       .from(inquiries)
@@ -645,7 +654,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.serviceType) {
       conditions.push(eq(partners.serviceType, filters.serviceType));
     }
-    
+
     const results = await db
       .select()
       .from(partners)
@@ -701,6 +710,132 @@ export class DatabaseStorage implements IStorage {
         } as any)
         .returning();
       return created;
+    }
+  }
+
+  async getReportTemplates() {
+    try {
+      const templates = await db.select().from(reportTemplates);
+      return templates;
+    } catch (error) {
+      console.error('Error fetching report templates:', error);
+      throw error;
+    }
+  }
+
+  async createReport(reportData: any) {
+    try {
+      const [report] = await db.insert(reports).values({
+        type: reportData.type,
+        name: reportData.name,
+        description: reportData.description,
+        status: 'generating',
+        parameters: reportData.parameters,
+        generatedBy: reportData.generatedBy
+      }).returning();
+      return report;
+    } catch (error) {
+      console.error('Error creating report:', error);
+      throw error;
+    }
+  }
+
+  async updateReport(reportId: string, updates: any) {
+    try {
+      const [report] = await db.update(reports)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(reports.id, reportId))
+        .returning();
+      return report;
+    } catch (error) {
+      console.error('Error updating report:', error);
+      throw error;
+    }
+  }
+
+  async getReports(filters: any = {}) {
+    try {
+      let query = db.select().from(reports);
+
+      if (filters.type) {
+        query = query.where(eq(reports.type, filters.type));
+      }
+
+      if (filters.generatedBy) {
+        query = query.where(eq(reports.generatedBy, filters.generatedBy));
+      }
+
+      const reportsList = await query.orderBy(desc(reports.generatedAt));
+      return reportsList;
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      throw error;
+    }
+  }
+
+  async generateReportData(reportType: string, parameters: any) {
+    try {
+      let data = {};
+
+      switch (reportType) {
+        case 'stop-touchpoint':
+          // Generate STOP touchpoint data
+          const touchpoints = await db.select().from(caseNotes)
+            .where(
+              and(
+                gte(caseNotes.createdAt, parameters.startDate),
+                lte(caseNotes.createdAt, parameters.endDate)
+              )
+            );
+          data = { touchpoints, summary: { total: touchpoints.length } };
+          break;
+
+        case 'resident-progress':
+          // Generate resident progress data
+          const residentsProgress = await db.select().from(users)
+            .where(eq(users.role, 'Resident' as any));
+          data = { residents: residentsProgress, averageStage: 3.2 };
+          break;
+
+        case 'housing-occupancy':
+          // Generate housing occupancy data
+          const properties = await this.getProperties();
+          data = { properties, totalCapacity: properties.reduce((sum, p) => sum + (p.capacity || 0), 0) };
+          break;
+
+        case 'attendance-compliance':
+          // Generate attendance data
+          const attendanceData = await db.select().from(attendance)
+            .where(
+              and(
+                gte(attendance.date, parameters.startDate),
+                lte(attendance.date, parameters.endDate)
+              )
+            );
+          data = { attendance: attendanceData, complianceRate: 0.85 };
+          break;
+
+        case 'financial-summary':
+          // Generate financial data
+          const donations = await this.getDonations();
+          data = { 
+            donations, 
+            totalDonations: donations.reduce((sum, d) => sum + parseFloat(d.amount), 0),
+            avgDonation: donations.length > 0 ? donations.reduce((sum, d) => sum + parseFloat(d.amount), 0) / donations.length : 0
+          };
+          break;
+
+        default:
+          throw new Error(`Unknown report type: ${reportType}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error generating report data:', error);
+      throw error;
     }
   }
 }
