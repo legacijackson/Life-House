@@ -34,7 +34,10 @@ import {
   Scale,
   Info,
   TrendingUp,
-  Target
+  Target,
+  Upload,
+  Building,
+  User
 } from 'lucide-react';
 
 interface Resource {
@@ -147,6 +150,8 @@ export default function Resources() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [selectedLifeHouseProgram, setSelectedLifeHouseProgram] = useState<string | null>(null);
+  const [showCSVUpload, setShowCSVUpload] = useState(false);
 
 
   // Fetch resources from API (supports both guest and authenticated access)
@@ -257,20 +262,184 @@ export default function Resources() {
         </header>
 
         <div className="p-6">
-          {/* CSV Upload Section - Case Managers and Admins Only */}
-          {!isGuest && user && ['CaseManager', 'Admin'].includes(user.role) && (
-            <section className="mb-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Resource Management</h2>
-                <p className="text-gray-600">Upload CSV files containing community resources. Files will be processed using AI to clean and categorize the data.</p>
+          {/* Life House Programs Section */}
+          <section className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Life House Programs & Services</h2>
+                <p className="text-gray-600">Comprehensive wraparound services designed for successful reentry</p>
               </div>
-              <div className="max-w-2xl">
-                <CSVUpload />
-              </div>
-            </section>
-          )}
+              {!isGuest && user && ['CaseManager', 'Admin'].includes((user as any).role) && (
+                <Button 
+                  onClick={() => setShowCSVUpload(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Community Resources
+                </Button>
+              )}
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <Card 
+                className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                onClick={() => setSelectedLifeHouseProgram('housing')}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-green-100 rounded-full group-hover:bg-green-200 transition-colors">
+                      <Home className="w-6 h-6 text-green-600" />
+                    </div>
+                    <Badge className="bg-green-100 text-green-700 border-green-200">housing</Badge>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">7-Stage Reentry Housing Program</h3>
+                  <p className="text-sm text-gray-600 mb-4">Our comprehensive structured pathway guides residents from Intake through Legacy stages. Each stage includes specific milestones: sober housing, life-design coaching, job placement...</p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <Badge variant="outline" className="text-xs">housing</Badge>
+                    <Badge variant="outline" className="text-xs">reentry</Badge>
+                    <Badge variant="outline" className="text-xs">support-services</Badge>
+                    <Badge variant="outline" className="text-xs">+1 more</Badge>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <MapPin className="w-3 h-3 mr-1" />
+                    Life House, CA
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Flagship Programs Carousel */}
+              <Card 
+                className="bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                onClick={() => setSelectedLifeHouseProgram('credit')}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-blue-100 rounded-full group-hover:bg-blue-200 transition-colors">
+                      <TrendingUp className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <Badge className="bg-blue-100 text-blue-700 border-blue-200">financial</Badge>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">CureMyCrédit700 Partnership</h3>
+                  <p className="text-sm text-gray-600 mb-4">Professional credit repair services specializing in challenging inaccurate, outdated, and unverifiable information. 4.9/5 stars, 400+ reviews...</p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <Badge variant="outline" className="text-xs">credit-repair</Badge>
+                    <Badge variant="outline" className="text-xs">financial-health</Badge>
+                    <Badge variant="outline" className="text-xs">housing-ready</Badge>
+                    <Badge variant="outline" className="text-xs">+2 more</Badge>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    Partner Service
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                onClick={() => setSelectedLifeHouseProgram('financial')}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-purple-100 rounded-full group-hover:bg-purple-200 transition-colors">
+                      <GraduationCap className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <Badge className="bg-purple-100 text-purple-700 border-purple-200">education</Badge>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Financial Literacy Program</h3>
+                  <p className="text-sm text-gray-600 mb-4">Global Investment Company partnership offering comprehensive financial education. $179.99/month program covering budgeting, investing, credit, insurance...</p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <Badge variant="outline" className="text-xs">financial-literacy</Badge>
+                    <Badge variant="outline" className="text-xs">budgeting</Badge>
+                    <Badge variant="outline" className="text-xs">investing</Badge>
+                    <Badge variant="outline" className="text-xs">+3 more</Badge>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Building className="w-3 h-3 mr-1" />
+                    Global Investment Co.
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                onClick={() => setSelectedLifeHouseProgram('business')}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-orange-100 rounded-full group-hover:bg-orange-200 transition-colors">
+                      <Target className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <Badge className="bg-orange-100 text-orange-700 border-orange-200">coaching</Badge>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Business Coaching Program</h3>
+                  <p className="text-sm text-gray-600 mb-4">Building Your Dream Legacy by Kai Shariff - "Serve your gifts, talents and magic to people who get you and build a legacy that serves you"</p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <Badge variant="outline" className="text-xs">entrepreneurship</Badge>
+                    <Badge variant="outline" className="text-xs">coaching</Badge>
+                    <Badge variant="outline" className="text-xs">legacy-building</Badge>
+                    <Badge variant="outline" className="text-xs">+2 more</Badge>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <User className="w-3 h-3 mr-1" />
+                    Kai Shariff Method
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                onClick={() => setSelectedLifeHouseProgram('brokerage')}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-emerald-100 rounded-full group-hover:bg-emerald-200 transition-colors">
+                      <Shield className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">savings</Badge>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Brokerage & Savings Program</h3>
+                  <p className="text-sm text-gray-600 mb-4">Forced savings program building wealth while residents stabilize their lives. 30% contribution: 25% savings (reimbursable) + 5% brokerage investment...</p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <Badge variant="outline" className="text-xs">forced-savings</Badge>
+                    <Badge variant="outline" className="text-xs">wealth-building</Badge>
+                    <Badge variant="outline" className="text-xs">investment</Badge>
+                    <Badge variant="outline" className="text-xs">+1 more</Badge>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                    Global Investment Co.
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                onClick={() => setSelectedLifeHouseProgram('partnerships')}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-red-100 rounded-full group-hover:bg-red-200 transition-colors">
+                      <Users className="w-6 h-6 text-red-600" />
+                    </div>
+                    <Badge className="bg-red-100 text-red-700 border-red-200">partnerships</Badge>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Community Partnerships</h3>
+                  <p className="text-sm text-gray-600 mb-4">Strategic healing-centered engagement network for comprehensive wraparound services including parole, STOP contractors, CalAIM ECM providers...</p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    <Badge variant="outline" className="text-xs">wraparound-services</Badge>
+                    <Badge variant="outline" className="text-xs">healing-centered</Badge>
+                    <Badge variant="outline" className="text-xs">community</Badge>
+                    <Badge variant="outline" className="text-xs">+3 more</Badge>
+                  </div>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <MapPin className="w-3 h-3 mr-1" />
+                    California Network
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* Community Resources Section */}
           <section className="mb-8">
             <div className="mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Community Resources</h2>
@@ -584,6 +753,24 @@ export default function Resources() {
         </div>
       </main>
 
+      {/* CSV Upload Modal */}
+      <Dialog open={showCSVUpload} onOpenChange={setShowCSVUpload}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Upload className="w-5 h-5 mr-2 text-primary" />
+              Upload Community Resources
+            </DialogTitle>
+            <DialogDescription>
+              Upload CSV files containing community resources. Files will be processed using AI to clean and categorize the data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <CSVUpload />
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Resource Detail Modal */}
       <Dialog open={!!selectedResource} onOpenChange={() => setSelectedResource(null)}>
         <DialogContent className="max-w-2xl">
@@ -609,7 +796,7 @@ export default function Resources() {
                   <div>
                     <h4 className="font-medium text-sm mb-2">Location</h4>
                     <p className="text-sm text-muted-foreground">
-                      {selectedResource.geo.city}, {selectedResource.geo.state}
+                      {(selectedResource as any).geo?.city}, {(selectedResource as any).geo?.state}
                     </p>
                   </div>
                 </div>
@@ -621,37 +808,37 @@ export default function Resources() {
                   </div>
                 )}
                 
-                {selectedResource.contact && (
+                {(selectedResource as any).contact && (
                   <div>
                     <h4 className="font-medium text-sm mb-2">Contact Information</h4>
                     <div className="space-y-1 text-sm">
-                      {selectedResource.contact.phone && (
+                      {(selectedResource as any).contact.phone && (
                         <div className="flex items-center">
                           <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
-                          {selectedResource.contact.phone}
+                          {(selectedResource as any).contact.phone}
                         </div>
                       )}
-                      {selectedResource.contact.email && (
+                      {(selectedResource as any).contact.email && (
                         <div className="flex items-center">
                           <span className="w-4 h-4 mr-2">@</span>
-                          {selectedResource.contact.email}
+                          {(selectedResource as any).contact.email}
                         </div>
                       )}
-                      {selectedResource.contact.address && (
+                      {(selectedResource as any).contact.address && (
                         <div className="flex items-center">
                           <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
-                          {selectedResource.contact.address}
+                          {(selectedResource as any).contact.address}
                         </div>
                       )}
                     </div>
                   </div>
                 )}
                 
-                {selectedResource.languages.length > 0 && (
+                {(selectedResource as any).languages?.length > 0 && (
                   <div>
                     <h4 className="font-medium text-sm mb-2">Languages</h4>
                     <div className="flex flex-wrap gap-1">
-                      {selectedResource.languages.map((lang, index) => (
+                      {(selectedResource as any).languages.map((lang: string, index: number) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {lang.toUpperCase()}
                         </Badge>
@@ -660,11 +847,11 @@ export default function Resources() {
                   </div>
                 )}
                 
-                {selectedResource.tags.length > 0 && (
+                {(selectedResource as any).tags?.length > 0 && (
                   <div>
                     <h4 className="font-medium text-sm mb-2">Tags</h4>
                     <div className="flex flex-wrap gap-1">
-                      {selectedResource.tags.map((tag, index) => (
+                      {(selectedResource as any).tags.map((tag: string, index: number) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {tag}
                         </Badge>
@@ -672,6 +859,493 @@ export default function Resources() {
                     </div>
                   </div>
                 )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Life House Program Detail Modals */}
+      <Dialog open={!!selectedLifeHouseProgram} onOpenChange={() => setSelectedLifeHouseProgram(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedLifeHouseProgram === 'housing' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center text-2xl">
+                  <Home className="w-6 h-6 text-green-600 mr-3" />
+                  Transitional Housing Program
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Safe, structured living with comprehensive life-design support for formerly incarcerated individuals
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Program Overview</h3>
+                    <p className="text-gray-600">Life House provides safe, sober transitional housing for 90-730 days, paired with holistic life-design coaching, case management, benefits enrollment, and pathways to permanent housing or homeownership.</p>
+                    
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-green-800 mb-2">Key Features</h4>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>• Safe, structured, sober living environment</li>
+                        <li>• Individual life-design coaching</li>
+                        <li>• Case management and benefits navigation</li>
+                        <li>• Document assistance (ID, SSN)</li>
+                        <li>• Financial literacy and credit repair</li>
+                        <li>• Job readiness and employer partnerships</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">7-Stage Transformation Model</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center">1</div>
+                        <div>
+                          <p className="font-medium text-sm">Intake</p>
+                          <p className="text-xs text-gray-600">Assessment, stabilization, documents, benefits, initial plan</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center">2</div>
+                        <div>
+                          <p className="font-medium text-sm">Design</p>
+                          <p className="text-xs text-gray-600">Individualized goals, services map, accountability schedule</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center">3</div>
+                        <div>
+                          <p className="font-medium text-sm">Training</p>
+                          <p className="text-xs text-gray-600">Life skills, CBT groups, education/certifications, financial literacy</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center">4</div>
+                        <div>
+                          <p className="font-medium text-sm">Working</p>
+                          <p className="text-xs text-gray-600">Job placement, income stabilization, 30% contribution (25% savings + 5% brokerage)</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center">5</div>
+                        <div>
+                          <p className="font-medium text-sm">Overflow</p>
+                          <p className="text-xs text-gray-600">Step-down independence, continued coaching, housing search</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center">6</div>
+                        <div>
+                          <p className="font-medium text-sm">Transition</p>
+                          <p className="text-xs text-gray-600">Permanent housing/homeownership secured, move-out readiness</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-green-100 text-green-600 text-xs font-medium flex items-center justify-center">7</div>
+                        <div>
+                          <p className="font-medium text-sm">Legacy</p>
+                          <p className="text-xs text-gray-600">Alumni network, mentoring, aftercare check-ins</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+          
+          
+          {selectedLifeHouseProgram === 'credit' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center text-2xl">
+                  <TrendingUp className="w-6 h-6 text-blue-600 mr-3" />
+                  Credit Repair Service Partnership
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Professional credit repair through CureMyCrédit700 - proven strategies for housing and financial stability
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Service Overview</h3>
+                    <p className="text-gray-600">Professional credit repair services specializing in challenging inaccurate, outdated, and unverifiable information on credit reports through proven strategies and personalized approaches.</p>
+                    
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-blue-800 mb-2">Proven Results</h4>
+                      <div className="space-y-2 text-sm text-blue-700">
+                        <div className="flex justify-between">
+                          <span>Customer Rating:</span>
+                          <span className="font-medium">4.9/5 stars</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Reviews:</span>
+                          <span className="font-medium">400+ testimonials</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Typical Timeline:</span>
+                          <span className="font-medium">3-6 months</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Core Services</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-blue-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Credit Report Analysis</p>
+                          <p className="text-xs text-gray-600">Expert identification of negative items affecting credit scores</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-blue-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Dispute Processing</p>
+                          <p className="text-xs text-gray-600">Strategic challenges to inaccurate information with credit bureaus</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-blue-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Credit Building Guidance</p>
+                          <p className="text-xs text-gray-600">Personalized strategies for improving credit health long-term</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {selectedLifeHouseProgram === 'financial' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center text-2xl">
+                  <GraduationCap className="w-6 h-6 text-purple-600 mr-3" />
+                  Financial Literacy Program
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Global Investment Company partnership - comprehensive financial education for lifelong stability
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Program Structure</h3>
+                    <p className="text-gray-600">Comprehensive financial literacy education through Global Investment Company's proven curriculum, covering essential money management skills for successful reentry and long-term stability.</p>
+                    
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-purple-800 mb-2">Program Details</h4>
+                      <div className="space-y-2 text-sm text-purple-700">
+                        <div className="flex justify-between">
+                          <span>Monthly Cost:</span>
+                          <span className="font-medium">$179.99</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Provider:</span>
+                          <span className="font-medium">Global Investment Co.</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Experience:</span>
+                          <span className="font-medium">40+ years</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Curriculum Areas</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-purple-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Budgeting & Money Management</p>
+                          <p className="text-xs text-gray-600">Creating and maintaining personal budgets, expense tracking</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-purple-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Debt Management</p>
+                          <p className="text-xs text-gray-600">Strategies for paying down debt and avoiding financial traps</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-purple-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Investment Basics</p>
+                          <p className="text-xs text-gray-600">Introduction to investing, risk management, portfolio building</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-purple-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Insurance & Risk Management</p>
+                          <p className="text-xs text-gray-600">Types of insurance, determining best options</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-purple-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Retirement Planning</p>
+                          <p className="text-xs text-gray-600">Catching up strategies, plan options, setup guidance</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {selectedLifeHouseProgram === 'business' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center text-2xl">
+                  <Target className="w-6 h-6 text-orange-600 mr-3" />
+                  Business Coaching Program
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Building Your Dream Legacy by Kai Shariff - "Serve your gifts, talents and magic to people who get you and build a legacy that serves you"
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Legacy Business Method</h3>
+                    <p className="text-gray-600">This isn't just business coaching—it's building an intentional, soul-aligned ecosystem that supports you financially, spiritually, and creatively. The "Earn While You Learn" framework helps residents generate real revenue while building their brand.</p>
+                    
+                    <div className="bg-orange-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-orange-800 mb-2">Core Philosophy</h4>
+                      <ul className="text-sm text-orange-700 space-y-1">
+                        <li>• You can earn while you learn - no need to wait for perfection</li>
+                        <li>• Build a body of work, not just a business</li>
+                        <li>• Soul-aligned ecosystem supporting you holistically</li>
+                        <li>• Focus on transformation, not just transactions</li>
+                        <li>• Create systems that honor your natural rhythms</li>
+                        <li>• Build sustainable revenue without burnout</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Business Development Stages</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">1</div>
+                        <div>
+                          <p className="font-medium text-sm">Clarity & Messaging</p>
+                          <p className="text-xs text-gray-600">Define who you serve and speak their language, not expert-speak</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">2</div>
+                        <div>
+                          <p className="font-medium text-sm">Offer Testing & Validation</p>
+                          <p className="text-xs text-gray-600">Test ideas with real humans before building the full program</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">3</div>
+                        <div>
+                          <p className="font-medium text-sm">Revenue Ecosystem</p>
+                          <p className="text-xs text-gray-600">Build signature offers and pricing strategies that reflect your value</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">4</div>
+                        <div>
+                          <p className="font-medium text-sm">Systems & Structure</p>
+                          <p className="text-xs text-gray-600">Create repeatable workflows and delegate effectively</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">5</div>
+                        <div>
+                          <p className="font-medium text-sm">Legacy & Leadership</p>
+                          <p className="text-xs text-gray-600">Scale without burnout and design your exit strategy</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-800 mb-2">Business Alignment Diagnostic Areas</h4>
+                  <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
+                    <div>
+                      <p className="font-medium text-orange-600">💰 Money + Offers</p>
+                      <p>Revenue ecosystem, signature offers, confident pricing</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-orange-600">📣 Visibility + Marketing</p>
+                      <p>Messaging alignment, content strategy, sales conversations</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-orange-600">⚙️ Structure + Systems</p>
+                      <p>Team roles, operations workflow, data tracking</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-orange-600">🏛️ Legacy + Leadership</p>
+                      <p>Scaling strategies, sabbatical planning, method licensing</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-orange-800 mb-2">This Isn't Hustle Culture—It's Holistic Culture</h4>
+                  <p className="text-sm text-orange-700">"You are not a machine. You are not an algorithm. You are a unique and worthy soul who gets to choose their own rhythm. Your business must honor that whole person—not just your tasks."</p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {selectedLifeHouseProgram === 'brokerage' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center text-2xl">
+                  <Shield className="w-6 h-6 text-emerald-600 mr-3" />
+                  Brokerage & Savings Program
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Forced savings program building wealth while residents stabilize their lives
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Program Structure</h3>
+                    <p className="text-gray-600">As part of the working stage in our 7-step transformation model, residents contribute 30% of their income to housing costs. Of this contribution, 25% is placed in a reimbursable savings account (capped at $1,500) and 5% is invested in a brokerage account for long-term wealth building.</p>
+                    
+                    <div className="bg-emerald-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-emerald-800 mb-2">Financial Breakdown</h4>
+                      <div className="space-y-2 text-sm text-emerald-700">
+                        <div className="flex justify-between">
+                          <span>Housing Contribution:</span>
+                          <span className="font-medium">30% of income</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Savings (Reimbursable):</span>
+                          <span className="font-medium">25% (max $1,500)</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Investment Account:</span>
+                          <span className="font-medium">5% (brokerage)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Investment Benefits</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Automatic Wealth Building</p>
+                          <p className="text-xs text-gray-600">Consistent investment while focusing on life stabilization</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Professional Management</p>
+                          <p className="text-xs text-gray-600">Investments managed through Global Investment Company expertise</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Financial Education</p>
+                          <p className="text-xs text-gray-600">Learn investing principles through hands-on experience</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-emerald-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Long-term Perspective</p>
+                          <p className="text-xs text-gray-600">Building assets for future housing and life goals</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {selectedLifeHouseProgram === 'partnerships' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center text-2xl">
+                  <Users className="w-6 h-6 text-red-600 mr-3" />
+                  Community Partnerships
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Strategic healing-centered engagement network for comprehensive wraparound services
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Partnership Network</h3>
+                    <p className="text-gray-600">Life House maintains strategic partnerships with key organizations to provide comprehensive wraparound services, ensuring residents have access to all necessary support systems for successful reentry and long-term stability.</p>
+                    
+                    <div className="bg-red-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-red-800 mb-2">Key Partners</h4>
+                      <ul className="text-sm text-red-700 space-y-1">
+                        <li>• Parole and Probation Departments</li>
+                        <li>• STOP Prime Contractors</li>
+                        <li>• Medi-Cal Managed Care Plans</li>
+                        <li>• CalAIM ECM Providers</li>
+                        <li>• Community Support Organizations</li>
+                        <li>• Licensed Clinical Providers</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Healing-Centered Approach</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-red-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Trauma-Informed Care</p>
+                          <p className="text-xs text-gray-600">Recognition and response to trauma impacts throughout services</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-red-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Cultural Responsiveness</p>
+                          <p className="text-xs text-gray-600">Services aligned with community values and cultural practices</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-red-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Strength-Based Support</p>
+                          <p className="text-xs text-gray-600">Focus on individual assets and community resilience building</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 rounded-full bg-red-600 mt-2"></div>
+                        <div>
+                          <p className="font-medium text-sm">Referral Pathways</p>
+                          <p className="text-xs text-gray-600">Streamlined connections to essential services and ongoing support</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           )}
