@@ -129,3 +129,6 @@ CREATE TABLE IF NOT EXISTS "resources" (
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
+
+-- Add hours column if it doesn't exist (for existing databases)
+ALTER TABLE "resources" ADD COLUMN IF NOT EXISTS "hours" jsonb;
