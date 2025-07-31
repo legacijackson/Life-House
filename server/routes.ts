@@ -109,6 +109,11 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Test endpoint to debug JSON response
+  app.get('/api/test-json', (req: Request, res: Response) => {
+    res.json({ message: 'JSON response working', timestamp: new Date().toISOString() });
+  });
+
   // Public routes (no auth required)
 
   // Housing application submission
@@ -537,7 +542,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Apply auth middleware to all API routes
+  // Simple CSV processor test
+  app.post('/api/test-csv-processor', requireAuth, roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      console.log('[Test CSV] Processing test data...');
+      
+      // Test with a simple CSV string
+      const testCSV = `Name,Description,Type,City,State
+Sacramento Food Bank,Emergency food assistance,food,Sacramento,CA
+Legal Aid Society,Free legal services,legal,Sacramento,CA`;
+      
+      const processedCount = await csvProcessor.processAndSaveCSV(testCSV, 'test.csv');
+      
+      res.json({
+        success: true,
+        message: `Test CSV processed successfully. ${processedCount} resources added.`,
+        processedCount
+      });
+    } catch (error) {
+      console.error('[Test CSV] Error:', error);
+      res.status(500).json({ 
+        message: 'Failed to process test CSV',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }));
+
+  // Apply auth middleware to remaining API routes
   app.use('/api', requireAuth);
 
   // Dashboard stats
@@ -653,71 +684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
-  // CSV Upload endpoint for Case Managers and Admins only
-  app.post('/api/resources/upload-csv', requireAuth, roleRoute(['CaseManager', 'Admin'], 
-    upload.array('csvFiles', 10), // Allow up to 10 files at once
-    async (req: AuthenticatedRequest, res: Response) => {
-      try {
-        const files = req.files as Express.Multer.File[];
-        
-        if (!files || files.length === 0) {
-          return res.status(400).json({ message: 'No CSV files provided' });
-        }
 
-        console.log(`[CSV Upload] Processing ${files.length} files for user ${req.user.name}`);
-
-        const results = [];
-        let totalProcessed = 0;
-        let totalErrors = 0;
-
-        for (const file of files) {
-          try {
-            console.log(`[CSV Upload] Processing file: ${file.originalname}`);
-            const csvContent = file.buffer.toString('utf-8');
-            const processedCount = await csvProcessor.processAndSaveCSV(csvContent, file.originalname);
-            
-            results.push({
-              fileName: file.originalname,
-              status: 'success',
-              resourcesProcessed: processedCount
-            });
-            
-            totalProcessed += processedCount;
-          } catch (error) {
-            console.error(`[CSV Upload] Error processing ${file.originalname}:`, error);
-            results.push({
-              fileName: file.originalname,
-              status: 'error',
-              error: error instanceof Error ? error.message : 'Unknown error'
-            });
-            totalErrors++;
-          }
-        }
-
-        const successCount = files.length - totalErrors;
-        console.log(`[CSV Upload] Completed: ${successCount}/${files.length} files successful, ${totalProcessed} total resources processed`);
-
-        res.json({
-          success: successCount > 0,
-          message: `Processed ${successCount}/${files.length} files successfully. ${totalProcessed} resources added to database.`,
-          results,
-          summary: {
-            filesUploaded: files.length,
-            filesSuccessful: successCount,
-            filesWithErrors: totalErrors,
-            totalResourcesProcessed: totalProcessed
-          }
-        });
-
-      } catch (error) {
-        console.error('[CSV Upload] Upload error:', error);
-        res.status(500).json({ 
-          message: 'Failed to process CSV files',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
-    }
-  ));
 
   // Staff Dashboard Routes
   app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {

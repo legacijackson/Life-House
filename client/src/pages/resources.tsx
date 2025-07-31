@@ -445,7 +445,10 @@ export default function Resources() {
               <h2 className="text-2xl font-bold text-gray-900">Community Resources</h2>
               <p className="text-gray-600 mt-1">Additional resources and support services in our network</p>
             </div>
-            <HighlightCarousel onResourceClick={(resource) => setSelectedResource(resource as Resource)} />
+            <HighlightCarousel onResourceClick={(resource) => setSelectedResource({
+              ...resource,
+              benefitAmount: resource.benefitAmount ? parseFloat(resource.benefitAmount.toString()) : undefined
+            } as Resource)} />
           </section>
 
           {/* Guest Banner */}

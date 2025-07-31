@@ -139,16 +139,53 @@ ${JSON.stringify(rows, null, 2)}`
       });
 
       const result = JSON.parse(response.choices[0].message.content || '{"resources": []}');
-      const resources = result.resources || result || [];
+      console.log('[CSVProcessor] OpenAI response structure:', typeof result, Object.keys(result));
+      
+      let resources = [];
+      
+      // Handle different response structures
+      if (Array.isArray(result)) {
+        resources = result;
+      } else if (result.resources && Array.isArray(result.resources)) {
+        resources = result.resources;
+      } else if (typeof result === 'object' && result !== null) {
+        // If it's a single resource object, wrap it in an array
+        if (result.name && result.description) {
+          resources = [result];
+        } else {
+          // If it's an object but not in expected format, try to extract array values
+          const values = Object.values(result);
+          const arrayValue = values.find(val => Array.isArray(val));
+          resources = arrayValue || [];
+        }
+      }
 
-      // Validate and filter results
-      return resources.filter((resource: any) => 
-        resource.name && 
-        resource.description && 
-        resource.category &&
-        resource.geo?.city &&
-        resource.geo?.state
-      );
+      console.log(`[CSVProcessor] Found ${resources.length} resources in OpenAI response`);
+      console.log('[CSVProcessor] First resource sample:', JSON.stringify(resources[0], null, 2));
+
+      // Validate and filter results with more detailed logging
+      const validResources = resources.filter((resource: any, index: number) => {
+        const isValid = resource.name && 
+                       resource.description && 
+                       resource.category &&
+                       resource.geo?.city &&
+                       resource.geo?.state;
+        
+        if (!isValid) {
+          console.log(`[CSVProcessor] Resource ${index} failed validation:`, {
+            hasName: !!resource.name,
+            hasDescription: !!resource.description,
+            hasCategory: !!resource.category,
+            hasCity: !!resource.geo?.city,
+            hasState: !!resource.geo?.state,
+            resource: JSON.stringify(resource, null, 2)
+          });
+        }
+        return isValid;
+      });
+      
+      console.log(`[CSVProcessor] ${validResources.length} resources passed validation`);
+      return validResources;
 
     } catch (error) {
       console.error('[CSVProcessor] Error processing batch:', error);
