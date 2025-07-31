@@ -38,9 +38,24 @@ export function Sidebar() {
   const [location] = useLocation();
   const { data: user, isLoading } = useCurrentUser();
   
+  // Don't render sidebar if user is not authenticated
+  if (isLoading) {
+    return (
+      <aside className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
+        <div className="p-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </aside>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+  
   // Filter navigation items based on user role
-  const filteredNavigation = user ? filterSidebarItems(navigation, user.role) : [];
-  const filteredPortalNavigation = user ? filterSidebarItems(newPortalNavigation, user.role) : [];
+  const filteredNavigation = filterSidebarItems(navigation, (user as any)?.role);
+  const filteredPortalNavigation = filterSidebarItems(newPortalNavigation, (user as any)?.role);
 
   return (
     <aside className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
@@ -49,8 +64,8 @@ export function Sidebar() {
         <div className="flex items-center space-x-3">
           <Logo className="w-10 h-10" />
           <div>
-            
-            
+            <h1 className="text-lg font-semibold text-gray-900">Life House</h1>
+            <p className="text-sm text-gray-500">Portal System</p>
           </div>
         </div>
       </div>
@@ -58,16 +73,14 @@ export function Sidebar() {
       {/* User Profile */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden">
-            <img 
-              src="https://images.pexels.com/photos/6150527/pexels-photo-6150527.jpeg?auto=compress&cs=tinysrgb&w=100"
-              alt="Case manager profile"
-              className="w-full h-full object-cover"
-            />
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <span className="text-sm font-medium text-primary">
+              {(user as any)?.name?.charAt(0) || (user as any)?.email?.charAt(0) || 'U'}
+            </span>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-900">{user?.name || 'Loading...'}</p>
-            <p className="text-xs text-gray-500">{user?.role || 'Loading...'}</p>
+            <p className="text-sm font-medium text-gray-900">{(user as any)?.name || (user as any)?.email}</p>
+            <p className="text-xs text-gray-500">{(user as any)?.role}</p>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useCurrentUser, filterSidebarItems } from "@/lib/rbac";
 import { 
   LayoutDashboard,
   Users,
@@ -44,6 +45,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
   const [location] = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { data: user, isLoading } = useCurrentUser();
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -61,6 +63,26 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
   const closeSidebar = () => {
     setIsSidebarOpen(false);
   };
+
+  // Don't render if user is not authenticated
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen">
+        <div className="w-64 bg-white border-r border-gray-200 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+        <div className="flex-1">{children}</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <div className="min-h-screen">{children}</div>;
+  }
+
+  // Filter navigation items based on user role
+  const filteredNavigation = filterSidebarItems(navigation, (user as any)?.role);
+  const filteredPortalNavigation = filterSidebarItems(newPortalNavigation, (user as any)?.role);
 
   const SidebarContent = () => (
     <aside className={cn(
@@ -108,8 +130,8 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
             />
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-900">Sarah Williams</p>
-            <p className="text-xs text-gray-500">Senior Case Manager</p>
+            <p className="text-sm font-medium text-gray-900">{(user as any)?.name || (user as any)?.email}</p>
+            <p className="text-xs text-gray-500">{(user as any)?.role}</p>
           </div>
         </div>
       </div>
@@ -117,7 +139,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4">
         <ul className="space-y-2">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = location === item.href;
             return (
               <li key={item.name}>
