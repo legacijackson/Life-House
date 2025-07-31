@@ -397,12 +397,12 @@ export default function Resources() {
                     <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">savings</Badge>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Brokerage & Savings Program</h3>
-                  <p className="text-sm text-gray-600 mb-4">Forced savings program building wealth while residents stabilize their lives. 30% contribution: 25% savings (reimbursable) + 5% brokerage investment...</p>
+                  <p className="text-sm text-gray-600 mb-4">Professional investment services with transparent trust account model. Clients retain beneficial ownership with structured access during program participation...</p>
                   <div className="flex flex-wrap gap-1 mb-3">
-                    <Badge variant="outline" className="text-xs">forced-savings</Badge>
                     <Badge variant="outline" className="text-xs">wealth-building</Badge>
-                    <Badge variant="outline" className="text-xs">investment</Badge>
-                    <Badge variant="outline" className="text-xs">+1 more</Badge>
+                    <Badge variant="outline" className="text-xs">client-ownership</Badge>
+                    <Badge variant="outline" className="text-xs">trust-model</Badge>
+                    <Badge variant="outline" className="text-xs">+2 more</Badge>
                   </div>
                   <div className="flex items-center text-xs text-gray-500">
                     <TrendingUp className="w-3 h-3 mr-1" />
@@ -1216,65 +1216,91 @@ export default function Resources() {
                   Brokerage & Savings Program
                 </DialogTitle>
                 <DialogDescription className="text-base">
-                  Forced savings program building wealth while residents stabilize their lives
+                  Professional wealth-building services with transparent trust account model and client beneficial ownership
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Program Structure</h3>
-                    <p className="text-gray-600">As part of the working stage in our 7-step transformation model, residents contribute 30% of their income to housing costs. Of this contribution, 25% is placed in a reimbursable savings account (capped at $1,500) and 5% is invested in a brokerage account for long-term wealth building.</p>
+                    <h3 className="text-lg font-semibold text-gray-900">Trust Account Model</h3>
+                    <p className="text-gray-600">Building on Global Investment Company's experience with institutional trustee services, this program provides professional investment management while clients retain beneficial ownership of all funds with structured access during program participation.</p>
                     
                     <div className="bg-emerald-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-emerald-800 mb-2">Financial Breakdown</h4>
+                      <h4 className="font-medium text-emerald-800 mb-2">Account Setup Features</h4>
                       <div className="space-y-2 text-sm text-emerald-700">
-                        <div className="flex justify-between">
-                          <span>Housing Contribution:</span>
-                          <span className="font-medium">30% of income</span>
+                        <div className="flex items-start space-x-2">
+                          <div className="w-1 h-1 rounded-full bg-emerald-600 mt-2"></div>
+                          <span>Standard brokerage terms for all clients</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Savings (Reimbursable):</span>
-                          <span className="font-medium">25% (max $1,500)</span>
+                        <div className="flex items-start space-x-2">
+                          <div className="w-1 h-1 rounded-full bg-emerald-600 mt-2"></div>
+                          <span>Full disclosure during normal application process</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Investment Account:</span>
-                          <span className="font-medium">5% (brokerage)</span>
+                        <div className="flex items-start space-x-2">
+                          <div className="w-1 h-1 rounded-full bg-emerald-600 mt-2"></div>
+                          <span>Multiple partner options: Credit unions, Fidelity, discount brokers</span>
+                        </div>
+                        <div className="flex items-start space-x-2">
+                          <div className="w-1 h-1 rounded-full bg-emerald-600 mt-2"></div>
+                          <span>Leverages NorCal FDC relationship and city partnerships</span>
                         </div>
                       </div>
                     </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Investment Benefits</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Program Support Services</h3>
                     <div className="space-y-3">
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 rounded-full bg-emerald-600 mt-2"></div>
                         <div>
-                          <p className="font-medium text-sm">Automatic Wealth Building</p>
-                          <p className="text-xs text-gray-600">Consistent investment while focusing on life stabilization</p>
+                          <p className="font-medium text-sm">Financial Literacy Education</p>
+                          <p className="text-xs text-gray-600">Required before account opening to ensure informed decisions</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 rounded-full bg-emerald-600 mt-2"></div>
                         <div>
-                          <p className="font-medium text-sm">Professional Management</p>
-                          <p className="text-xs text-gray-600">Investments managed through Global Investment Company expertise</p>
+                          <p className="font-medium text-sm">Monthly Financial Coaching</p>
+                          <p className="text-xs text-gray-600">Ongoing support sessions while participating in program</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 rounded-full bg-emerald-600 mt-2"></div>
                         <div>
-                          <p className="font-medium text-sm">Financial Education</p>
-                          <p className="text-xs text-gray-600">Learn investing principles through hands-on experience</p>
+                          <p className="font-medium text-sm">Graduated Investment Access</p>
+                          <p className="text-xs text-gray-600">Investment options expand based on demonstrated financial knowledge</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 rounded-full bg-emerald-600 mt-2"></div>
                         <div>
-                          <p className="font-medium text-sm">Long-term Perspective</p>
-                          <p className="text-xs text-gray-600">Building assets for future housing and life goals</p>
+                          <p className="font-medium text-sm">Emergency Hardship Provisions</p>
+                          <p className="text-xs text-gray-600">Partial/full withdrawal options for qualifying circumstances</p>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-800 mb-3">Ethical Safeguards & Client Protections</h4>
+                  <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
+                    <div>
+                      <p className="font-medium text-emerald-600 mb-1">✓ Client Beneficial Ownership</p>
+                      <p>Clients retain beneficial ownership of all funds at all times</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-emerald-600 mb-1">✓ Transparent Fee Structure</p>
+                      <p>Trustee fees separate from brokerage fees, fully disclosed</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-emerald-600 mb-1">✓ Clear Graduation Provisions</p>
+                      <p>Well-defined timeline to full account control upon program completion</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-emerald-600 mb-1">✓ Institutional Trust Experience</p>
+                      <p>GIC acts as institutional trustee/fiduciary with proven track record</p>
                     </div>
                   </div>
                 </div>
