@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { AnimatedInput } from "@/components/ui/animated-input";
+import { AnimatedTextarea } from "@/components/ui/animated-textarea";
+import { AnimatedSelect } from "@/components/ui/animated-select";
+import { SelectItem } from "@/components/ui/select";
+import { AnimatedCheckbox } from "@/components/ui/animated-checkbox";
 import { Home, User, Phone, Mail, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
+import { useFormAnimation, formAnimationVariants, sectionAnimationVariants, fieldGroupVariants } from '@/hooks/use-form-animation';
+import { validators } from '@/lib/validation';
 
 export default function Apply() {
   const [formData, setFormData] = useState({
@@ -26,8 +29,68 @@ export default function Apply() {
     agreedToTerms: false
   });
 
+  const {
+    formRef,
+    isSubmitting,
+    isSuccess,
+    errors,
+    setFieldError,
+    clearErrors,
+    setSubmitting,
+    setSuccess,
+    shakeForm,
+    scrollToFirstError,
+    getFieldProps,
+  } = useFormAnimation();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearErrors();
+
+    // Validate form
+    const validationErrors: Record<string, string> = {};
+    
+    const nameValidation = validators.name(formData.name);
+    if (!nameValidation.isValid) validationErrors.name = nameValidation.message!;
+    
+    const emailValidation = validators.email(formData.email);
+    if (!emailValidation.isValid) validationErrors.email = emailValidation.message!;
+    
+    const phoneValidation = validators.phone(formData.phone);
+    if (!phoneValidation.isValid) validationErrors.phone = phoneValidation.message!;
+    
+    const dobValidation = validators.dateOfBirth(formData.dateOfBirth);
+    if (!dobValidation.isValid) validationErrors.dateOfBirth = dobValidation.message!;
+    
+    const releaseDateValidation = validators.releaseDate(formData.releaseDate);
+    if (!releaseDateValidation.isValid) validationErrors.releaseDate = releaseDateValidation.message!;
+    
+    const justiceStatusValidation = validators.justiceStatus(formData.justiceStatus);
+    if (!justiceStatusValidation.isValid) validationErrors.justiceStatus = justiceStatusValidation.message!;
+    
+    const emergencyContactValidation = validators.emergencyContact(formData.emergencyContact);
+    if (!emergencyContactValidation.isValid) validationErrors.emergencyContact = emergencyContactValidation.message!;
+    
+    const emergencyPhoneValidation = validators.phone(formData.emergencyPhone);
+    if (!emergencyPhoneValidation.isValid) validationErrors.emergencyPhone = emergencyPhoneValidation.message!;
+    
+    if (!formData.agreedToTerms) {
+      validationErrors.agreedToTerms = 'You must agree to the terms and conditions';
+    }
+
+    // Set validation errors
+    Object.entries(validationErrors).forEach(([field, error]) => {
+      setFieldError(field, error);
+    });
+
+    if (Object.keys(validationErrors).length > 0) {
+      shakeForm();
+      scrollToFirstError();
+      return;
+    }
+
+    setSubmitting(true);
+    
     try {
       const response = await fetch('/api/public/apply', {
         method: 'POST',
@@ -40,6 +103,7 @@ export default function Apply() {
       const result = await response.json();
 
       if (response.ok) {
+        setSuccess(true);
         alert(result.message || 'Application submitted successfully! We will contact you within 24-48 hours.');
         // Reset form
         setFormData({
@@ -62,6 +126,8 @@ export default function Apply() {
     } catch (error) {
       console.error('Application submission error:', error);
       alert('There was an error submitting your application. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -77,7 +143,7 @@ export default function Apply() {
               </div>
             </Link>
             <Link href="/">
-              <Button variant="outline">Back to Home</Button>
+              <AnimatedButton variant="outline">Back to Home</AnimatedButton>
             </Link>
           </div>
         </div>
@@ -86,191 +152,185 @@ export default function Apply() {
       {/* Application Form */}
       <section className="container mx-auto px-4 py-12">
         <div className="max-w-3xl mx-auto">
-          <Card className="shadow-xl">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
-                Apply for <span className="text-green-600">Housing</span>
-              </CardTitle>
-              <CardDescription className="text-lg">
-                Start your journey with Life House Reentry. We're here to help you rebuild with dignity and purpose.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={formAnimationVariants}
+          >
+            <Card className="shadow-xl">
+              <CardHeader className="text-center">
+                <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
+                  Apply for <span className="text-green-600">Housing</span>
+                </CardTitle>
+                <CardDescription className="text-lg">
+                  Start your journey with Life House Reentry. We're here to help you rebuild with dignity and purpose.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
                 {/* Personal Information */}
                 <div className="space-y-4">
                   <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Personal Information</h3>
                   
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
+                  <motion.div 
+                    variants={fieldGroupVariants}
+                    className="grid md:grid-cols-2 gap-4"
+                  >
+                    <AnimatedInput
+                      label="Full Name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      onValidation={validators.name}
+                      {...getFieldProps('name')}
+                    />
+                    <AnimatedInput
+                      label="Email Address"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      onValidation={validators.email}
+                      {...getFieldProps('email')}
+                    />
+                  </motion.div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="phone">Phone Number *</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                      <Input
-                        id="dateOfBirth"
-                        type="date"
-                        value={formData.dateOfBirth}
-                        onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
+                  <motion.div 
+                    variants={fieldGroupVariants}
+                    className="grid md:grid-cols-2 gap-4"
+                  >
+                    <AnimatedInput
+                      label="Phone Number"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      onValidation={validators.phone}
+                      {...getFieldProps('phone')}
+                    />
+                    <AnimatedInput
+                      label="Date of Birth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+                      onValidation={validators.dateOfBirth}
+                      {...getFieldProps('dateOfBirth')}
+                    />
+                  </motion.div>
                 </div>
 
                 {/* Justice System Information */}
                 <div className="space-y-4">
                   <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Justice System Information</h3>
                   
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="releaseDate">Release Date *</Label>
-                      <Input
-                        id="releaseDate"
-                        type="date"
-                        value={formData.releaseDate}
-                        onChange={(e) => setFormData({...formData, releaseDate: e.target.value})}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="justiceStatus">Current Status *</Label>
-                      <Select value={formData.justiceStatus} onValueChange={(value) => setFormData({...formData, justiceStatus: value})}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Select your current status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="parole">Parole</SelectItem>
-                          <SelectItem value="probation">Probation</SelectItem>
-                          <SelectItem value="formerly_incarcerated">Formerly Incarcerated</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  <motion.div 
+                    variants={fieldGroupVariants}
+                    className="grid md:grid-cols-2 gap-4"
+                  >
+                    <AnimatedInput
+                      label="Release Date"
+                      type="date"
+                      value={formData.releaseDate}
+                      onChange={(e) => setFormData({...formData, releaseDate: e.target.value})}
+                      onValidation={validators.releaseDate}
+                      {...getFieldProps('releaseDate')}
+                    />
+                    <AnimatedSelect
+                      label="Current Status"
+                      value={formData.justiceStatus}
+                      onValueChange={(value) => setFormData({...formData, justiceStatus: value})}
+                      placeholder="Select your current status"
+                      {...getFieldProps('justiceStatus')}
+                    >
+                      <SelectItem value="parole">Parole</SelectItem>
+                      <SelectItem value="probation">Probation</SelectItem>
+                      <SelectItem value="formerly_incarcerated">Formerly Incarcerated</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </AnimatedSelect>
+                  </motion.div>
                 </div>
 
                 {/* Emergency Contact */}
                 <div className="space-y-4">
                   <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Emergency Contact</h3>
                   
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="emergencyContact">Emergency Contact Name *</Label>
-                      <Input
-                        id="emergencyContact"
-                        value={formData.emergencyContact}
-                        onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="emergencyPhone">Emergency Contact Phone *</Label>
-                      <Input
-                        id="emergencyPhone"
-                        type="tel"
-                        value={formData.emergencyPhone}
-                        onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
-                        required
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
+                  <motion.div 
+                    variants={fieldGroupVariants}
+                    className="grid md:grid-cols-2 gap-4"
+                  >
+                    <AnimatedInput
+                      label="Emergency Contact Name"
+                      value={formData.emergencyContact}
+                      onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                      onValidation={validators.emergencyContact}
+                      {...getFieldProps('emergencyContact')}
+                    />
+                    <AnimatedInput
+                      label="Emergency Contact Phone"
+                      type="tel"
+                      value={formData.emergencyPhone}
+                      onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
+                      onValidation={validators.phone}
+                      {...getFieldProps('emergencyPhone')}
+                    />
+                  </motion.div>
                 </div>
 
                 {/* Additional Information */}
                 <div className="space-y-4">
                   <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">Additional Information</h3>
                   
-                  <div>
-                    <Label htmlFor="medicalNeeds">Medical or Special Needs</Label>
-                    <Textarea
-                      id="medicalNeeds"
-                      value={formData.medicalNeeds}
-                      onChange={(e) => setFormData({...formData, medicalNeeds: e.target.value})}
-                      placeholder="Please describe any medical conditions, disabilities, or special accommodations needed..."
-                      className="mt-1"
-                    />
-                  </div>
+                  <AnimatedTextarea
+                    label="Medical or Special Needs"
+                    value={formData.medicalNeeds}
+                    onChange={(e) => setFormData({...formData, medicalNeeds: e.target.value})}
+                    placeholder="Please describe any medical conditions, disabilities, or special accommodations needed..."
+                    rows={3}
+                    autoResize={true}
+                    maxLength={500}
+                    showCharCount={true}
+                  />
 
-                  <div>
-                    <Label htmlFor="employmentGoals">Employment Goals</Label>
-                    <Textarea
-                      id="employmentGoals"
-                      value={formData.employmentGoals}
-                      onChange={(e) => setFormData({...formData, employmentGoals: e.target.value})}
-                      placeholder="What type of work are you interested in? What are your career goals?"
-                      className="mt-1"
-                    />
-                  </div>
+                  <AnimatedTextarea
+                    label="Employment Goals"
+                    value={formData.employmentGoals}
+                    onChange={(e) => setFormData({...formData, employmentGoals: e.target.value})}
+                    placeholder="What type of work are you interested in? What are your career goals?"
+                    rows={3}
+                    autoResize={true}
+                    maxLength={500}
+                    showCharCount={true}
+                  />
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasChildren"
-                      checked={formData.hasChildren}
-                      onCheckedChange={(checked) => setFormData({...formData, hasChildren: checked as boolean})}
-                    />
-                    <Label htmlFor="hasChildren">I have children under 18</Label>
-                  </div>
+                  <AnimatedCheckbox
+                    id="hasChildren"
+                    checked={formData.hasChildren}
+                    onCheckedChange={(checked) => setFormData({...formData, hasChildren: checked as boolean})}
+                    label="I have children under 18"
+                  />
                 </div>
 
                 {/* Terms and Conditions */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="agreedToTerms"
-                      checked={formData.agreedToTerms}
-                      onCheckedChange={(checked) => setFormData({...formData, agreedToTerms: checked as boolean})}
-                      required
-                    />
-                    <Label htmlFor="agreedToTerms" className="text-sm">
-                      I agree to the Life House program requirements and understand that housing is contingent on program participation and house rules compliance. *
-                    </Label>
-                  </div>
-                </div>
+                <motion.div 
+                  variants={sectionAnimationVariants}
+                  className="space-y-4"
+                >
+                  <AnimatedCheckbox
+                    id="agreedToTerms"
+                    checked={formData.agreedToTerms}
+                    onCheckedChange={(checked) => setFormData({...formData, agreedToTerms: checked as boolean})}
+                    label="I agree to the Life House program requirements and understand that housing is contingent on program participation and house rules compliance."
+                    required={true}
+                    {...getFieldProps('agreedToTerms')}
+                  />
+                </motion.div>
 
-                <Button 
+                <AnimatedButton 
                   type="submit" 
                   className="w-full text-lg py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                   disabled={!formData.agreedToTerms}
+                  loading={isSubmitting}
+                  success={isSuccess}
                 >
                   Submit Application
-                </Button>
+                </AnimatedButton>
               </form>
 
               <div className="mt-8 p-4 bg-blue-50 rounded-lg">
@@ -282,8 +342,9 @@ export default function Apply() {
                   <li>• You'll receive orientation materials and program information</li>
                 </ul>
               </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </section>
     </div>
