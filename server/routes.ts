@@ -51,7 +51,7 @@ function roleRoute(roles: string[], handler: AuthenticatedHandler) {
 }
 
 // Simple auth middleware (in production, implement proper JWT validation)
-const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
 
   if (!token) {
@@ -61,14 +61,25 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   // For development, accept mock tokens
   if (token.startsWith('mock-token-')) {
     const userId = token.replace('mock-token-', '');
-    // Mock user for development - in production, validate JWT token
-    (req as AuthenticatedRequest).user = {
-      id: userId,
-      role: "CaseManager",
-      name: "Sarah Martinez",
-      email: "sarah.martinez@example.com"
-    };
-    return next();
+    
+    try {
+      // Look up the actual user from the database
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid token - user not found' });
+      }
+
+      (req as AuthenticatedRequest).user = {
+        id: user.id,
+        role: user.role,
+        name: user.name || 'Unknown User',
+        email: user.email
+      };
+      return next();
+    } catch (error) {
+      console.error('Auth middleware error:', error);
+      return res.status(401).json({ message: 'Authentication failed' });
+    }
   }
 
   // In production, validate JWT here
