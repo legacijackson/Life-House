@@ -105,3 +105,27 @@ INSERT INTO settings (key, value, description) VALUES
 ON CONFLICT (key) DO UPDATE SET 
   value = EXCLUDED.value,
   updated_at = NOW();
+
+CREATE TYPE resource_category AS ENUM ('food', 'shelter', 'health', 'legal', 'education', 'employment', 'other');
+CREATE TYPE resource_status AS ENUM ('active', 'inactive', 'pending');
+
+CREATE TABLE IF NOT EXISTS "resources" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"category" "resource_category" NOT NULL,
+	"name" varchar NOT NULL,
+	"description" text,
+	"eligibility" text,
+	"benefit_amount" numeric,
+	"geo" jsonb,
+	"url" varchar,
+	"contact" jsonb,
+	"address" text,
+	"phone" varchar,
+	"website" varchar,
+	"hours" jsonb,
+	"languages" jsonb,
+	"status" "resource_status" DEFAULT 'active',
+	"tags" jsonb,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
