@@ -40,7 +40,7 @@ export default function Apply() {
       const result = await response.json();
 
       if (response.ok) {
-        alert('Application submitted successfully! We will contact you within 24-48 hours.');
+        alert(result.message || 'Application submitted successfully! We will contact you within 24-48 hours.');
         // Reset form
         setFormData({
           name: '',
@@ -73,7 +73,7 @@ export default function Apply() {
           <div className="flex items-center justify-between">
             <Link href="/">
               <div className="flex items-center space-x-3 cursor-pointer">
-                <Logo variant="color" layout="icon" className="w-8 h-8" />
+                <Logo className="w-8 h-8" />
               </div>
             </Link>
             <Link href="/">

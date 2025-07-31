@@ -49,7 +49,7 @@ export default function Refer() {
       const result = await response.json();
 
       if (response.ok) {
-        alert('Referral submitted successfully! We will contact you and the client within 24 hours.');
+        alert(result.message || 'Referral submitted successfully! We will contact you and the client within 24 hours.');
         // Reset form
         setFormData({
           referrerName: '',
@@ -86,7 +86,7 @@ export default function Refer() {
           <div className="flex items-center justify-between">
             <Link href="/">
               <div className="flex items-center space-x-3 cursor-pointer">
-                <Logo variant="color" layout="icon" className="w-8 h-8" />
+                <Logo className="w-8 h-8" />
                 
               </div>
             </Link>

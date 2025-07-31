@@ -73,7 +73,7 @@ export default function Donate() {
         const result = await response.json();
 
         if (response.ok) {
-          alert(`Thank you for your donation of $${finalAmount}! Your submission has been received and will be processed.`);
+          alert(result.message || `Thank you for your donation of $${finalAmount}! Your submission has been received and will be processed.`);
           // Reset form
           setFormData({
             firstName: '',
@@ -104,7 +104,7 @@ export default function Donate() {
           <div className="flex items-center justify-between">
             <Link href="/">
               <div className="flex items-center space-x-3 cursor-pointer">
-                <Logo variant="color" layout="icon" className="w-8 h-8" />
+                <Logo className="w-8 h-8" />
                 
               </div>
             </Link>

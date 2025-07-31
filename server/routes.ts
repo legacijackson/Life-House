@@ -86,22 +86,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Housing application submission
   app.post('/api/public/apply', async (req: Request, res: Response) => {
     try {
+      const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
+      const confirmationNumber = generateTicketNumber('APP');
+      
       // Transform date strings to Date objects for validation
       const transformedData = {
         ...req.body,
+        confirmationNumber,
         dateOfBirth: new Date(req.body.dateOfBirth),
         releaseDate: new Date(req.body.releaseDate)
       };
       const validatedData = insertApplicationSchema.parse(transformedData);
       const application = await storage.createApplication(validatedData);
 
-      // In production, you'd send confirmation emails here
-      console.log('New housing application:', application.id);
+      const confirmationMessage = generateConfirmationMessage(
+        confirmationNumber,
+        'housing application',
+        'What happens next:\n• We\'ll review your application within 24-48 hours\n• Our intake coordinator will contact you for a brief interview\n• If approved, we\'ll schedule your move-in date'
+      );
+
+      console.log('New housing application:', application.id, confirmationNumber);
 
       res.status(201).json({ 
         success: true, 
-        message: 'Application submitted successfully',
-        applicationId: application.id 
+        message: confirmationMessage,
+        applicationId: application.id,
+        confirmationNumber
       });
     } catch (error) {
       console.error('Application submission error:', error);
@@ -115,7 +125,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Referral submission
   app.post('/api/public/refer', async (req: Request, res: Response) => {
     try {
+      const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
+      const confirmationNumber = generateTicketNumber('REF');
+      
       const validatedData = insertReferralSchema.parse({
+        confirmationNumber,
         source: 'CBO',
         referrerOrg: req.body.organization,
         referrerName: req.body.referrerName,
@@ -135,13 +149,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const referral = await storage.createReferral(validatedData);
 
-      // In production, you'd send notifications here
-      console.log('New referral:', referral.id);
+      const confirmationMessage = generateConfirmationMessage(
+        confirmationNumber,
+        'referral',
+        'What happens next:\n• We\'ll contact you and the client within 24 hours\n• Our intake team will schedule a preliminary assessment\n• You\'ll receive updates on the referral status'
+      );
+
+      console.log('New referral:', referral.id, confirmationNumber);
 
       res.status(201).json({ 
         success: true, 
-        message: 'Referral submitted successfully',
-        referralId: referral.id 
+        message: confirmationMessage,
+        referralId: referral.id,
+        confirmationNumber
       });
     } catch (error) {
       console.error('Referral submission error:', error);
@@ -155,16 +175,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Donation submission
   app.post('/api/public/donate', async (req: Request, res: Response) => {
     try {
-      const validatedData = insertDonationSchema.parse(req.body);
+      const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
+      const confirmationNumber = generateTicketNumber('DON');
+      
+      const validatedData = insertDonationSchema.parse({
+        ...req.body,
+        confirmationNumber
+      });
       const donation = await storage.createDonation(validatedData);
 
-      // In production, you'd process payment with Stripe here
-      console.log('New donation:', donation.id, donation.amount);
+      const confirmationMessage = generateConfirmationMessage(
+        confirmationNumber,
+        'donation',
+        `Donation amount: $${donation.amount}\n\nWhat happens next:\n• You\'ll receive a tax-deductible receipt via email\n• Your donation will be processed within 1-2 business days\n• Thank you for supporting our community!`
+      );
+
+      console.log('New donation:', donation.id, donation.amount, confirmationNumber);
 
       res.status(201).json({ 
         success: true, 
-        message: 'Donation submitted successfully',
-        donationId: donation.id 
+        message: confirmationMessage,
+        donationId: donation.id,
+        confirmationNumber
       });
     } catch (error) {
       console.error('Donation submission error:', error);
@@ -317,16 +349,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Program inquiry submission
   app.post('/api/inquiry', async (req: Request, res: Response) => {
     try {
-      const validatedData = insertInquirySchema.parse(req.body);
+      const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
+      const confirmationNumber = generateTicketNumber('INQ');
+      
+      const validatedData = insertInquirySchema.parse({
+        ...req.body,
+        confirmationNumber
+      });
       const inquiry = await storage.createInquiry(validatedData);
 
-      // In production, you'd send notification emails here
-      console.log('New program inquiry:', inquiry.id);
+      const confirmationMessage = generateConfirmationMessage(
+        confirmationNumber,
+        'program inquiry',
+        'What happens next:\n• We\'ll review your inquiry within 24 hours\n• A program coordinator will contact you directly\n• We\'ll answer all your questions about our programs'
+      );
+
+      console.log('New program inquiry:', inquiry.id, confirmationNumber);
 
       res.status(201).json({
         success: true,
-        message: 'Thank you for your inquiry! We\'ll be in touch soon.',
+        message: confirmationMessage,
         inquiryId: inquiry.id,
+        confirmationNumber
       });
     } catch (error) {
       console.error('Inquiry submission error:', error);
@@ -340,16 +384,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Partner signup
   app.post('/api/partners', async (req: Request, res: Response) => {
     try {
-      const validatedData = insertPartnerSchema.parse(req.body);
+      const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
+      const confirmationNumber = generateTicketNumber('PAR');
+      
+      const validatedData = insertPartnerSchema.parse({
+        ...req.body,
+        confirmationNumber
+      });
       const partner = await storage.createPartner(validatedData);
 
-      // In production, you'd send notification emails here
-      console.log('New partner signup:', partner.id);
+      const confirmationMessage = generateConfirmationMessage(
+        confirmationNumber,
+        'partnership application',
+        'What happens next:\n• We\'ll review your application within 24 hours\n• Our partnership coordinator will contact you\n• We\'ll discuss how we can work together to serve our community'
+      );
+
+      console.log('New partner signup:', partner.id, confirmationNumber);
 
       res.status(201).json({
         success: true,
-        message: 'Thank you for partnering with Life House! We\'ll be in touch within 24 hours.',
+        message: confirmationMessage,
         partnerId: partner.id,
+        confirmationNumber
       });
     } catch (error) {
       console.error('Partner signup error:', error);

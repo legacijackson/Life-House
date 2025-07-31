@@ -106,6 +106,7 @@ export const residentProfiles = pgTable("resident_profiles", {
 
 export const referrals = pgTable("referrals", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  confirmationNumber: varchar("confirmation_number").unique(),
   source: referralSourceEnum("source").notNull(),
   referrerOrg: varchar("referrer_org"),
   referrerName: varchar("referrer_name"),
@@ -120,6 +121,7 @@ export const referrals = pgTable("referrals", {
 }, (table) => [
   index("referrals_status_idx").on(table.status),
   index("referrals_created_at_idx").on(table.createdAt),
+  index("referrals_confirmation_idx").on(table.confirmationNumber),
 ]);
 
 export const intakeChecklists = pgTable("intake_checklists", {
@@ -283,6 +285,7 @@ export const tickets = pgTable("tickets", {
 // Housing applications table
 export const applications = pgTable("applications", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  confirmationNumber: varchar("confirmation_number").unique(),
   name: varchar("name").notNull(),
   email: varchar("email").notNull(),
   phone: varchar("phone").notNull(),
@@ -300,10 +303,12 @@ export const applications = pgTable("applications", {
 }, (table) => [
   index("applications_status_idx").on(table.status),
   index("applications_created_at_idx").on(table.createdAt),
+  index("applications_confirmation_idx").on(table.confirmationNumber),
 ]);
 
 export const donations = pgTable("donations", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  confirmationNumber: varchar("confirmation_number").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   email: varchar("email").notNull(),
@@ -320,6 +325,7 @@ export const donations = pgTable("donations", {
 }, (table) => [
   index("donations_created_at_idx").on(table.createdAt),
   index("donations_frequency_idx").on(table.frequency),
+  index("donations_confirmation_idx").on(table.confirmationNumber),
 ]);
 
 export const auditLog = pgTable("audit_log", {
@@ -408,6 +414,7 @@ export const faqFeedback = pgTable("faq_feedback", {
 // Inquiries table for program information requests
 export const inquiries = pgTable("inquiries", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  confirmationNumber: varchar("confirmation_number").unique(),
   name: varchar("name").notNull(),
   email: varchar("email").notNull(),
   phone: varchar("phone").notNull(),
@@ -419,11 +426,13 @@ export const inquiries = pgTable("inquiries", {
 }, (table) => [
   index("inquiries_status_idx").on(table.status),
   index("inquiries_created_at_idx").on(table.createdAt),
+  index("inquiries_confirmation_idx").on(table.confirmationNumber),
 ]);
 
 // Partners table for community organizations
 export const partners = pgTable("partners", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  confirmationNumber: varchar("confirmation_number").unique(),
   organizationName: varchar("organization_name").notNull(),
   contactName: varchar("contact_name").notNull(),
   email: varchar("email").notNull(),
@@ -434,6 +443,7 @@ export const partners = pgTable("partners", {
 }, (table) => [
   index("partners_status_idx").on(table.status),
   index("partners_service_type_idx").on(table.serviceType),
+  index("partners_confirmation_idx").on(table.confirmationNumber),
 ]);
 
 export const documents = pgTable("documents", {
