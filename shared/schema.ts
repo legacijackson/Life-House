@@ -706,7 +706,7 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   updatedAt: true,
 });
 
-exportconst insertDonationSchema = createInsertSchema(donations).omit({
+export const insertDonationSchema = createInsertSchema(donations).omit({
   id: true,
   stripePaymentId: true,
   receiptId: true,

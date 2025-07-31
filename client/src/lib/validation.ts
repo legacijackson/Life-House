@@ -2,6 +2,8 @@
  * Real-time validation utilities for form inputs
  */
 
+import { z } from 'zod';
+
 export interface ValidationResult {
   isValid: boolean;
   message?: string;
