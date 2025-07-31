@@ -233,6 +233,8 @@ export const properties = pgTable("properties", {
   bedsAvailable: integer("beds_available"),
   occupancyLimit: integer("occupancy_limit"),
   amenities: jsonb("amenities"), // array of strings
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -254,20 +256,24 @@ export const tickets = pgTable("tickets", {
   propertyId: uuid("property_id").references(() => properties.id).notNull(),
   roomId: uuid("room_id").references(() => rooms.id),
   residentId: uuid("resident_id").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id).notNull(),
   category: ticketCategoryEnum("category").notNull(),
   priority: ticketPriorityEnum("priority").default("normal"),
   description: text("description").notNull(),
   photos: jsonb("photos"), // array of document IDs
   status: ticketStatusEnum("status").default("new"),
   assignedTo: uuid("assigned_to").references(() => users.id),
+  comments: jsonb("comments").default([]), // array of comment objects
   slaDueAt: timestamp("sla_due_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   assignedAt: timestamp("assigned_at"),
   resolvedAt: timestamp("resolved_at"),
 }, (table) => [
   index("tickets_property_id_idx").on(table.propertyId),
   index("tickets_status_idx").on(table.status),
   index("tickets_priority_idx").on(table.priority),
+  index("tickets_created_by_idx").on(table.createdBy),
 ]);
 
 // Housing applications table
@@ -326,6 +332,35 @@ export const auditLog = pgTable("audit_log", {
 }, (table) => [
   index("audit_log_entity_idx").on(table.entity, table.entityId),
   index("audit_log_ts_idx").on(table.ts),
+]);
+
+// Check-in tracking table (missing from v10 requirements)
+export const checkins = pgTable("checkins", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  residentId: uuid("resident_id").references(() => users.id).notNull(),
+  propertyId: uuid("property_id").references(() => properties.id).notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
+  reason: text("reason"), // home, life_design, work, etc.
+  status: varchar("status").default("in"), // in|out
+  distance: integer("distance"), // distance from property in meters
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("checkins_resident_idx").on(table.residentId),
+  index("checkins_property_idx").on(table.propertyId),
+  index("checkins_created_at_idx").on(table.createdAt),
+]);
+
+// Maintenance history tracking table (missing from v10 requirements)
+export const maintenanceHistory = pgTable("maintenance_history", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: uuid("ticket_id").references(() => tickets.id).notNull(),
+  editorId: uuid("editor_id").references(() => users.id).notNull(),
+  diff: jsonb("diff").notNull(), // JSON diff of changes
+  editedAt: timestamp("edited_at").defaultNow(),
+}, (table) => [
+  index("maintenance_history_ticket_idx").on(table.ticketId),
+  index("maintenance_history_edited_at_idx").on(table.editedAt),
 ]);
 
 // FAQ Support System Tables
