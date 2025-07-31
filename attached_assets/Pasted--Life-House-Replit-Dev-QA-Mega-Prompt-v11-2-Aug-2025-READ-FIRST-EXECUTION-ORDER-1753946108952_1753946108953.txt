@@ -1,0 +1,237 @@
+# Life House – **Replit Dev & QA Mega‑Prompt**  (v11 – 2 Aug 2025)
+
+> **READ FIRST — EXECUTION ORDER**
+> **Step 0 » Comprehensive Pre‑Flight Script** (added in v11)
+> **Step 1 » Implement Change‑Requests (CR‑1→CR‑51)**
+> **Step 2 » Run Full Automated & Manual QA Matrix (110 + tests)**
+> **Step 3 » Resolve *all* failures, rerun until 100 % Pass**
+> **Step 4 » Attach Artifacts & Ship v1.3.0**
+>
+> This doc now contains **every dev task, DB migration, API spec, RBAC rule, UI component, and test** required to finish the Life House app. Follow the exact order; do not skip any item.
+
+---
+
+## 0  Comprehensive Pre‑Flight Script (to be executed by Replit Assistant)
+
+### 0.1  Data Sanitisation
+
+1. **DROP** all seed/fake rows from `users`, `residents`, `case_notes`, `attendance`, `resources`, `maintenance`, `checkins`, `reports`.
+2. **VERIFY** each table now `COUNT(*) = 0` or only system/admin records.
+3. **Run migration** `2025_08_02_seed_admin.sql` which inserts only:
+
+   * Super Admins → `julius@lifehousereentry.com`, `brittney@lifehousereentry.com`, `kairia@lifehousereentry.com`, `juliusdjackson@gmail.com`.
+4. Output SQL dump `/artifacts/preflight/clean_schema.sql`.
+
+### 0.2  Integration Smoke Test
+
+| Service                                                           | CLI / API Call                                     | Expected               |
+| ----------------------------------------------------------------- | -------------------------------------------------- | ---------------------- |
+| **Stripe**                                                        | `stripe prices list --limit 3`                     | returns ≥3 tier prices |
+| **SendGrid**                                                      | `curl -I https://api.sendgrid.com/v3/user/account` | 200 OK                 |
+| **Slack Bot**                                                     | `curl -X POST chat.postMessage` to #lifehouse‑ops  | 200 OK                 |
+| **OpenAI**                                                        | `curl completions` test                            | 200 OK                 |
+| Upload console output to `/artifacts/preflight/integrations.txt`. |                                                    |                        |
+
+### 0.3  Security Sweep
+
+* Run **OWASP ZAP full scan** against `.replit.dev`; export HTML report `/artifacts/security/zap.html`.
+* Run **npm audit --production**; auto‑fix minor, fail on high/critical.
+* Lint for secrets `git-secrets --scan`.
+
+### 0.4  Notification Hook
+
+* Create Cloud‑function `healthPing` that pings `/health` every 5 min; on non‑200 sends Slack DM to SuperAdmin with stack‑trace.
+* Store function source `/monitor/healthPing.js`; prove with test failure screenshot.
+
+> **Proceed to Step 1 only after all Pre‑Flight artifacts uploaded and validated.**
+
+---
+
+## 1  Change‑Request Matrix (CR‑41 → CR‑51)
+
+*(unchanged from v10.1 but renumbered—CR‑51 already included)*
+
+\[Matrix table retained here…]
+
+---
+
+## 2  RBAC Summary Table
+
+*(unchanged)*
+
+---
+
+## 3  Key DB Migrations
+
+*(unchanged)*
+
+---
+
+## 4  API Additions / Modifications
+
+*(unchanged)*
+
+---
+
+## 5  Front‑End Components
+
+*(unchanged)*
+
+---
+
+## 6  Automated Test Inventory  (now **120 tests**)
+
+We extend previous suites with **10 new Pre‑Flight & Security tests**.
+
+| Suite                     | New Tests                                                   |
+| ------------------------- | ----------------------------------------------------------- |
+| `preflight.cy.js`         | PF‑01 (tables empty), PF‑02 (admins seeded)                 |
+| `integration.cy.js`       | INT‑01 Stripe, INT‑02 SendGrid, INT‑03 Slack, INT‑04 OpenAI |
+| `security.cy.js`          | SEC‑11 ZAP 0 highs, SEC‑12 npm audit 0 highs                |
+| `portal_visibility.cy.js` | F‑61 Resident hides Staff btn, F‑62 CM hides Admin btn      |
+
+All tests must run green in CI.
+
+---
+
+## 7  Manual QA Matrix (unchanged 30 checks)
+
+Add **MQ‑31** — Admin banner appears in View‑As.
+
+---
+
+## 8  Artifacts Folders (added)
+
+```
+/artifacts/preflight/
+  clean_schema.sql
+  integrations.txt
+/artifacts/security/
+  zap.html
+```
+
+---
+
+## 9  Go‑Live Gates (expanded)
+
+28. ✔️ Pre‑Flight artifacts present & verified.
+29. ✔️ ZAP & npm audit show 0 high/critical.
+30. ✔️ HealthPing alert tested (simulate 500).
+
+---
+
+*Save this file as `/README_REPLIT.md`; CI must show **120/120** tests passed.*
+
+*Last updated: 2025‑08‑02*
+
+---
+
+## 13  **CR‑52 — Life House Flagship Resources Section**  *(v12 – 2 Aug 2025)*
+
+### 13.1  Business Goal
+
+Surface Life House–owned programs first, in a branded **“Our Flagship Programs”** row that sits **above the search bar** on `/app/resources` for every visitor (guest, resident, CM, admin). Each program appears as a large card featuring an image, short pitch, category chips, and a **Learn More** click‑through that opens a full‑detail modal. This raises awareness, drives enrollment, and excites donors/partners.
+
+### 13.2  Database Δ
+
+```sql
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS is_lifehouse boolean DEFAULT false;
+-- seed core programs (run once)
+INSERT INTO resources (title, summary, categories, url, is_lifehouse) VALUES
+ ('Life House Brokerage & Savings Program',
+  'Matched‑savings + 5 % brokerage account that turns mandatory 30 % program contributions into a $1,500 nest‑egg for permanent housing.',
+  '{financial,lifedesign}',
+  'https://lifehousereentry.org/brokerage',
+  true),
+ ('Life & Love Design Curriculum',
+  '12‑week healing‑centered coaching that rewires identity, relationships & money habits through CBT‑informed journaling and peer labs.',
+  '{healing,jobreadiness}',
+  'https://lifehousereentry.org/lifedesign',
+  true),
+ ('7‑Stage Reentry Housing Program',
+  'Structured pathway from Intake → Legacy with sober housing, life‑design coaching, job placement, and permanent‑housing navigation.',
+  '{housing,jobreadiness}',
+  'https://lifehousereentry.org/7stages',
+  true),
+ ('Credit‑Repair Clinic (Cure My Credit 700)',
+  'Partner‑led dispute service that lifts FICO ≥ 640 in ~6 mo; offered free to Life House residents, sliding‑scale for community.',
+  '{financial}',
+  'https://www.curemycredit700.com',
+  true),
+ ('Global Investment Co. Financial Literacy',
+  'Self‑paced micro‑courses + live workshops covering budgeting, debt snowball, and beginner investing. Residents earn $25 stipend per module.',
+  '{financial,community}',
+  'https://globalinvestmentcompanies.com/home',
+  true),
+ ('LegacyPlan™ Pathway (Business & Money)',
+  'Gamified mobile curriculum that walks residents through side‑gig ideation, LLC setup, and tax basics. Integrated wallet for savings goals.',
+  '{jobreadiness,financial}',
+  'https://legacyplan.app/b/globalpathway',
+  true),
+ ('Building Your Dream Legacy – Business Coaching',
+  '12‑month accelerator by Kai Shariff turning creative genius into scalable revenue using the Earn‑While‑You‑Learn™ method.',
+  '{business,community}',
+  'https://lifehousereentry.org/legacy‑coaching',
+  true);
+```
+
+### 13.3  API
+
+* **GET `/resources/highlight`**  → returns `SELECT * FROM resources WHERE is_lifehouse=true ORDER BY id`.
+
+### 13.4  Front‑End
+
+* **Component** `HighlightCarousel.tsx`
+
+  * Fetch `/resources/highlight` once.
+  * Render horizontal scroll (Tailwind `flex overflow-x-auto gap-4 pb-2`).
+  * Card (`CardHighlight`) props: `image, title, tags, blurb`. Image fallback = LH logo.
+  * On click open `ResourceModal` using existing Details panel styles.
+* **Placement** in `ResourcesPage`:
+
+  ```tsx
+  <section className="mb-6">
+    <h3 className="text-lg font-semibold mb-2">Our Flagship Programs</h3>
+    <HighlightCarousel />
+  </section>
+  ```
+* **Guest Banner** (blue) now sits **below** highlight section.
+
+### 13.5  Images
+
+Store hero images under `/public/flagship/…`.
+
+| Program               | Image Suggestion                          |
+| --------------------- | ----------------------------------------- |
+| Brokerage & Savings   | piggy‑bank with upward arrow              |
+| Life & Love Design    | people journaling in a circle             |
+| 7‑Stage Housing       | collage of House → Apartment              |
+| Credit Repair         | smiling resident with “+120 FICO” overlay |
+| Financial Literacy    | classroom scene with instructor           |
+| LegacyPlan Pathway    | phone mock‑up of gamified app             |
+| Dream Legacy Coaching | Kai speaking with whiteboard              |
+
+### 13.6  Automated Tests (add F‑63 → F‑66)
+
+| ID   | Scenario                                                         | Role    | Expect                                  |
+| ---- | ---------------------------------------------------------------- | ------- | --------------------------------------- |
+| F‑63 | Visit `/app/resources` as guest                                  | guest   | 7 highlight cards present, banner below |
+| F‑64 | Click card → modal                                               | guest   | modal shows title & summary             |
+| F‑65 | Search filter works independent of highlights                    | any     | highlight row unaffected                |
+| F‑66 | API `/resources/highlight` returns only `is_lifehouse=true` rows | backend | 200 JSON array length == 7              |
+
+### 13.7  Manual QA Add‑Ons
+
+* **MQ‑32** – A11y: cards focusable via keyboard & modal exits with ESC.
+* **MQ‑33** – Banner hides after login.
+
+### 13.8  Docs & Content Source Notes
+
+* Content for **Building Your Dream Legacy** pulled from uploaded PDF – use Chapter 1 tagline and Earn‑While‑You‑Learn summary. fileciteturn4file0L1-L25
+* Credit & finance partner details scraped from public homepages (Replit assistant to run during Pre‑Flight integration tests).
+
+---
+
+All other sections unchanged. Commit this as **v12** into `/README_REPLIT.md`; bump automated test target to **124/124**.
+
+*Last updated: 2025‑08‑02*
