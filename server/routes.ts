@@ -1036,7 +1036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(status === 'resolved' ? { resolvedAt: new Date().toISOString() } : {}),
         ...(comment ? { 
           comments: [
-            ...(ticket.comments || []),
+            ...((ticket.comments as any[]) || []),
             {
               id: Date.now().toString(),
               text: comment,
@@ -1153,7 +1153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: '2024-11-20.acacia'
+        apiVersion: '2024-11-20.acacia' as any
       });
       
       const session = await stripe.checkout.sessions.create({
@@ -1198,7 +1198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: '2024-11-20.acacia'
+        apiVersion: '2024-11-20.acacia' as any
       });
       
       let event;
@@ -1217,12 +1217,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Save donation to database
           const donation = {
-            stripeSessionId: session.id,
-            amount: session.amount_total ? session.amount_total / 100 : 0,
-            donorEmail: session.customer_email,
-            donorName: session.metadata?.donor_name || 'Anonymous',
-            type: session.metadata?.donation_type || 'one-time',
-            paidAt: new Date().toISOString()
+            email: session.customer_email || 'anonymous@lifehouse.org',
+            amount: String(session.amount_total ? session.amount_total / 100 : 0),
+            firstName: session.metadata?.donor_name?.split(' ')[0] || 'Anonymous',
+            lastName: session.metadata?.donor_name?.split(' ').slice(1).join(' ') || '',
+            frequency: session.metadata?.donation_type === 'recurring' ? 'monthly' as const : 'one_time' as const,
+            designation: 'general' as const,
+            stripePaymentId: session.id
           };
           
           await storage.createDonation(donation);
@@ -1556,7 +1557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const query = searchQuery.toLowerCase().trim();
         filteredResources = filteredResources.filter(resource =>
           resource.name.toLowerCase().includes(query) ||
-          resource.description.toLowerCase().includes(query) ||
+          (resource.description && resource.description.toLowerCase().includes(query)) ||
           resource.category.toLowerCase().includes(query)
         );
       }
@@ -1593,6 +1594,255 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/resources/public', async (req: Request, res: Response) => {
     // Redirect to unified endpoint
     return app._router.handle(Object.assign(req, { url: '/api/resources' }), res, () => {});
+  });
+
+  // Admin Panel API Routes
+  app.get('/api/admin/users', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const users = await storage.getUsers();
+      res.json(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  }));
+
+  app.get('/api/admin/properties', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const properties = await storage.getProperties();
+      res.json(properties);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      res.status(500).json({ message: 'Failed to fetch properties' });
+    }
+  }));
+
+  // Homepage Photos Management
+  app.get('/api/admin/homepage-photos', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Mock homepage photos data for now
+      const photos = [
+        {
+          id: '1',
+          url: '/assets/3.png',
+          alt: 'Life House Community',
+          caption: 'Building stronger communities',
+          section: 'hero',
+          order: 1,
+          isActive: true,
+          uploadedAt: new Date().toISOString()
+        },
+        {
+          id: '2', 
+          url: '/assets/5.png',
+          alt: 'Success Stories',
+          caption: 'Celebrating resident achievements',
+          section: 'testimonials',
+          order: 1,
+          isActive: true,
+          uploadedAt: new Date().toISOString()
+        }
+      ];
+      res.json(photos);
+    } catch (error) {
+      console.error('Error fetching homepage photos:', error);
+      res.status(500).json({ message: 'Failed to fetch homepage photos' });
+    }
+  }));
+
+  app.post('/api/admin/homepage-photos', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // In production, handle file upload to S3/cloud storage
+      const newPhoto = {
+        id: Date.now().toString(),
+        url: '/assets/uploaded-photo.jpg',
+        alt: req.body.alt || 'Uploaded photo',
+        section: req.body.section || 'gallery',
+        order: 1,
+        isActive: true,
+        uploadedAt: new Date().toISOString()
+      };
+      
+      // TODO: Save to database
+      res.json(newPhoto);
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      res.status(500).json({ message: 'Failed to upload photo' });
+    }
+  }));
+
+  app.patch('/api/admin/homepage-photos/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // TODO: Update photo in database
+      res.json({ id, ...updates });
+    } catch (error) {
+      console.error('Error updating photo:', error);
+      res.status(500).json({ message: 'Failed to update photo' });
+    }
+  }));
+
+  app.delete('/api/admin/homepage-photos/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // TODO: Delete photo from database and storage
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      res.status(500).json({ message: 'Failed to delete photo' });
+    }
+  }));
+
+  // System Settings Management
+  app.get('/api/admin/settings', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const settings = [
+        {
+          id: '1',
+          key: 'SLACK_WEBHOOK_URL',
+          value: process.env.SLACK_WEBHOOK_URL || '',
+          description: 'Slack webhook for notifications',
+          category: 'integrations',
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: '2',
+          key: 'S3_BUCKET_NAME',
+          value: process.env.S3_BUCKET_NAME || '',
+          description: 'AWS S3 bucket for file storage',
+          category: 'integrations',
+          updatedAt: new Date().toISOString()
+        },
+        {
+          id: '3',
+          key: 'MAX_RESIDENTS_PER_PROPERTY',
+          value: '50',
+          description: 'Maximum residents allowed per property',
+          category: 'general',
+          updatedAt: new Date().toISOString()
+        }
+      ];
+      res.json(settings);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      res.status(500).json({ message: 'Failed to fetch settings' });
+    }
+  }));
+
+  app.patch('/api/admin/settings/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { value } = req.body;
+      
+      // TODO: Update setting in database
+      res.json({ id, value, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      console.error('Error updating setting:', error);
+      res.status(500).json({ message: 'Failed to update setting' });
+    }
+  }));
+
+  // Audit Logs
+  app.get('/api/admin/audit-logs', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const logs = [
+        {
+          id: '1',
+          action: 'create_user',
+          entity: 'User',
+          entityId: 'user-123',
+          actorName: 'Admin User',
+          timestamp: new Date().toISOString(),
+          ip: req.ip
+        },
+        {
+          id: '2',
+          action: 'update_application',
+          entity: 'Application',
+          entityId: 'app-456',
+          actorName: 'Case Manager',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          ip: req.ip
+        }
+      ];
+      res.json(logs);
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+      res.status(500).json({ message: 'Failed to fetch audit logs' });
+    }
+  }));
+
+  // Applications Management
+  app.get('/api/admin/applications', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { status } = req.query;
+      const applications = await storage.getApplications(
+        status && status !== 'all' ? { status: status as string } : {}
+      );
+      res.json(applications);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      res.status(500).json({ message: 'Failed to fetch applications' });
+    }
+  }));
+
+  app.patch('/api/admin/applications/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const updatedApplication = await storage.updateApplication(id, updates);
+      res.json(updatedApplication);
+    } catch (error) {
+      console.error('Error updating application:', error);
+      res.status(500).json({ message: 'Failed to update application' });
+    }
+  }));
+
+  // Referrals Management
+  app.get('/api/admin/referrals', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { status } = req.query;
+      const referrals = await storage.getReferrals(
+        status && status !== 'all' ? { status: status as string } : {}
+      );
+      res.json(referrals);
+    } catch (error) {
+      console.error('Error fetching referrals:', error);
+      res.status(500).json({ message: 'Failed to fetch referrals' });
+    }
+  }));
+
+  app.patch('/api/admin/referrals/:id', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const updatedReferral = await storage.updateReferral(id, updates);
+      res.json(updatedReferral);
+    } catch (error) {
+      console.error('Error updating referral:', error);
+      res.status(500).json({ message: 'Failed to update referral' });
+    }
+  }));
+
+  // Profile completion endpoint
+  app.post('/api/auth/complete-profile', async (req: Request, res: Response) => {
+    try {
+      // In production, validate JWT and update user profile
+      const updates = req.body;
+      
+      // TODO: Handle file upload for avatar
+      // TODO: Update user in database
+      
+      res.json({ success: true, message: 'Profile completed successfully' });
+    } catch (error) {
+      console.error('Error completing profile:', error);
+      res.status(500).json({ message: 'Failed to complete profile' });
+    }
   });
 
   // Create HTTP server

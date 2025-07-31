@@ -200,6 +200,10 @@ export const resources = pgTable("resources", {
   geo: jsonb("geo"), // {zip, city, county, state}
   url: varchar("url"),
   contact: jsonb("contact"), // {name, phone, email}
+  address: text("address"), // Full address for location
+  phone: varchar("phone"), // Primary phone number  
+  website: varchar("website"), // Website URL
+  hours: jsonb("hours"), // {mon: "9-5", tue: "9-5", ...}
   languages: jsonb("languages"), // array of language codes
   status: resourceStatusEnum("status").default("active"),
   tags: jsonb("tags"), // array of strings

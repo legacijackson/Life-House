@@ -32,6 +32,9 @@ import { StaffDashboard } from "@/components/staff-dashboard";
 import { AdminPanel } from "@/components/admin-panel";
 import { PartnerPortal } from "@/components/partner-portal";
 import ProfilePage from "@/pages/profile";
+import AdminPanelPage from "@/pages/admin-panel";
+import FirstLoginWizard from "@/pages/first-login-wizard";
+import IntakeReferrals from "@/pages/intake-referrals";
 import NotFound from "@/pages/not-found";
 
 // Protected routes wrapper
@@ -53,6 +56,9 @@ function ProtectedRoutes() {
         <Route path="/app/resident-portal" component={ResidentPortal} />
         <Route path="/app/staff-dashboard" component={StaffDashboard} />
         <Route path="/app/admin-panel" component={AdminPanel} />
+        <Route path="/app/admin" component={AdminPanelPage} />
+        <Route path="/app/intake-referrals" component={IntakeReferrals} />
+        <Route path="/app/first-login" component={FirstLoginWizard} />
         <Route path="/app/partner-portal" component={PartnerPortal} />
         <Route path="/app/profile" component={ProfilePage} />
       </Switch>
