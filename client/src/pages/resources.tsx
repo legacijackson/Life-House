@@ -343,9 +343,9 @@ export default function Resources() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 mb-3">Entrepreneurship development, business planning, and legacy building coaching to help residents create sustainable income and generational wealth.</p>
+                  <p className="text-sm text-gray-600 mb-3">Soul-aligned business coaching using the "Earn While You Learn" framework to build sustainable revenue and legacy wealth without burnout.</p>
                   <div className="flex items-center text-orange-600 text-sm font-medium">
-                    <span>Personal & Business Credit Building</span>
+                    <span>Holistic Culture • Not Hustle Culture</span>
                   </div>
                 </CardContent>
               </Card>
@@ -972,61 +972,95 @@ export default function Resources() {
                   Business Coaching Program
                 </DialogTitle>
                 <DialogDescription className="text-base">
-                  Building Your Dream Legacy - entrepreneurship development and generational wealth building
+                  Building Your Dream Legacy by Kai Shariff - "Serve your gifts, talents and magic to people who get you and build a legacy that serves you"
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Program Overview</h3>
-                    <p className="text-gray-600">Comprehensive business coaching focused on entrepreneurship development, business planning, and legacy building to help residents create sustainable income streams and build generational wealth.</p>
+                    <h3 className="text-lg font-semibold text-gray-900">Legacy Business Method</h3>
+                    <p className="text-gray-600">This isn't just business coaching—it's building an intentional, soul-aligned ecosystem that supports you financially, spiritually, and creatively. The "Earn While You Learn" framework helps residents generate real revenue while building their brand.</p>
                     
                     <div className="bg-orange-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-orange-800 mb-2">Core Focus Areas</h4>
+                      <h4 className="font-medium text-orange-800 mb-2">Core Philosophy</h4>
                       <ul className="text-sm text-orange-700 space-y-1">
-                        <li>• Personal and business credit building</li>
-                        <li>• Business plan development</li>
-                        <li>• Revenue stream diversification</li>
-                        <li>• Legacy planning and wealth transfer</li>
-                        <li>• Market analysis and customer development</li>
-                        <li>• Financial systems and cash flow management</li>
+                        <li>• You can earn while you learn - no need to wait for perfection</li>
+                        <li>• Build a body of work, not just a business</li>
+                        <li>• Soul-aligned ecosystem supporting you holistically</li>
+                        <li>• Focus on transformation, not just transactions</li>
+                        <li>• Create systems that honor your natural rhythms</li>
+                        <li>• Build sustainable revenue without burnout</li>
                       </ul>
                     </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Coaching Components</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Business Development Stages</h3>
                     <div className="space-y-3">
                       <div className="flex items-start space-x-3">
-                        <div className="w-2 h-2 rounded-full bg-orange-600 mt-2"></div>
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">1</div>
                         <div>
-                          <p className="font-medium text-sm">One-on-One Coaching</p>
-                          <p className="text-xs text-gray-600">Personalized business development sessions with experienced coaches</p>
+                          <p className="font-medium text-sm">Clarity & Messaging</p>
+                          <p className="text-xs text-gray-600">Define who you serve and speak their language, not expert-speak</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <div className="w-2 h-2 rounded-full bg-orange-600 mt-2"></div>
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">2</div>
                         <div>
-                          <p className="font-medium text-sm">Group Workshops</p>
-                          <p className="text-xs text-gray-600">Peer learning environment with other aspiring entrepreneurs</p>
+                          <p className="font-medium text-sm">Offer Testing & Validation</p>
+                          <p className="text-xs text-gray-600">Test ideas with real humans before building the full program</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <div className="w-2 h-2 rounded-full bg-orange-600 mt-2"></div>
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">3</div>
                         <div>
-                          <p className="font-medium text-sm">Business Credit Building</p>
-                          <p className="text-xs text-gray-600">Establish business credit separate from personal credit history</p>
+                          <p className="font-medium text-sm">Revenue Ecosystem</p>
+                          <p className="text-xs text-gray-600">Build signature offers and pricing strategies that reflect your value</p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <div className="w-2 h-2 rounded-full bg-orange-600 mt-2"></div>
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">4</div>
                         <div>
-                          <p className="font-medium text-sm">Legacy Planning</p>
-                          <p className="text-xs text-gray-600">Building sustainable businesses that create generational wealth</p>
+                          <p className="font-medium text-sm">Systems & Structure</p>
+                          <p className="text-xs text-gray-600">Create repeatable workflows and delegate effectively</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-medium flex items-center justify-center">5</div>
+                        <div>
+                          <p className="font-medium text-sm">Legacy & Leadership</p>
+                          <p className="text-xs text-gray-600">Scale without burnout and design your exit strategy</p>
                         </div>
                       </div>
                     </div>
                   </div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-800 mb-2">Business Alignment Diagnostic Areas</h4>
+                  <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
+                    <div>
+                      <p className="font-medium text-orange-600">💰 Money + Offers</p>
+                      <p>Revenue ecosystem, signature offers, confident pricing</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-orange-600">📣 Visibility + Marketing</p>
+                      <p>Messaging alignment, content strategy, sales conversations</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-orange-600">⚙️ Structure + Systems</p>
+                      <p>Team roles, operations workflow, data tracking</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-orange-600">🏛️ Legacy + Leadership</p>
+                      <p>Scaling strategies, sabbatical planning, method licensing</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-orange-800 mb-2">This Isn't Hustle Culture—It's Holistic Culture</h4>
+                  <p className="text-sm text-orange-700">"You are not a machine. You are not an algorithm. You are a unique and worthy soul who gets to choose their own rhythm. Your business must honor that whole person—not just your tasks."</p>
                 </div>
               </div>
             </>
