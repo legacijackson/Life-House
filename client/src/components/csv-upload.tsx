@@ -1,216 +1,301 @@
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import React, { useState, useRef } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
-import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Trash2 } from 'lucide-react';
 
-export default function CsvUpload() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [csvData, setCsvData] = useState<any[]>([]);
-  const [fileName, setFileName] = useState('');
-  const [preview, setPreview] = useState<string[][]>([]);
+interface UploadResult {
+  fileName: string;
+  status: 'success' | 'error';
+  resourcesProcessed?: number;
+  error?: string;
+}
+
+interface UploadResponse {
+  success: boolean;
+  message: string;
+  results: UploadResult[];
+  summary: {
+    filesUploaded: number;
+    filesSuccessful: number;
+    filesWithErrors: number;
+    totalResourcesProcessed: number;
+  };
+}
+
+export function CSVUpload() {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
-    mutationFn: async (data: any[]) => 
-      apiRequest('/api/resources/upload-csv', {
+    mutationFn: async (files: File[]): Promise<UploadResponse> => {
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('csvFiles', file);
+      });
+
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/resources/upload-csv', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ csvData: data })
-      }),
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Upload failed');
+      }
+
+      return response.json();
+    },
     onSuccess: (data) => {
       toast({
-        title: "Success!",
+        title: "Upload Complete",
         description: data.message,
+        variant: data.success ? "default" : "destructive",
       });
+      
+      // Clear selected files on success
+      if (data.success) {
+        setSelectedFiles([]);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+      
+      // Refresh resources data
       queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
-      setIsOpen(false);
-      resetForm();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Upload Failed",
-        description: error.message || "Failed to upload CSV",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const csvFiles = files.filter(file => 
+      file.type === 'text/csv' || file.name.endsWith('.csv')
+    );
+    
+    if (csvFiles.length !== files.length) {
+      toast({
+        title: "Invalid File Type",
+        description: "Only CSV files are allowed",
         variant: "destructive",
       });
     }
-  });
-
-  const resetForm = () => {
-    setCsvData([]);
-    setFileName('');
-    setPreview([]);
+    
+    setSelectedFiles(csvFiles);
   };
 
-  const parseCSV = (text: string) => {
-    const lines = text.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'));
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    event.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    setDragOver(false);
     
-    const data = [];
-    const previewData = [lines[0].split(',')]; // Add headers to preview
+    const files = Array.from(event.dataTransfer.files);
+    const csvFiles = files.filter(file => 
+      file.type === 'text/csv' || file.name.endsWith('.csv')
+    );
     
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
-      const row: any = {};
-      
-      headers.forEach((header, index) => {
-        row[header] = values[index] || '';
+    if (csvFiles.length !== files.length) {
+      toast({
+        title: "Invalid File Type",
+        description: "Only CSV files are allowed",
+        variant: "destructive",
       });
-      
-      data.push(row);
-      if (i <= 5) { // Show first 5 rows in preview
-        previewData.push(values);
-      }
     }
     
-    setCsvData(data);
-    setPreview(previewData);
+    setSelectedFiles(csvFiles);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setFileName(file.name);
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      parseCSV(text);
-    };
-    
-    reader.readAsText(file);
+  const removeFile = (index: number) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
   };
 
-  const handleSubmit = () => {
-    if (csvData.length === 0) {
+  const handleUpload = () => {
+    if (selectedFiles.length === 0) {
       toast({
-        title: "No Data",
-        description: "Please upload a CSV file first",
+        title: "No Files Selected",
+        description: "Please select CSV files to upload",
         variant: "destructive",
       });
       return;
     }
     
-    uploadMutation.mutate(csvData);
+    uploadMutation.mutate(selectedFiles);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Upload className="h-4 w-4" />
-          Import CSV
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Import Resources from CSV</DialogTitle>
-          <DialogDescription>
-            Upload a CSV file containing resource data. The file should include columns like:
-            name, description, category, address, phone, website, eligibility, etc.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 mt-4">
-          {/* File Upload */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="csv-upload"
-            />
-            <label
-              htmlFor="csv-upload"
-              className="cursor-pointer flex flex-col items-center space-y-2"
-            >
-              <FileSpreadsheet className="h-12 w-12 text-gray-400" />
-              <span className="text-sm text-gray-600">
-                {fileName || "Click to upload CSV file"}
-              </span>
-            </label>
-          </div>
-
-          {/* Preview */}
-          {preview.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-2">Preview (first 5 rows):</h3>
-              <div className="overflow-x-auto border rounded">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      {preview[0].map((header, idx) => (
-                        <th
-                          key={idx}
-                          className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          {header}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {preview.slice(1).map((row, rowIdx) => (
-                      <tr key={rowIdx}>
-                        {row.map((cell, cellIdx) => (
-                          <td
-                            key={cellIdx}
-                            className="px-3 py-2 whitespace-nowrap text-sm text-gray-900"
-                          >
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Total rows to import: {csvData.length}
-              </p>
-            </div>
-          )}
-
-          {/* CSV Format Help */}
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>CSV Format Guidelines:</strong>
-              <ul className="mt-2 space-y-1 text-sm">
-                <li>• Required fields: name, category</li>
-                <li>• Category values: housing, employment, healthcare, food, legal, etc.</li>
-                <li>• Optional fields: description, address, phone, website, eligibility</li>
-                <li>• For Life House programs, include: is_lifehouse=true</li>
-              </ul>
-            </AlertDescription>
-          </Alert>
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={csvData.length === 0 || uploadMutation.isPending}
-            >
-              {uploadMutation.isPending ? (
-                <>Uploading...</>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Import {csvData.length} Resources
-                </>
-              )}
-            </Button>
-          </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Upload className="w-5 h-5 mr-2" />
+          Upload Community Resources
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Upload CSV files containing community resources. Multiple files can be processed at once.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* File Drop Zone */}
+        <div
+          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+            dragOver 
+              ? 'border-primary bg-primary/5' 
+              : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm font-medium">Drop CSV files here or click to browse</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Maximum file size: 10MB per file
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".csv,text/csv"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Selected Files */}
+        {selectedFiles.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Selected Files ({selectedFiles.length})</h4>
+            {selectedFiles.map((file, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeFile(index)}
+                  disabled={uploadMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Upload Progress */}
+        {uploadMutation.isPending && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Processing files...</span>
+              <span className="text-xs text-muted-foreground">Please wait</span>
+            </div>
+            <Progress value={undefined} className="w-full" />
+          </div>
+        )}
+
+        {/* Upload Results */}
+        {uploadMutation.data && (
+          <div className="space-y-3">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {uploadMutation.data.message}
+              </AlertDescription>
+            </Alert>
+            
+            {uploadMutation.data.results.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Processing Results</h4>
+                {uploadMutation.data.results.map((result, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                    <div className="flex items-center space-x-2">
+                      {result.status === 'success' ? (
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-red-600" />
+                      )}
+                      <span className="text-sm">{result.fileName}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {result.status === 'success' ? (
+                        <Badge variant="outline" className="text-green-600">
+                          {result.resourcesProcessed} resources
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive">
+                          Error
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Upload Button */}
+        <Button 
+          onClick={handleUpload}
+          disabled={selectedFiles.length === 0 || uploadMutation.isPending}
+          className="w-full"
+        >
+          {uploadMutation.isPending ? (
+            <>Processing {selectedFiles.length} files...</>
+          ) : (
+            <>Upload {selectedFiles.length > 0 ? `${selectedFiles.length} ` : ''}CSV Files</>
+          )}
+        </Button>
+
+        {/* Info */}
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            CSV files will be processed using AI to clean and categorize resource data. 
+            This may take a few moments depending on file size and content.
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    </Card>
   );
 }

@@ -758,17 +758,22 @@ export class DatabaseStorage implements IStorage {
 
   async getReports(filters: any = {}) {
     try {
-      let query = db.select().from(reports);
-
+      let whereConditions = [];
+      
       if (filters.type) {
-        query = query.where(eq(reports.type, filters.type));
+        whereConditions.push(eq(reports.type, filters.type));
       }
 
       if (filters.generatedBy) {
-        query = query.where(eq(reports.generatedBy, filters.generatedBy));
+        whereConditions.push(eq(reports.generatedBy, filters.generatedBy));
       }
 
-      const reportsList = await query.orderBy(desc(reports.generatedAt));
+      const query = db.select().from(reports);
+      const finalQuery = whereConditions.length > 0 
+        ? query.where(and(...whereConditions))
+        : query;
+      
+      const reportsList = await finalQuery.orderBy(desc(reports.generatedAt));
       return reportsList;
     } catch (error) {
       console.error('Error fetching reports:', error);

@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
 import { storage } from "./storage";
+import { csvProcessor } from "./csv-processor";
 import { z } from "zod";
 import { 
   insertUserSchema, 
@@ -90,6 +92,21 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ message: 'Invalid token' });
   }
 };
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Public routes (no auth required)
@@ -635,6 +652,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to download report' });
     }
   }));
+
+  // CSV Upload endpoint for Case Managers and Admins only
+  app.post('/api/resources/upload-csv', requireAuth, roleRoute(['CaseManager', 'Admin'], 
+    upload.array('csvFiles', 10), // Allow up to 10 files at once
+    async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const files = req.files as Express.Multer.File[];
+        
+        if (!files || files.length === 0) {
+          return res.status(400).json({ message: 'No CSV files provided' });
+        }
+
+        console.log(`[CSV Upload] Processing ${files.length} files for user ${req.user.name}`);
+
+        const results = [];
+        let totalProcessed = 0;
+        let totalErrors = 0;
+
+        for (const file of files) {
+          try {
+            console.log(`[CSV Upload] Processing file: ${file.originalname}`);
+            const csvContent = file.buffer.toString('utf-8');
+            const processedCount = await csvProcessor.processAndSaveCSV(csvContent, file.originalname);
+            
+            results.push({
+              fileName: file.originalname,
+              status: 'success',
+              resourcesProcessed: processedCount
+            });
+            
+            totalProcessed += processedCount;
+          } catch (error) {
+            console.error(`[CSV Upload] Error processing ${file.originalname}:`, error);
+            results.push({
+              fileName: file.originalname,
+              status: 'error',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+            totalErrors++;
+          }
+        }
+
+        const successCount = files.length - totalErrors;
+        console.log(`[CSV Upload] Completed: ${successCount}/${files.length} files successful, ${totalProcessed} total resources processed`);
+
+        res.json({
+          success: successCount > 0,
+          message: `Processed ${successCount}/${files.length} files successfully. ${totalProcessed} resources added to database.`,
+          results,
+          summary: {
+            filesUploaded: files.length,
+            filesSuccessful: successCount,
+            filesWithErrors: totalErrors,
+            totalResourcesProcessed: totalProcessed
+          }
+        });
+
+      } catch (error) {
+        console.error('[CSV Upload] Upload error:', error);
+        res.status(500).json({ 
+          message: 'Failed to process CSV files',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+  ));
 
   // Staff Dashboard Routes
   app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
