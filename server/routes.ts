@@ -1681,6 +1681,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return app._router.handle(Object.assign(req, { url: '/api/resources' }), res, () => {});
   });
 
+  // Get Life House flagship resources (CR-52)
+  app.get('/api/resources/highlight', async (req: Request, res: Response) => {
+    try {
+      const highlightResources = await storage.getHighlightResources();
+      res.json(highlightResources);
+    } catch (error) {
+      console.error('Error fetching highlight resources:', error);
+      res.status(500).json({ message: 'Failed to fetch highlight resources' });
+    }
+  });
+
+  // CSV Upload endpoint for resources
+  app.post('/api/resources/upload-csv', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { csvData } = req.body;
+      
+      if (!csvData || !Array.isArray(csvData)) {
+        return res.status(400).json({ message: 'Invalid CSV data' });
+      }
+
+      // Transform CSV data to resource format
+      const resourcesToCreate = csvData.map(row => ({
+        name: row.name || row.title || 'Unnamed Resource',
+        description: row.description || row.summary || '',
+        category: (row.category || 'other').toLowerCase() as any,
+        address: row.address || '',
+        phone: row.phone || '',
+        website: row.website || row.url || '',
+        eligibility: row.eligibility || '',
+        hours: row.hours ? JSON.parse(row.hours) : null,
+        languages: row.languages ? row.languages.split(',').map((l: string) => l.trim()) : ['en'],
+        status: 'active' as const,
+        tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()) : [],
+        isLifehouse: row.isLifehouse === 'true' || row.is_lifehouse === 'true' || false,
+        image: row.image || null,
+        summary: row.summary || null,
+        categories: row.categories ? row.categories.split(',').map((c: string) => c.trim()) : null,
+        geo: row.zip || row.city ? {
+          zip: row.zip || null,
+          city: row.city || null,
+          county: row.county || null,
+          state: row.state || null
+        } : null,
+        contact: row.contact_name || row.contact_email ? {
+          name: row.contact_name || null,
+          phone: row.contact_phone || null,
+          email: row.contact_email || null
+        } : null,
+        benefitAmount: row.benefitAmount || null,
+      }));
+
+      // Bulk create resources
+      const created = await storage.bulkCreateResources(resourcesToCreate);
+
+      res.json({
+        success: true,
+        message: `Successfully imported ${created.length} resources`,
+        count: created.length
+      });
+    } catch (error) {
+      console.error('CSV upload error:', error);
+      res.status(500).json({ 
+        message: 'Failed to upload CSV', 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  }));
+
   // Admin Panel API Routes
   app.get('/api/admin/users', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {

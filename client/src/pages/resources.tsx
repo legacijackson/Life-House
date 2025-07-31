@@ -11,6 +11,8 @@ import { ResourceAddModal } from "@/components/resource-add-modal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useCurrentUser } from '@/lib/rbac';
 import { Logo } from "@/components/logo";
+import HighlightCarousel from "@/components/highlight-carousel";
+import CsvUpload from "@/components/csv-upload";
 import { 
   Search,
   Filter,
@@ -240,13 +242,27 @@ export default function Resources() {
                     Back to Home
                   </Button>
                 )}
-                {!isGuest && <ResourceAddModal />}
+                {!isGuest && (
+                  <div className="flex items-center space-x-2">
+                    <CsvUpload />
+                    <ResourceAddModal />
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </header>
 
         <div className="p-6">
+          {/* Flagship Programs Carousel */}
+          <section className="mb-8">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Our Flagship Programs</h2>
+              <p className="text-gray-600 mt-1">Transformative Life House programs designed for lasting change</p>
+            </div>
+            <HighlightCarousel onResourceClick={(resource) => setSelectedResource(resource as Resource)} />
+          </section>
+
           {/* Guest Banner */}
           {isGuest && (
             <Alert className="mb-6 border-blue-200 bg-blue-50">

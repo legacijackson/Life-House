@@ -83,6 +83,9 @@ export interface IStorage {
   getResources(filters?: { category?: string; status?: string }): Promise<Resource[]>;
   createResource(resource: InsertResource): Promise<Resource>;
   getResidentResources(residentId: string): Promise<any[]>;
+  getHighlightResources(): Promise<Resource[]>;
+  updateResource(id: string, updates: Partial<Resource>): Promise<Resource>;
+  bulkCreateResources(resources: InsertResource[]): Promise<Resource[]>;
 
   // Properties and tickets
   getProperties(): Promise<any[]>;
@@ -414,6 +417,35 @@ export class DatabaseStorage implements IStorage {
     const [created] = await db
       .insert(resources)
       .values(resource)
+      .returning();
+    return created;
+  }
+
+  async getHighlightResources(): Promise<Resource[]> {
+    return await db
+      .select()
+      .from(resources)
+      .where(and(
+        eq(resources.isLifehouse, true),
+        eq(resources.status, 'active')
+      ))
+      .orderBy(resources.name);
+  }
+
+  async updateResource(id: string, updates: Partial<Resource>): Promise<Resource> {
+    const [updated] = await db
+      .update(resources)
+      .set(updates)
+      .where(eq(resources.id, id))
+      .returning();
+    return updated;
+  }
+
+  async bulkCreateResources(resourceList: InsertResource[]): Promise<Resource[]> {
+    if (resourceList.length === 0) return [];
+    const created = await db
+      .insert(resources)
+      .values(resourceList)
       .returning();
     return created;
   }

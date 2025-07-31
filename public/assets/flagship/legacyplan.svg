@@ -1,0 +1,74 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="phoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ddd6fe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c4b5fd;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="200" height="200" fill="#faf5ff" rx="10"/>
+  
+  <!-- Phone frame -->
+  <rect x="65" y="30" width="70" height="140" rx="10" fill="url(#phoneGrad)"/>
+  <rect x="70" y="35" width="60" height="130" rx="8" fill="#1f2937"/>
+  
+  <!-- Phone screen -->
+  <rect x="73" y="50" width="54" height="100" fill="url(#screenGrad)"/>
+  
+  <!-- App interface -->
+  <g transform="translate(100, 75)">
+    <!-- Progress bar -->
+    <rect x="-20" y="-15" width="40" height="4" rx="2" fill="#e5e7eb"/>
+    <rect x="-20" y="-15" width="28" height="4" rx="2" fill="#10b981"/>
+    
+    <!-- Trophy icon -->
+    <g transform="translate(0, 5)">
+      <path d="M -8 0 L -6 8 L 6 8 L 8 0 Z" fill="#fbbf24"/>
+      <rect x="-6" y="8" width="12" height="2" fill="#f59e0b"/>
+      <rect x="-4" y="10" width="8" height="4" fill="#92400e"/>
+      <circle cx="0" cy="0" r="6" fill="#fbbf24"/>
+      <text x="0" y="3" font-family="Arial, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#92400e">1</text>
+    </g>
+    
+    <!-- Level indicator -->
+    <text x="0" y="35" font-family="Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#4f46e5">Level 4</text>
+    
+    <!-- LLC icon -->
+    <rect x="-15" y="40" width="30" height="20" rx="3" fill="#3b82f6"/>
+    <text x="0" y="53" font-family="Arial, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="white">LLC</text>
+  </g>
+  
+  <!-- Floating game elements -->
+  <g>
+    <!-- Coins -->
+    <circle cx="40" cy="60" r="8" fill="#fbbf24"/>
+    <text x="40" y="63" font-family="Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#92400e">$</text>
+    
+    <circle cx="160" cy="80" r="6" fill="#fbbf24" opacity="0.7"/>
+    <text x="160" y="83" font-family="Arial, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#92400e">$</text>
+    
+    <!-- Stars -->
+    <path d="M 45 100 L 47 105 L 52 105 L 48 108 L 50 113 L 45 110 L 40 113 L 42 108 L 38 105 L 43 105 Z" fill="#f59e0b"/>
+    <path d="M 155 120 L 156 123 L 159 123 L 157 125 L 158 128 L 155 126 L 152 128 L 153 125 L 151 123 L 154 123 Z" fill="#f59e0b" opacity="0.6"/>
+  </g>
+  
+  <!-- Digital wallet icon -->
+  <g transform="translate(100, 140)">
+    <rect x="-15" y="-8" width="30" height="16" rx="3" fill="#10b981"/>
+    <rect x="-12" y="-5" width="10" height="10" rx="2" fill="#34d399"/>
+    <circle cx="8" cy="0" r="3" fill="#fbbf24"/>
+  </g>
+  
+  <!-- Text label -->
+  <text x="100" y="175" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#7c3aed">
+    Business Gamified
+  </text>
+  <text x="100" y="190" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#64748b">
+    LLC Setup Made Fun
+  </text>
+</svg>

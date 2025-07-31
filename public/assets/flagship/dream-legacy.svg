@@ -1,0 +1,72 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="rocketGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#f97316;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fb923c;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="200" height="200" fill="#fff7ed" rx="10"/>
+  
+  <!-- Whiteboard -->
+  <rect x="120" y="40" width="70" height="80" fill="white" stroke="#d1d5db" stroke-width="2"/>
+  
+  <!-- Business plan on whiteboard -->
+  <g transform="translate(125, 50)">
+    <text x="5" y="10" font-family="Arial, sans-serif" font-size="8" fill="#374151">VISION</text>
+    <line x1="5" y1="12" x2="55" y2="12" stroke="#10b981" stroke-width="2"/>
+    
+    <text x="5" y="25" font-family="Arial, sans-serif" font-size="8" fill="#374151">STRATEGY</text>
+    <line x1="5" y1="27" x2="45" y2="27" stroke="#3b82f6" stroke-width="2"/>
+    
+    <text x="5" y="40" font-family="Arial, sans-serif" font-size="8" fill="#374151">REVENUE</text>
+    <line x1="5" y1="42" x2="50" y2="42" stroke="#f59e0b" stroke-width="2"/>
+    
+    <!-- Growth chart -->
+    <path d="M 5 55 L 15 50 L 25 45 L 35 35 L 45 25" stroke="#ef4444" stroke-width="2" fill="none"/>
+    <circle cx="45" cy="25" r="2" fill="#ef4444"/>
+  </g>
+  
+  <!-- Speaker/Coach figure -->
+  <g transform="translate(70, 80)">
+    <circle cx="0" cy="0" r="12" fill="#8b5cf6"/>
+    <circle cx="0" cy="25" r="15" fill="#8b5cf6"/>
+    <!-- Speaking gesture -->
+    <circle cx="15" cy="-5" r="4" fill="#a78bfa" opacity="0.5"/>
+    <circle cx="22" cy="-8" r="6" fill="#c4b5fd" opacity="0.3"/>
+    <circle cx="32" cy="-10" r="8" fill="#ddd6fe" opacity="0.2"/>
+  </g>
+  
+  <!-- Rocket launching -->
+  <g transform="translate(100, 120) rotate(-45)">
+    <!-- Rocket body -->
+    <path d="M 0 0 L -10 20 L 0 30 L 10 20 Z" fill="url(#rocketGrad)"/>
+    <!-- Rocket tip -->
+    <path d="M 0 0 L -5 -10 L 0 -15 L 5 -10 Z" fill="#dc2626"/>
+    <!-- Windows -->
+    <circle cx="0" cy="10" r="3" fill="#60a5fa"/>
+    <!-- Fins -->
+    <path d="M -10 20 L -15 30 L -10 30 Z" fill="#ea580c"/>
+    <path d="M 10 20 L 15 30 L 10 30 Z" fill="#ea580c"/>
+  </g>
+  
+  <!-- Flame/exhaust -->
+  <g transform="translate(85, 135)">
+    <path d="M 0 0 L -5 15 L 0 10 L 5 15 Z" fill="#fbbf24" opacity="0.8"/>
+    <path d="M -2 10 L -4 20 L 0 15 L 4 20 L 2 10 Z" fill="#f59e0b" opacity="0.6"/>
+  </g>
+  
+  <!-- Dollar signs floating -->
+  <text x="30" y="40" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#22c55e" opacity="0.5">$</text>
+  <text x="160" y="140" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#22c55e" opacity="0.6">$</text>
+  <text x="40" y="150" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#22c55e" opacity="0.4">$</text>
+  
+  <!-- Text label -->
+  <text x="100" y="175" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#ea580c">
+    Launch Your Business
+  </text>
+  <text x="100" y="190" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#64748b">
+    12-Month Accelerator
+  </text>
+</svg>

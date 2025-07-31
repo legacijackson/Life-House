@@ -209,11 +209,16 @@ export const resources = pgTable("resources", {
   languages: jsonb("languages"), // array of language codes
   status: resourceStatusEnum("status").default("active"),
   tags: jsonb("tags"), // array of strings
+  isLifehouse: boolean("is_lifehouse").default(false), // Life House owned programs
+  image: varchar("image"), // Image URL for flagship programs
+  summary: text("summary"), // Short pitch for flagship programs
+  categories: jsonb("categories"), // Array of categories for flagship programs
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("resources_category_idx").on(table.category),
   index("resources_status_idx").on(table.status),
+  index("resources_is_lifehouse_idx").on(table.isLifehouse),
 ]);
 
 export const residentResources = pgTable("resident_resources", {

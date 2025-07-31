@@ -1,0 +1,61 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="90" fill="#fef2f2" stroke="#fecaca" stroke-width="2"/>
+  
+  <!-- Circle of people -->
+  <g>
+    <!-- Person 1 -->
+    <circle cx="100" cy="50" r="12" fill="#8b5cf6"/>
+    <circle cx="100" cy="30" r="8" fill="#8b5cf6"/>
+    
+    <!-- Person 2 -->
+    <circle cx="140" cy="70" r="12" fill="#3b82f6"/>
+    <circle cx="155" cy="55" r="8" fill="#3b82f6"/>
+    
+    <!-- Person 3 -->
+    <circle cx="150" cy="110" r="12" fill="#10b981"/>
+    <circle cx="165" cy="105" r="8" fill="#10b981"/>
+    
+    <!-- Person 4 -->
+    <circle cx="120" cy="140" r="12" fill="#f59e0b"/>
+    <circle cx="125" cy="155" r="8" fill="#f59e0b"/>
+    
+    <!-- Person 5 -->
+    <circle cx="80" cy="140" r="12" fill="#ec4899"/>
+    <circle cx="75" cy="155" r="8" fill="#ec4899"/>
+    
+    <!-- Person 6 -->
+    <circle cx="50" cy="110" r="12" fill="#14b8a6"/>
+    <circle cx="35" cy="105" r="8" fill="#14b8a6"/>
+    
+    <!-- Person 7 -->
+    <circle cx="60" cy="70" r="12" fill="#f97316"/>
+    <circle cx="45" cy="55" r="8" fill="#f97316"/>
+  </g>
+  
+  <!-- Central heart -->
+  <path d="M 100 85 C 95 75, 85 75, 85 85 C 85 75, 75 75, 75 85 Q 75 100, 100 115 Q 125 100, 125 85 C 125 75, 115 75, 115 85 C 115 75, 105 75, 100 85 Z" fill="url(#heartGrad)" transform="translate(0, 5)"/>
+  
+  <!-- Journal/notebook icons -->
+  <rect x="25" y="30" width="15" height="20" rx="2" fill="#6366f1" opacity="0.3"/>
+  <line x1="29" y1="35" x2="36" y2="35" stroke="#4f46e5" stroke-width="1.5"/>
+  <line x1="29" y1="40" x2="36" y2="40" stroke="#4f46e5" stroke-width="1.5"/>
+  <line x1="29" y1="45" x2="33" y2="45" stroke="#4f46e5" stroke-width="1.5"/>
+  
+  <rect x="160" y="140" width="15" height="20" rx="2" fill="#6366f1" opacity="0.3"/>
+  <line x1="164" y1="145" x2="171" y2="145" stroke="#4f46e5" stroke-width="1.5"/>
+  <line x1="164" y1="150" x2="171" y2="150" stroke="#4f46e5" stroke-width="1.5"/>
+  <line x1="164" y1="155" x2="168" y2="155" stroke="#4f46e5" stroke-width="1.5"/>
+  
+  <!-- Text label -->
+  <text x="100" y="175" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#dc2626">
+    Healing Together
+  </text>
+</svg>
