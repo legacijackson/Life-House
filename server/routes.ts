@@ -63,7 +63,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   // For development, accept mock tokens
   if (token.startsWith('mock-token-')) {
     const userId = token.replace('mock-token-', '');
-    
+
     try {
       // Look up the actual user from the database
       const user = await storage.getUser(userId);
@@ -74,7 +74,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
       (req as AuthenticatedRequest).user = {
         id: user.id,
         role: user.role,
-        name: user.name || user.email || 'Unknown User',
+        name: user.name || 'Unknown User',
         email: user.email
       };
       return next();
@@ -121,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
       const confirmationNumber = generateTicketNumber('APP');
-      
+
       // Transform date strings to Date objects for validation
       const transformedData = {
         ...req.body,
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
       const confirmationNumber = generateTicketNumber('REF');
-      
+
       const validatedData = insertReferralSchema.parse({
         confirmationNumber,
         source: 'CBO',
@@ -210,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
       const confirmationNumber = generateTicketNumber('DON');
-      
+
       const validatedData = insertDonationSchema.parse({
         ...req.body,
         confirmationNumber
@@ -384,7 +384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
       const confirmationNumber = generateTicketNumber('INQ');
-      
+
       const validatedData = insertInquirySchema.parse({
         ...req.body,
         confirmationNumber
@@ -419,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { generateTicketNumber, generateConfirmationMessage } = await import('../shared/ticket-generator');
       const confirmationNumber = generateTicketNumber('PAR');
-      
+
       const validatedData = insertPartnerSchema.parse({
         ...req.body,
         confirmationNumber
@@ -546,14 +546,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/test-csv-processor', requireAuth, roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       console.log('[Test CSV] Processing test data...');
-      
+
       // Test with a simple CSV string
       const testCSV = `Name,Description,Type,City,State
 Sacramento Food Bank,Emergency food assistance,food,Sacramento,CA
 Legal Aid Society,Free legal services,legal,Sacramento,CA`;
-      
+
       const processedCount = await csvProcessor.processAndSaveCSV(testCSV, 'test.csv');
-      
+
       res.json({
         success: true,
         message: `Test CSV processed successfully. ${processedCount} resources added.`,
@@ -567,31 +567,6 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       });
     }
   }));
-
-  // AI Chat endpoint (public access for widget) - MUST be before auth middleware
-  app.post('/api/ai/chat', async (req: Request, res: Response) => {
-    try {
-      const { message, context } = req.body;
-
-      if (!message) {
-        return res.status(400).json({ message: 'Message is required' });
-      }
-
-      // Import the AI helper
-      const { aiService } = await import('./ai');
-
-      const context_type = context === 'public_assistant' ? 'public_assistant' : 'case_management';
-      const aiResponse = await aiService.chatResponse(message, context_type);
-
-      res.json({ response: aiResponse.response });
-    } catch (error: any) {
-      console.error('AI chat error:', error);
-      res.status(500).json({ 
-        message: 'Failed to generate response',
-        error: error.message 
-      });
-    }
-  });
 
   // Apply auth middleware to remaining API routes
   app.use('/api', requireAuth);
@@ -629,7 +604,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       const filters: any = {};
       if (type && type !== 'all') filters.type = type as string;
       if (status && status !== 'all') filters.status = status as string;
-      
+
       const reports = await storage.getReports(filters);
       res.json(reports);
     } catch (error) {
@@ -658,7 +633,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       // Generate report data in background
       try {
         const reportData = await storage.generateReportData(reportType, parameters);
-        
+
         // Update report with success status
         await storage.updateReport(report.id, {
           status: 'completed',
@@ -913,6 +888,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   }));
 
   // Homepage Content Management
+  ```text
   app.get('/api/admin/homepage-content', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const content = await storage.getHomepageContent();
@@ -927,13 +903,13 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       const { section } = req.params;
       const contentData = req.body;
-      
+
       const updatedContent = await storage.updateHomepageContent(section, {
         ...contentData,
         lastUpdatedBy: req.user.id,
         updatedAt: new Date(),
       });
-      
+
       res.json(updatedContent);
     } catch (error) {
       console.error('Homepage content update error:', error);
@@ -1282,7 +1258,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       // Get the ticket to check permissions
       const tickets = await storage.getTickets({});
       const ticket = tickets.find((t: any) => t.id === id);
-      
+
       if (!ticket) {
         return res.status(404).json({ message: 'Ticket not found' });
       }
@@ -1332,13 +1308,13 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   app.post('/api/check-in', async (req: Request, res: Response) => {
     try {
       const { userId, propertyId, latitude, longitude } = req.body;
-      
+
       // Get property location
       const property = await storage.getProperty(propertyId);
       if (!property) {
         return res.status(404).json({ message: 'Property not found' });
       }
-      
+
       // Calculate distance using Haversine formula
       const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
         const R = 6371e3; // Earth radius in meters
@@ -1346,22 +1322,22 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         const φ2 = lat2 * Math.PI/180;
         const Δφ = (lat2-lat1) * Math.PI/180;
         const Δλ = (lon2-lon1) * Math.PI/180;
-        
+
         const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
                   Math.cos(φ1) * Math.cos(φ2) *
                   Math.sin(Δλ/2) * Math.sin(Δλ/2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        
+
         return R * c; // Distance in meters
       };
-      
+
       const distance = calculateDistance(
         latitude, 
         longitude, 
         property.latitude as number, 
         property.longitude as number
       );
-      
+
       // Check if within 91 meters (100 yards)
       if (distance > 91) {
         return res.status(400).json({ 
@@ -1370,7 +1346,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
           maxDistance: 91
         });
       }
-      
+
       // Create check-in record
       const checkIn = {
         id: Date.now().toString(),
@@ -1381,10 +1357,10 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         longitude,
         distance: Math.round(distance)
       };
-      
+
       // TODO: Save check-in to database
       console.log('Check-in successful:', checkIn);
-      
+
       res.status(201).json({
         success: true,
         checkIn,
@@ -1400,7 +1376,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   app.post('/api/resources', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const resourceData = req.body;
-      
+
       // Validate required fields
       if (!resourceData.name || !resourceData.category) {
         return res.status(400).json({ message: 'Name and category are required' });
@@ -1433,7 +1409,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       };
 
       const created = await storage.createResource(resource);
-      
+
       res.status(201).json({
         success: true,
         resource: created
@@ -1448,15 +1424,15 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   app.post('/api/donate', async (req: Request, res: Response) => {
     try {
       const { amount, email, name, isRecurring } = req.body;
-      
+
       if (!process.env.STRIPE_SECRET_KEY) {
         return res.status(500).json({ message: 'Stripe is not configured' });
       }
-      
+
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
         apiVersion: '2024-11-20.acacia' as any
       });
-      
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: isRecurring ? 'subscription' : 'payment',
@@ -1480,7 +1456,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         success_url: `${req.headers.origin}/donate?success=true`,
         cancel_url: `${req.headers.origin}/donate?canceled=true`
       });
-      
+
       res.json({ url: session.url });
     } catch (error) {
       console.error('Stripe checkout error:', error);
@@ -1493,29 +1469,29 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       const sig = req.headers['stripe-signature'];
       const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-      
+
       if (!sig || !endpointSecret) {
         return res.status(400).json({ message: 'Missing stripe signature or webhook secret' });
       }
-      
+
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
         apiVersion: '2024-11-20.acacia' as any
       });
-      
+
       let event;
-      
+
       try {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
       } catch (err: any) {
         console.error('Webhook signature verification failed:', err.message);
         return res.status(400).json({ message: `Webhook Error: ${err.message}` });
       }
-      
+
       // Handle the event
       switch (event.type) {
         case 'checkout.session.completed':
           const session = event.data.object;
-          
+
           // Save donation to database
           const donation = {
             email: session.customer_email || 'anonymous@lifehouse.org',
@@ -1526,21 +1502,46 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
             designation: 'general' as const,
             stripePaymentId: session.id
           };
-          
+
           await storage.createDonation(donation);
-          
+
           // TODO: Send thank you email
           console.log('Donation successful:', donation);
           break;
-          
+
         default:
           console.log(`Unhandled event type ${event.type}`);
       }
-      
+
       res.json({ received: true });
     } catch (error) {
       console.error('Webhook error:', error);
       res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
+  // AI Chat endpoint (public access for widget)
+  app.post('/api/ai/chat', async (req: Request, res: Response) => {
+    try {
+      const { message, context } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ message: 'Message is required' });
+      }
+
+      // Import the AI helper
+      const { aiService } = await import('./ai');
+
+      const context_type = context === 'public_assistant' ? 'public_assistant' : 'case_management';
+      const aiResponse = await aiService.chatResponse(message, context_type);
+
+      res.json({ response: aiResponse.response });
+    } catch (error: any) {
+      console.error('AI chat error:', error);
+      res.status(500).json({ 
+        message: 'Failed to generate response',
+        error: error.message 
+      });
     }
   });
 
@@ -1749,7 +1750,8 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
           weight: faqs.weight
         })
         .from(faqs)
-        .innerJoin(faqRoles, eq(faqs.id, faqRoles.faqId))
+        .innerJoin(faqRoles, eq(faqs.id,```text
+ faqRoles.faqId))
         .leftJoin(faqPages, eq(faqs.id, faqPages.faqId))
         .where(
           and(
@@ -1791,7 +1793,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       const token = req.headers.authorization?.replace('Bearer ', '');
       let user: AuthenticatedRequest['user'] | null = null;
-      
+
       // Check if user is authenticated
       if (token && token.startsWith('mock-token-')) {
         const userId = token.replace('mock-token-', '');
@@ -1805,16 +1807,16 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
 
       const searchQuery = req.query.q as string;
       const categoryFilter = req.query.category as string;
-      
+
       let filters: any = {};
       if (categoryFilter && categoryFilter !== 'all') {
         filters.category = categoryFilter;
       }
-      
+
       const allResources = await storage.getResources(filters);
-      
+
       let filteredResources = allResources.filter(r => r.status === 'active');
-      
+
       // Apply role-based filtering
       if (!user) {
         // Guest users see limited resources
@@ -1835,7 +1837,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
             break;
         }
       }
-      
+
       if (searchQuery && searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         filteredResources = filteredResources.filter(resource =>
@@ -1984,7 +1986,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         isActive: true,
         uploadedAt: new Date().toISOString()
       };
-      
+
       // TODO: Save to database
       res.json(newPhoto);
     } catch (error) {
@@ -1997,7 +1999,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       // TODO: Update photo in database
       res.json({ id, ...updates });
     } catch (error) {
@@ -2009,7 +2011,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   app.delete('/api/admin/homepage-photos/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      
+
       // TODO: Delete photo from database and storage
       res.json({ success: true });
     } catch (error) {
@@ -2058,7 +2060,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       const { id } = req.params;
       const { value } = req.body;
-      
+
       // TODO: Update setting in database
       res.json({ id, value, updatedAt: new Date().toISOString() });
     } catch (error) {
@@ -2115,7 +2117,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       const updatedApplication = await storage.updateApplication(id, updates);
       res.json(updatedApplication);
     } catch (error) {
@@ -2142,7 +2144,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       const updatedReferral = await storage.updateReferral(id, updates);
       res.json(updatedReferral);
     } catch (error) {
@@ -2156,16 +2158,113 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       // In production, validate JWT and update user profile
       const updates = req.body;
-      
+
       // TODO: Handle file upload for avatar
       // TODO: Update user in database
-      
+
       res.json({ success: true, message: 'Profile completed successfully' });
     } catch (error) {
       console.error('Error completing profile:', error);
       res.status(500).json({ message: 'Failed to complete profile' });
     }
   });
+
+  // Update user profile
+app.patch("/api/users/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const updates = req.body;
+
+    const [user] = await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ error: "Failed to update user" });
+  }
+});
+
+// Upload user avatar
+app.post("/api/users/:id/avatar", requireAuth, upload.single('avatar'), async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // Store the uploaded file path as profile image
+    const profileImageUrl = `/uploads/${file.filename}`;
+
+    const [user] = await db
+      .update(users)
+      .set({
+        profileImage: profileImageUrl,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ 
+      message: "Avatar uploaded successfully", 
+      profileImage: profileImageUrl,
+      user 
+    });
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
+    res.status(500).json({ error: "Failed to upload avatar" });
+  }
+});
+
+// Set user avatar preset
+app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { avatarUrl } = req.body;
+
+    if (!avatarUrl) {
+      return res.status(400).json({ error: "Avatar URL is required" });
+    }
+
+    const [user] = await db
+      .update(users)
+      .set({
+        profileImage: avatarUrl,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ 
+      message: "Avatar updated successfully", 
+      profileImage: avatarUrl,
+      user 
+    });
+  } catch (error) {
+    console.error("Error setting avatar preset:", error);
+    res.status(500).json({ error: "Failed to set avatar preset" });
+  }
+});
 
   // Create HTTP server
   const httpServer = createServer(app);
