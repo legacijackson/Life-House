@@ -11,6 +11,7 @@ import { ProgramOverviewModal } from "@/components/program-overview-modal";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
 import _3 from "@assets/3.png";
+import lifeHouseLogo from "@assets/Life House large icon_1753856825753.png";
 
 export default function Landing() {
   const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
@@ -475,7 +476,7 @@ export default function Landing() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <img 
-                  src="/attached_assets/Untitled design (4)_1753914677705.png" 
+                  src={lifeHouseLogo} 
                   alt="Life House Logo" 
                   className="w-6 h-6 object-contain"
                 />
