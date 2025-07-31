@@ -162,7 +162,7 @@ export default function Resources() {
   const filteredResources = (resources as Resource[]).filter((resource: Resource) => {
     const matchesSearch = resource.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          resource.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         resource.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (resource.tags && resource.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase())));
     const matchesCategory = categoryFilter === 'all' || resource.category === categoryFilter;
     return matchesSearch && matchesCategory && resource.status === 'active';
   });
@@ -447,7 +447,11 @@ export default function Resources() {
             </div>
             <HighlightCarousel onResourceClick={(resource) => setSelectedResource({
               ...resource,
-              benefitAmount: resource.benefitAmount ? parseFloat(resource.benefitAmount.toString()) : undefined
+              benefitAmount: resource.benefitAmount ? parseFloat(resource.benefitAmount.toString()) : undefined,
+              createdAt: resource.createdAt ? resource.createdAt.toString() : new Date().toISOString(),
+              updatedAt: resource.updatedAt ? resource.updatedAt.toString() : new Date().toISOString(),
+              tags: resource.tags || [],
+              languages: resource.languages || []
             } as Resource)} />
           </section>
 
