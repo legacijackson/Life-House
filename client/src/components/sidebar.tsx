@@ -64,7 +64,6 @@ export function Sidebar() {
         <div className="flex items-center space-x-3">
           <Logo className="w-10 h-10" />
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">Life House</h1>
             <p className="text-sm text-gray-500">Portal System</p>
           </div>
         </div>
