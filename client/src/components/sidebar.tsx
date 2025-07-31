@@ -69,11 +69,19 @@ export function Sidebar() {
       {/* User Profile */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-sm font-medium text-primary">
-              {(user as any)?.name?.charAt(0) || (user as any)?.email?.charAt(0) || 'U'}
-            </span>
-          </div>
+          {(user as any)?.profileImage ? (
+            <img 
+              src={(user as any).profileImage} 
+              alt={(user as any)?.name || 'User'} 
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-sm font-medium text-primary">
+                {(user as any)?.name?.charAt(0) || (user as any)?.email?.charAt(0) || 'U'}
+              </span>
+            </div>
+          )}
           <div>
             <p className="text-sm font-medium text-gray-900">{(user as any)?.name || (user as any)?.email}</p>
             <p className="text-xs text-gray-500">{(user as any)?.role}</p>
@@ -149,12 +157,22 @@ export function Sidebar() {
       {/* User Profile */}
       <div className="p-4 border-t border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-            <span className="text-sm font-medium text-gray-700">SM</span>
-          </div>
+          {(user as any)?.profileImage ? (
+            <img 
+              src={(user as any).profileImage} 
+              alt={(user as any)?.name || 'User'} 
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+              <span className="text-sm font-medium text-gray-700">
+                {(user as any)?.name?.charAt(0) || (user as any)?.email?.charAt(0) || 'U'}
+              </span>
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">Sarah Martinez</p>
-            <p className="text-xs text-gray-500 truncate">Case Manager</p>
+            <p className="text-sm font-medium text-gray-900 truncate">{(user as any)?.name || (user as any)?.email}</p>
+            <p className="text-xs text-gray-500 truncate">{(user as any)?.role}</p>
           </div>
           <button className="text-gray-400 hover:text-gray-600">
             <LogOut className="w-5 h-5" />
