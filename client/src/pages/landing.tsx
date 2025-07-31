@@ -478,9 +478,9 @@ export default function Landing() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <img 
-                  src={Untitled_design__4_} 
+                  src={lifeHouseLogo} 
                   alt="Life House Logo" 
-                  className="w-6 h-6 object-contain mt-[0px] mb-[0px] pl-[0px] pr-[0px]"
+                  className="w-16 h-16 object-contain"
                 />
               </div>
               <p className="text-green-100 text-sm">
