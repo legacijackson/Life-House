@@ -82,8 +82,10 @@ export interface IStorage {
   createCaseNote(note: InsertCaseNote): Promise<CaseNote>;
 
   // Resources
-  getResources(filters?: { category?: string; status?: string }): Promise<Resource[]>;
+  getResources(filters?: { category?: string; status?: string; isLifehouse?: boolean }): Promise<Resource[]>;
   createResource(resource: InsertResource): Promise<Resource>;
+  createOrUpdateResource(resource: InsertResource): Promise<Resource>;
+  findResourceByName(name: string): Promise<Resource | undefined>;
   getResidentResources(residentId: string): Promise<any[]>;
   getHighlightResources(): Promise<Resource[]>;
   updateResource(id: string, updates: Partial<Resource>): Promise<Resource>;
@@ -428,6 +430,49 @@ export class DatabaseStorage implements IStorage {
       .values(resource)
       .returning();
     return created;
+  }
+
+  async findResourceByName(name: string): Promise<Resource | undefined> {
+    const [resource] = await db
+      .select()
+      .from(resources)
+      .where(eq(resources.name, name))
+      .limit(1);
+    return resource;
+  }
+
+  async createOrUpdateResource(resource: InsertResource): Promise<Resource> {
+    // Check if resource already exists by name
+    const existing = await this.findResourceByName(resource.name);
+    
+    if (existing) {
+      console.log(`[Storage] Resource "${resource.name}" already exists, updating instead`);
+      
+      // Update existing resource with new data, preserving certain fields
+      const [updated] = await db
+        .update(resources)
+        .set({
+          description: resource.description || existing.description,
+          category: resource.category || existing.category,
+          eligibility: resource.eligibility || existing.eligibility,
+          benefitAmount: resource.benefitAmount || existing.benefitAmount,
+          geo: resource.geo || existing.geo,
+          url: resource.url || existing.url,
+          contact: resource.contact || existing.contact,
+          languages: resource.languages || existing.languages,
+          tags: resource.tags || existing.tags,
+          status: resource.status || existing.status,
+          updatedAt: new Date()
+        })
+        .where(eq(resources.id, existing.id))
+        .returning();
+        
+      return updated;
+    } else {
+      // Create new resource
+      console.log(`[Storage] Creating new resource: ${resource.name}`);
+      return this.createResource(resource);
+    }
   }
 
   async getHighlightResources(): Promise<Resource[]> {

@@ -195,10 +195,22 @@ ${JSON.stringify(rows, null, 2)}`
 
   async saveProcessedResources(processedResources: ProcessedResource[]): Promise<void> {
     try {
-      console.log(`[CSVProcessor] Saving ${processedResources.length} processed resources to database`);
+      console.log(`[CSVProcessor] Processing ${processedResources.length} resources with automatic deduplication`);
+      
+      let created = 0;
+      let updated = 0;
       
       for (const resource of processedResources) {
-        await storage.createResource({
+        const existing = await storage.findResourceByName(resource.name);
+        
+        if (existing) {
+          updated++;
+          console.log(`[CSVProcessor] Resource "${resource.name}" already exists, updating`);
+        } else {
+          created++;
+        }
+        
+        await storage.createOrUpdateResource({
           category: resource.category,
           name: resource.name,
           description: resource.description,
@@ -214,7 +226,7 @@ ${JSON.stringify(rows, null, 2)}`
         });
       }
 
-      console.log(`[CSVProcessor] Successfully saved ${processedResources.length} resources to database`);
+      console.log(`[CSVProcessor] Deduplication complete: ${created} new resources created, ${updated} existing resources updated`);
     } catch (error) {
       console.error('[CSVProcessor] Error saving resources:', error);
       throw error;

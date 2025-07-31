@@ -72,9 +72,18 @@ async function processUploadedCSVFiles() {
     
     console.log(`[Startup] Found ${csvFiles.length} CSV files to process...`);
     
-    // Process just the first 10 files to build up a good resource database
-    const filesToProcess = csvFiles.slice(0, 10);
-    console.log(`[Startup] Processing ${filesToProcess.length} files to build resource database...`);
+    // Check if we already have external resources in the database
+    const { storage } = await import('./storage');
+    const existingResources = await storage.getResources({ isLifehouse: false });
+    
+    if (existingResources.length > 10) {
+      console.log(`[Startup] Database already contains ${existingResources.length} external resources, skipping CSV processing`);
+      return;
+    }
+    
+    // Process just the first 3 files at startup to avoid timeouts
+    const filesToProcess = csvFiles.slice(0, 3);
+    console.log(`[Startup] Processing ${filesToProcess.length} files at startup...`);
     
     for (const fileName of filesToProcess) {
       try {
