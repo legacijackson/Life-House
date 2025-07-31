@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { AnimatedInput } from "@/components/ui/animated-input";
+import { AnimatedSelect } from "@/components/ui/animated-select";
+import { SelectItem } from "@/components/ui/select";
+import { AnimatedCheckbox } from "@/components/ui/animated-checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Home, Heart, DollarSign, Users, Shield, Target } from "lucide-react";
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
+import { useFormAnimation, formAnimationVariants, sectionAnimationVariants, fieldGroupVariants } from '@/hooks/use-form-animation';
+import { validators } from '@/lib/validation';
 
 export default function Donate() {
   const [donationType, setDonationType] = useState('monthly');
@@ -24,6 +27,20 @@ export default function Donate() {
     mailingList: true
   });
 
+  const {
+    formRef,
+    isSubmitting,
+    isSuccess,
+    errors,
+    setFieldError,
+    clearErrors,
+    setSubmitting,
+    setSuccess,
+    shakeForm,
+    scrollToFirstError,
+    getFieldProps,
+  } = useFormAnimation();
+
   const predefinedAmounts = {
     monthly: ['50', '100', '250', '500', 'custom'],
     oneTime: ['50', '400', '1000', '2500', 'custom']
@@ -31,7 +48,44 @@ export default function Donate() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearErrors();
+    
     const finalAmount = amount === 'custom' ? customAmount : amount;
+    
+    // Validate form
+    const validationErrors: Record<string, string> = {};
+    
+    if (!formData.isAnonymous) {
+      const firstNameValidation = validators.name(formData.firstName);
+      if (!firstNameValidation.isValid) validationErrors.firstName = firstNameValidation.message!;
+      
+      const lastNameValidation = validators.name(formData.lastName);
+      if (!lastNameValidation.isValid) validationErrors.lastName = lastNameValidation.message!;
+      
+      const emailValidation = validators.email(formData.email);
+      if (!emailValidation.isValid) validationErrors.email = emailValidation.message!;
+      
+      if (formData.phone) {
+        const phoneValidation = validators.phone(formData.phone);
+        if (!phoneValidation.isValid) validationErrors.phone = phoneValidation.message!;
+      }
+    }
+    
+    const amountValidation = validators.donationAmount(finalAmount);
+    if (!amountValidation.isValid) validationErrors.amount = amountValidation.message!;
+
+    // Set validation errors
+    Object.entries(validationErrors).forEach(([field, error]) => {
+      setFieldError(field, error);
+    });
+
+    if (Object.keys(validationErrors).length > 0) {
+      shakeForm();
+      scrollToFirstError();
+      return;
+    }
+
+    setSubmitting(true);
     
     try {
       // For monthly donations, redirect to Stripe
@@ -73,6 +127,7 @@ export default function Donate() {
         const result = await response.json();
 
         if (response.ok) {
+          setSuccess(true);
           alert(result.message || `Thank you for your donation of $${finalAmount}! Your submission has been received and will be processed.`);
           // Reset form
           setFormData({
@@ -93,6 +148,8 @@ export default function Donate() {
     } catch (error) {
       console.error('Donation submission error:', error);
       alert('There was an error processing your donation. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -168,7 +225,14 @@ export default function Donate() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <motion.form 
+                  ref={formRef} 
+                  onSubmit={handleSubmit} 
+                  variants={formAnimationVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="space-y-6"
+                >
                   {/* Donation Type */}
                   <div>
                     <Label className="text-base font-semibold">Donation Type</Label>
@@ -211,116 +275,121 @@ export default function Donate() {
                         </Button>
                       ))}
                     </div>
-                    {amount === 'custom' && (
-                      <div className="mt-3">
-                        <Label htmlFor="customAmount">Custom Amount</Label>
-                        <Input
-                          id="customAmount"
-                          type="number"
-                          min="1"
-                          placeholder="Enter amount"
-                          value={customAmount}
-                          onChange={(e) => setCustomAmount(e.target.value)}
-                          className="mt-1"
-                          required
-                        />
-                      </div>
-                    )}
+                    <AnimatePresence>
+                      {amount === 'custom' && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-3"
+                        >
+                          <AnimatedInput
+                            label="Custom Amount"
+                            type="number"
+                            min="1"
+                            placeholder="Enter amount"
+                            value={customAmount}
+                            onChange={(e) => setCustomAmount(e.target.value)}
+                            onValidation={validators.donationAmount}
+                            {...getFieldProps('amount')}
+                            required
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Donor Information */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Donor Information</h3>
                     
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="firstName">First Name *</Label>
-                        <Input
-                          id="firstName"
-                          value={formData.firstName}
-                          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                          required={!formData.isAnonymous}
-                          disabled={formData.isAnonymous}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="lastName">Last Name *</Label>
-                        <Input
-                          id="lastName"
-                          value={formData.lastName}
-                          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                          required={!formData.isAnonymous}
-                          disabled={formData.isAnonymous}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="email">Email Address *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({...formData, email: e.target.value})}
-                          required
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">Phone Number</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="dedication">Dedication (Optional)</Label>
-                      <Input
-                        id="dedication"
-                        value={formData.dedication}
-                        onChange={(e) => setFormData({...formData, dedication: e.target.value})}
-                        placeholder="In honor of... or In memory of..."
-                        className="mt-1"
+                    <motion.div 
+                      variants={fieldGroupVariants}
+                      className="grid md:grid-cols-2 gap-4"
+                    >
+                      <AnimatedInput
+                        label="First Name"
+                        value={formData.firstName}
+                        onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                        onValidation={validators.name}
+                        disabled={formData.isAnonymous}
+                        required={!formData.isAnonymous}
+                        {...getFieldProps('firstName')}
                       />
-                    </div>
+                      <AnimatedInput
+                        label="Last Name"
+                        value={formData.lastName}
+                        onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                        onValidation={validators.name}
+                        disabled={formData.isAnonymous}
+                        required={!formData.isAnonymous}
+                        {...getFieldProps('lastName')}
+                      />
+                    </motion.div>
 
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="isAnonymous"
-                          checked={formData.isAnonymous}
-                          onCheckedChange={(checked) => setFormData({...formData, isAnonymous: checked as boolean})}
-                        />
-                        <Label htmlFor="isAnonymous">Make this donation anonymous</Label>
-                      </div>
+                    <motion.div 
+                      variants={fieldGroupVariants}
+                      className="grid md:grid-cols-2 gap-4"
+                    >
+                      <AnimatedInput
+                        label="Email Address"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        onValidation={validators.email}
+                        disabled={formData.isAnonymous}
+                        required={!formData.isAnonymous}
+                        {...getFieldProps('email')}
+                      />
+                      <AnimatedInput
+                        label="Phone Number"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        onValidation={validators.phone}
+                        disabled={formData.isAnonymous}
+                        {...getFieldProps('phone')}
+                      />
+                    </motion.div>
 
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="mailingList"
-                          checked={formData.mailingList}
-                          onCheckedChange={(checked) => setFormData({...formData, mailingList: checked as boolean})}
-                        />
-                        <Label htmlFor="mailingList">Send me updates about Life House impact</Label>
-                      </div>
-                    </div>
+                    <AnimatedInput
+                      label="Dedication (Optional)"
+                      value={formData.dedication}
+                      onChange={(e) => setFormData({...formData, dedication: e.target.value})}
+                      placeholder="In honor of... or In memory of..."
+                      disabled={formData.isAnonymous}
+                    />
+
+                    <motion.div 
+                      variants={sectionAnimationVariants}
+                      className="space-y-3"
+                    >
+                      <AnimatedCheckbox
+                        id="isAnonymous"
+                        checked={formData.isAnonymous}
+                        onCheckedChange={(checked) => setFormData({...formData, isAnonymous: checked as boolean})}
+                        label="Make this donation anonymous"
+                      />
+
+                      <AnimatedCheckbox
+                        id="mailingList"
+                        checked={formData.mailingList}
+                        onCheckedChange={(checked) => setFormData({...formData, mailingList: checked as boolean})}
+                        label="Send me updates about Life House impact"
+                      />
+                    </motion.div>
                   </div>
 
-                  <Button 
+                  <AnimatedButton 
                     type="submit" 
                     className="w-full text-lg py-3 bg-gradient-to-r from-purple-600 to-green-600 hover:from-purple-700 hover:to-green-700"
+                    loading={isSubmitting}
+                    success={isSuccess}
                   >
                     <Heart className="w-5 h-5 mr-2" />
                     Donate ${amount === 'custom' ? customAmount || '0' : amount} {donationType === 'monthly' ? 'Monthly' : 'Now'}
-                  </Button>
-                </form>
+                  </AnimatedButton>
+                </motion.form>
               </CardContent>
             </Card>
 

@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Button } from "@/components/ui/button";
+import { motion } from 'framer-motion';
+import { AnimatedButton } from "@/components/ui/animated-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { AnimatedInput } from "@/components/ui/animated-input";
+import { AnimatedTextarea } from "@/components/ui/animated-textarea";
+import { AnimatedSelect } from "@/components/ui/animated-select";
+import { SelectItem } from "@/components/ui/select";
+import { AnimatedCheckbox } from "@/components/ui/animated-checkbox";
 import { Home, Users, Phone, Mail, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
+import { useFormAnimation, formAnimationVariants, sectionAnimationVariants, fieldGroupVariants } from '@/hooks/use-form-animation';
+import { validators } from '@/lib/validation';
 
 export default function Refer() {
   const [formData, setFormData] = useState({
@@ -34,6 +37,20 @@ export default function Refer() {
     specialNeeds: '',
     hasConsent: false
   });
+
+  const {
+    formRef,
+    isSubmitting,
+    isSuccess,
+    errors,
+    setFieldError,
+    clearErrors,
+    setSubmitting,
+    setSuccess,
+    shakeForm,
+    scrollToFirstError,
+    getFieldProps,
+  } = useFormAnimation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

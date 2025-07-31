@@ -1,8 +1,7 @@
+@import './styles/animations.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import './styles/animations.css';
 
 :root {
   --background: hsl(0, 0%, 100%);
