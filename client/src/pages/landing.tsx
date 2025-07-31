@@ -12,6 +12,7 @@ import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, Dollar
 
 import _3 from "@assets/3.png";
 import lifeHouseLogo from "@assets/image_1753975873459.png";
+import lifeHouseText from "@assets/Untitled design (4)_1753976440819.png";
 
 import Untitled_design__4_ from "@assets/Untitled design (4).png";
 
@@ -476,6 +477,13 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
+              <div className="mb-4">
+                <img 
+                  src={lifeHouseText} 
+                  alt="Life House" 
+                  className="h-12 object-contain"
+                />
+              </div>
               <p className="text-green-100 text-sm">
                 Home for Good. Safe, structured housing and life-design support for people returning from incarceration.
               </p>
