@@ -13,6 +13,8 @@ import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, Dollar
 import _3 from "@assets/3.png";
 import lifeHouseLogo from "@assets/Life House large icon_1753856825753.png";
 
+import Untitled_design__4_ from "@assets/Untitled design (4).png";
+
 export default function Landing() {
   const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
@@ -476,9 +478,9 @@ export default function Landing() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <img 
-                  src={lifeHouseLogo} 
+                  src={Untitled_design__4_} 
                   alt="Life House Logo" 
-                  className="w-6 h-6 object-contain"
+                  className="w-6 h-6 object-contain mt-[0px] mb-[0px] pl-[0px] pr-[0px]"
                 />
               </div>
               <p className="text-green-100 text-sm">
