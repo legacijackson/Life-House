@@ -46,23 +46,21 @@ const rolePermissions: Record<UserRole, Permission[]> = {
   ]
 };
 
-// Mock current user - in production, this would come from authentication
-const mockCurrentUser = {
-  id: 'current-user',
-  name: 'Sarah Williams',
-  email: 'sarah.williams@lifehouse.org',
-  role: 'CaseManager' as UserRole
-};
-
-// Hook to get current user
+// Hook to get current user from authentication
 export function useCurrentUser() {
   return useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      // In production, this would fetch from API
-      return mockCurrentUser;
+      const response = await fetch('/api/auth/user', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Not authenticated');
+      }
+      return response.json();
     },
-    staleTime: Infinity // User data rarely changes
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false
   });
 }
 
