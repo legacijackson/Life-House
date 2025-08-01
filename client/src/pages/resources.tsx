@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from '@/lib/rbac';
-import { Search, Heart, TrendingUp } from 'lucide-react';
+import { Search, Heart, TrendingUp, Users, ChartBar, Settings, FileBox } from 'lucide-react';
 import HighlightCarousel from '@/components/highlight-carousel';
+import { Link, useLocation } from 'wouter';
+import { cn } from '@/lib/utils';
 
 interface Resource {
   id: string;
@@ -16,6 +18,81 @@ interface Resource {
   name: string;
   description: string;
   status: string;
+}
+
+// Simplified sidebar for resources page
+function SimplifiedSidebar() {
+  const [location] = useLocation();
+  
+  return (
+    <aside className="w-64 h-screen bg-white border-r border-gray-200">
+      {/* User Profile Section */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 font-medium">
+            T
+          </div>
+          <div>
+            <div className="font-medium text-gray-900">Test Admin</div>
+            <div className="text-sm text-gray-500">Guest</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="p-4">
+        {/* Resources - Current Page */}
+        <Link href="/resources">
+          <a className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+            "bg-gray-100 text-gray-900"
+          )}>
+            <FileBox className="h-5 w-5" />
+            <span className="font-medium">Resources</span>
+          </a>
+        </Link>
+
+        {/* Portal Features Section */}
+        <div className="mt-8">
+          <h3 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            Portal Features
+          </h3>
+          
+          <div className="space-y-1">
+            <Link href="/portal">
+              <a className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-gray-500" />
+                  <span className="text-gray-700">Resident Portal</span>
+                </div>
+                <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
+              </a>
+            </Link>
+
+            <Link href="/dashboard">
+              <a className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <ChartBar className="h-5 w-5 text-gray-500" />
+                  <span className="text-gray-700">Staff Dashboard</span>
+                </div>
+                <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
+              </a>
+            </Link>
+
+            <Link href="/admin">
+              <a className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Settings className="h-5 w-5 text-gray-500" />
+                  <span className="text-gray-700">Admin Panel</span>
+                </div>
+                <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
+              </a>
+            </Link>
+          </div>
+        </div>
+      </nav>
+    </aside>
+  );
 }
 
 // Mock data for now
@@ -124,7 +201,7 @@ function Resources() {
   return (
     <MobileSidebar>
       <div className="flex h-screen overflow-hidden">
-        <Sidebar />
+        <SimplifiedSidebar />
         <main className="flex-1 overflow-y-auto">
           <header className="bg-white shadow-sm border-b border-gray-200">
             <div className="px-6 py-4">
