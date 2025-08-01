@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { useLocation } from "wouter";
@@ -19,6 +20,9 @@ import { useLocation } from "wouter";
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+  userType: z.enum(["Resident", "CaseManager", "Admin"], {
+    required_error: "Please select your account type"
+  }),
 });
 
 // Signup schema
@@ -91,6 +95,7 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
     defaultValues: {
       email: "",
       password: "",
+      userType: "Resident",
     },
   });
 
@@ -112,11 +117,14 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
     mutationFn: async (data: LoginFormData) => {
       const response = await apiRequest("/api/login", {
         method: "POST",
-        body: data
+        body: {
+          email: data.email,
+          password: data.password
+        }
       });
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       if (data.token) {
         localStorage.setItem("token", data.token);
       }
@@ -125,6 +133,15 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
       }
       if (data.user) {
         localStorage.setItem("userData", JSON.stringify(data.user));
+      }
+      
+      // Validate that the user's actual role matches the selected login type
+      const selectedUserType = variables.userType;
+      const actualUserRole = data.user?.role;
+      
+      if (actualUserRole !== selectedUserType) {
+        toast.error(`Account mismatch: You selected "${selectedUserType}" but your account is registered as "${actualUserRole}". Please select the correct account type or contact support.`);
+        return;
       }
       
       // Validate role access for target portal
@@ -240,6 +257,43 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
             
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                <FormField
+                  control={loginForm.control}
+                  name="userType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>I am logging in as:</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Resident" id="resident" />
+                            <FormLabel htmlFor="resident" className="font-normal cursor-pointer">
+                              Resident - Access my personal dashboard and resources
+                            </FormLabel>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="CaseManager" id="casemanager" />
+                            <FormLabel htmlFor="casemanager" className="font-normal cursor-pointer">
+                              Case Manager - Manage residents and case notes
+                            </FormLabel>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Admin" id="admin" />
+                            <FormLabel htmlFor="admin" className="font-normal cursor-pointer">
+                              Administrator - Full system access
+                            </FormLabel>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={loginForm.control}
                   name="email"
