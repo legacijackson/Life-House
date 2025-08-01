@@ -55,10 +55,12 @@ export function Sidebar() {
   const { data: user, isLoading } = useCurrentUser();
   const [isUploading, setIsUploading] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [targetPortal, setTargetPortal] = useState<string | undefined>();
   
   // Helper function to check if user has required role for portal access
   const checkPortalAccess = (portalName: string, requiredRoles: string[]) => {
     if (!user) {
+      setTargetPortal(portalName);
       setIsLoginModalOpen(true);
       return false;
     }
@@ -457,7 +459,11 @@ export function Sidebar() {
       {/* Portal Login Modal */}
       <PortalLoginModal 
         isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
+        onClose={() => {
+          setIsLoginModalOpen(false);
+          setTargetPortal(undefined);
+        }}
+        targetPortal={targetPortal}
       />
     </aside>
   );

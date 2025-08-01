@@ -45,6 +45,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 interface PortalLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  targetPortal?: string; // Which portal the user is trying to access
 }
 
 // Portal routing based on user role
@@ -58,7 +59,27 @@ const getPortalRoute = (role: string) => {
   return routes[role] || "/app/resident-portal";
 };
 
-export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
+// Get portal route by portal name
+const getPortalRouteByName = (portalName: string) => {
+  const routes: Record<string, string> = {
+    "Resident Portal": "/app/resident-portal",
+    "Staff Dashboard": "/app/staff-dashboard", 
+    "Admin Panel": "/app/admin-panel",
+  };
+  return routes[portalName] || "/app/resident-portal";
+};
+
+// Validate if user role can access target portal
+const validatePortalAccess = (userRole: string, targetPortal: string) => {
+  const accessRules: Record<string, string[]> = {
+    "Resident Portal": ["Resident", "Admin"],
+    "Staff Dashboard": ["CaseManager", "Intake", "Admin"],
+    "Admin Panel": ["Admin"],
+  };
+  return accessRules[targetPortal]?.includes(userRole) || false;
+};
+
+export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
@@ -99,12 +120,22 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
       if (data.user?.role) {
         localStorage.setItem("userRole", data.user.role);
       }
-      toast.success("Welcome back to Life House!");
+      
+      // Validate role access for target portal
+      if (targetPortal && !validatePortalAccess(data.user?.role, targetPortal)) {
+        toast.error(`Your account role (${data.user?.role}) cannot access the ${targetPortal}. Please contact support if you believe this is an error.`);
+        return;
+      }
+      
+      toast.success(`Welcome back, ${data.user?.name || data.user?.email}!`);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       loginForm.reset();
       onClose();
-      // Navigate to appropriate portal based on role
-      const portalRoute = getPortalRoute(data.user?.role || "Resident");
+      
+      // Navigate to target portal or appropriate portal based on role
+      const portalRoute = targetPortal ? 
+        getPortalRouteByName(targetPortal) : 
+        getPortalRoute(data.user?.role || "Resident");
       setLocation(portalRoute);
     },
     onError: (error: any) => {
@@ -181,16 +212,31 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
           </TabsList>
           
           <TabsContent value="login" className="mt-4">
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Portal Access:</strong>
-              </p>
-              <ul className="text-xs text-blue-700 mt-1 space-y-1">
-                <li>• <strong>Residents:</strong> Use resident credentials to access Resident Portal</li>
-                <li>• <strong>Staff:</strong> Use staff credentials to access Staff Dashboard</li>
-                <li>• <strong>Admins:</strong> Can access all portals</li>
-              </ul>
-            </div>
+            {targetPortal && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Accessing {targetPortal}</strong>
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  {targetPortal === "Resident Portal" && "Please log in with your resident credentials to access your personal dashboard."}
+                  {targetPortal === "Staff Dashboard" && "Please log in with your staff credentials (Case Manager, Intake, or Admin)."}
+                  {targetPortal === "Admin Panel" && "Please log in with your administrator credentials."}
+                </p>
+              </div>
+            )}
+            
+            {!targetPortal && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Portal Access:</strong>
+                </p>
+                <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                  <li>• <strong>Residents:</strong> Use resident credentials to access Resident Portal</li>
+                  <li>• <strong>Staff:</strong> Use staff credentials to access Staff Dashboard</li>
+                  <li>• <strong>Admins:</strong> Can access all portals</li>
+                </ul>
+              </div>
+            )}
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                 <FormField

@@ -49,6 +49,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [targetPortal, setTargetPortal] = useState<string | undefined>();
   const { data: user, isLoading } = useCurrentUser();
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
   // Helper function to check if user has required role for portal access
   const checkPortalAccess = (portalName: string, requiredRoles: string[]) => {
     if (!user) {
+      setTargetPortal(portalName);
       setIsLoginModalOpen(true);
       return false;
     }
@@ -368,7 +370,11 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
       {/* Portal Login Modal */}
       <PortalLoginModal 
         isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
+        onClose={() => {
+          setIsLoginModalOpen(false);
+          setTargetPortal(undefined);
+        }}
+        targetPortal={targetPortal}
       />
     </div>
   );
