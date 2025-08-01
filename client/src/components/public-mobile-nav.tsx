@@ -203,7 +203,6 @@ export function PublicMobileNav({ children }: PublicMobileNavProps) {
             </Button>
             <div className="flex items-center space-x-2">
               <Logo className="h-6" />
-              <span className="text-lg font-semibold text-gray-900">Life House</span>
             </div>
             <div className="w-10" /> {/* Spacer for centering */}
           </div>
