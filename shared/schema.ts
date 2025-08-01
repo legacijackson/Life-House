@@ -72,6 +72,7 @@ export const users = pgTable("users", {
   totpSecret: varchar("totp_secret"), // encrypted
   twoFAEnabled: boolean("two_fa_enabled").default(false),
   ssoProviders: jsonb("sso_providers"), // array of {provider, subjectId}
+  profileImage: varchar("profile_image"), // Profile image URL
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

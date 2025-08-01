@@ -76,7 +76,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
         id: user.id,
         role: user.role,
         name: user.name || 'Unknown User',
-        email: user.email
+        email: user.email || ''
       };
       return next();
     } catch (error) {
@@ -103,7 +103,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
       id: user.id,
       role: user.role,
       name: user.name || 'Unknown User',
-      email: user.email
+      email: user.email || ''
     };
     return next();
   } catch (error) {
