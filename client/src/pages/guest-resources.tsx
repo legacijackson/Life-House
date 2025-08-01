@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Search, ExternalLink, Phone, Globe, MapPin } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { PublicMobileNav } from "@/components/public-mobile-nav";
+import HighlightCarousel from "@/components/highlight-carousel";
 
 interface Resource {
   id: string;
@@ -71,10 +72,18 @@ export default function GuestResourcesPage() {
         </div>
       </div>
 
-      {/* Search Section */}
+      {/* Life House Programs & Services Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Life House Programs & Services</h2>
+          <p className="text-gray-600 mb-8">Comprehensive wraparound services designed for successful reentry</p>
+          <HighlightCarousel />
+        </div>
+
+        {/* Search Section */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Search Resources</h2>
+          <h2 className="text-xl font-semibold mb-4">Community Resources</h2>
+          <p className="text-gray-600 mb-4">Additional resources and support services in our network</p>
           <div className="flex space-x-4">
             <div className="flex-1">
               <Input
