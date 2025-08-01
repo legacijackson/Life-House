@@ -32,15 +32,7 @@ import { toast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
 
 const navigation = [
-  { name: "Dashboard", href: "/app", icon: LayoutDashboard },
-  { name: "Intake & Referrals", href: "/app/intake", icon: UserPlus, badge: "5" },
-  { name: "My Residents", href: "/app/residents", icon: Users, badge: "12" },
-  { name: "Case Notes", href: "/app/case-notes", icon: FileText },
-  { name: "Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Resources", href: "/app/resources", icon: Archive },
-  { name: "Properties", href: "/app/properties", icon: Building },
-  { name: "Maintenance", href: "/app/maintenance", icon: Settings, badge: "3" },
-  { name: "Reports", href: "/app/reports", icon: BarChart3 },
 ];
 
 const newPortalNavigation = [
