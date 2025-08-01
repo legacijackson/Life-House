@@ -33,7 +33,7 @@ import { Logo } from "@/components/logo";
 import { PortalLoginModal } from "@/components/portal-login-modal";
 
 const navigation = [
-  { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Resources", href: "/resources", icon: Archive },
 ];
 
 const newPortalNavigation = [

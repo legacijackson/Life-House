@@ -28,7 +28,7 @@ const navigation = [
   { name: "My Residents", href: "/app/residents", icon: Users, badge: "12" },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Attendance", href: "/app/attendance", icon: Calendar },
-  { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Resources", href: "/resources", icon: Archive },
   { name: "Properties", href: "/app/properties", icon: Building },
   { name: "Maintenance", href: "/app/maintenance", icon: Settings, badge: "3" },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
