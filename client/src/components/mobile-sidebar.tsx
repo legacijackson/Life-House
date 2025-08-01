@@ -84,7 +84,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
       if (userRole !== "Resident" && userRole !== "Admin") {
         toast({
           title: "Access Denied",
-          description: "Only residents can access the Resident Portal. Staff must use the Staff Dashboard.",
+          description: "You need Resident access to view the Resident Portal.",
           variant: "destructive",
         });
         return false;
@@ -240,7 +240,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
               const getRequiredRoles = (itemName: string) => {
                 switch (itemName) {
                   case "Resident Portal":
-                    return ["Resident"];
+                    return ["Resident", "Admin"];
                   case "Staff Dashboard":
                     return ["CaseManager", "Intake", "Admin"];
                   case "Admin Panel":
