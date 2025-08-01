@@ -63,12 +63,7 @@ export default function GuestResourcesPage() {
               </div>
             </div>
             <div className="flex space-x-4">
-              <Button variant="outline" onClick={() => window.location.href = '/'}>
-                Home
-              </Button>
-              <Button onClick={() => window.location.href = '/apply'}>
-                Apply for Housing
-              </Button>
+              {/* Navigation simplified to focus only on resources */}
             </div>
           </div>
         </div>
