@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from '@/lib/rbac';
-import { Search, Heart, TrendingUp } from 'lucide-react';
+import { Search, Heart, TrendingUp, Home, DollarSign, GraduationCap, Users, PiggyBank, Handshake } from 'lucide-react';
 
 interface Resource {
   id: string;
@@ -16,6 +16,70 @@ interface Resource {
   description: string;
   status: string;
 }
+
+// Category cards data
+const categoryCards = [
+  {
+    id: 'housing',
+    title: '7-Stage Reentry Housing Program',
+    description: 'Our comprehensive structured pathway guides residents from intake through Legacy stages. Each stage includes specific milestones, sober housing, life-design coaching, job placement...',
+    icon: Home,
+    bgColor: 'bg-green-50',
+    iconColor: 'text-green-600',
+    tags: ['housing', 'reentry', 'support-services', '+1 more'],
+    provider: 'Life House, CA'
+  },
+  {
+    id: 'financial',
+    title: 'CureMyCrédit700 Partnership',
+    description: 'Professional credit repair services specializing in challenging inaccurate, outdated, and unverifiable information. 4.9/5 stars, 400+ reviews...',
+    icon: TrendingUp,
+    bgColor: 'bg-blue-50',
+    iconColor: 'text-blue-600',
+    tags: ['credit-repair', 'financial-health', 'housing-ready', '+2 more'],
+    provider: 'Partner Service'
+  },
+  {
+    id: 'education',
+    title: 'Financial Literacy Program',
+    description: 'Global Investment Company partnership offering comprehensive financial education. $179.99/month program covering budgeting, investing, credit, insurance...',
+    icon: GraduationCap,
+    bgColor: 'bg-purple-50',
+    iconColor: 'text-purple-600',
+    tags: ['financial-literacy', 'budgeting', 'investing', '+3 more'],
+    provider: 'Global Investment Co.'
+  },
+  {
+    id: 'coaching',
+    title: 'Business Coaching Program',
+    description: 'Building Your Dream Legacy by Kai Shariff - "Serve your gifts, talents and magic to people who get you and help build a legacy that serves our...',
+    icon: Users,
+    bgColor: 'bg-orange-50',
+    iconColor: 'text-orange-600',
+    tags: ['entrepreneurship', 'coaching', 'legacy-building', '+2 more'],
+    provider: 'Kai Shariff Method'
+  },
+  {
+    id: 'savings',
+    title: 'Brokerage & Savings Program',
+    description: 'Professional investment services with transparent trust account model. Clients retain beneficial ownership with structured access during program participation...',
+    icon: PiggyBank,
+    bgColor: 'bg-teal-50',
+    iconColor: 'text-teal-600',
+    tags: ['wealth-building', 'client-ownership', 'trust-model', '+2 more'],
+    provider: 'Global Investment Co.'
+  },
+  {
+    id: 'partnerships',
+    title: 'Community Partnerships',
+    description: 'Strategic healing-centered engagement network for comprehensive wraparound services including parole, STOP contracts, CalAIM ECM providers...',
+    icon: Handshake,
+    bgColor: 'bg-pink-50',
+    iconColor: 'text-pink-600',
+    tags: ['wraparound-services', 'healing-centered', 'community', '+3 more'],
+    provider: 'California Network'
+  }
+];
 
 // Mock data for now
 const mockResources: Resource[] = [
@@ -67,6 +131,50 @@ function Resources() {
           </header>
 
           <div className="p-6">
+            {/* Category Cards */}
+            <div className="mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categoryCards.map((category) => {
+                  const IconComponent = category.icon;
+                  return (
+                    <Card key={category.id} className="cursor-pointer transition-all hover:shadow-lg">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className={`p-2 rounded-lg ${category.bgColor}`}>
+                            <IconComponent className={`w-5 h-5 ${category.iconColor}`} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {category.id}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <h3 className="font-semibold text-gray-900 mb-2">{category.title}</h3>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-3">
+                          {category.description}
+                        </p>
+                        
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {category.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                        
+                        <div className="flex items-center text-xs text-gray-500">
+                          <span>📍 {category.provider}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Search */}
             <div className="mb-6">
               <div className="relative">
@@ -137,6 +245,50 @@ function Resources() {
           </header>
 
           <div className="p-6">
+            {/* Category Cards */}
+            <div className="mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categoryCards.map((category) => {
+                  const IconComponent = category.icon;
+                  return (
+                    <Card key={category.id} className="cursor-pointer transition-all hover:shadow-lg">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className={`p-2 rounded-lg ${category.bgColor}`}>
+                            <IconComponent className={`w-5 h-5 ${category.iconColor}`} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {category.id}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <h3 className="font-semibold text-gray-900 mb-2">{category.title}</h3>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-3">
+                          {category.description}
+                        </p>
+                        
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {category.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                        
+                        <div className="flex items-center text-xs text-gray-500">
+                          <span>📍 {category.provider}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Search */}
             <div className="mb-6">
               <div className="relative">
