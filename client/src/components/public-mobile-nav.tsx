@@ -112,7 +112,6 @@ export function PublicMobileNav({ children }: PublicMobileNavProps) {
             <Logo className="h-8" />
             <div>
               <h1 className="text-lg font-semibold text-gray-900">Life House</h1>
-              <p className="text-sm text-gray-500">Community Resources</p>
             </div>
           </div>
           {isMobile && (
