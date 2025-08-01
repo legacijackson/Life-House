@@ -110,7 +110,10 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormData) => {
-      const response = await apiRequest("POST", "/api/login", data);
+      const response = await apiRequest("/api/login", {
+        method: "POST",
+        body: data
+      });
       return response.json();
     },
     onSuccess: (data) => {
@@ -149,12 +152,15 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
   // Signup mutation
   const signupMutation = useMutation({
     mutationFn: async (data: SignupFormData) => {
-      const response = await apiRequest("POST", "/api/signup", {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        role: data.role,
-        password: data.password,
+      const response = await apiRequest("/api/signup", {
+        method: "POST",
+        body: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          role: data.role,
+          password: data.password,
+        }
       });
       return response.json();
     },

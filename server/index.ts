@@ -74,7 +74,7 @@ async function processUploadedCSVFiles() {
     
     // Check if we already have external resources in the database
     const { storage } = await import('./storage');
-    const existingResources = await storage.getResources({ isLifehouse: false });
+    const existingResources = await storage.getResources();
     
     if (existingResources.length > 10) {
       console.log(`[Startup] Database already contains ${existingResources.length} external resources, skipping CSV processing`);

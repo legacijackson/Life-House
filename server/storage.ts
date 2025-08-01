@@ -81,8 +81,8 @@ export interface IStorage {
   getCaseNotes(residentId: string): Promise<CaseNote[]>;
   createCaseNote(note: InsertCaseNote): Promise<CaseNote>;
 
-  // Resources
-  getResources(filters?: { category?: string; status?: string; isLifehouse?: boolean }): Promise<Resource[]>;
+  // Resources  
+  getResources(filters?: { category?: string; status?: string }): Promise<Resource[]>;
   createResource(resource: InsertResource): Promise<Resource>;
   createOrUpdateResource(resource: InsertResource): Promise<Resource>;
   findResourceByName(name: string): Promise<Resource | undefined>;
