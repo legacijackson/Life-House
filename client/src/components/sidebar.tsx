@@ -59,17 +59,21 @@ export function Sidebar() {
   
   // Helper function to check if user has required role for portal access
   const checkPortalAccess = (portalName: string, requiredRoles: string[]) => {
-    if (!user) {
+    // Always check for proper authentication tokens
+    const token = localStorage.getItem('token');
+    const userRole = localStorage.getItem('userRole');
+    
+    if (!user || !token || !userRole) {
       setTargetPortal(portalName);
       setIsLoginModalOpen(true);
       return false;
     }
     
-    const userRole = (user as any)?.role;
+    const currentUserRole = (user as any)?.role || userRole;
     
     // Special case for Resident Portal - only residents and admins can access
     if (portalName === "Resident Portal") {
-      if (userRole !== "Resident" && userRole !== "Admin") {
+      if (currentUserRole !== "Resident" && currentUserRole !== "Admin") {
         toast({
           title: "Access Denied",
           description: "You need Resident access to view the Resident Portal.",
@@ -81,7 +85,7 @@ export function Sidebar() {
     
     // Special case for Staff Dashboard - case managers, intake, and admins only
     if (portalName === "Staff Dashboard") {
-      if (!["CaseManager", "Intake", "Admin"].includes(userRole)) {
+      if (!["CaseManager", "Intake", "Admin"].includes(currentUserRole)) {
         toast({
           title: "Access Denied", 
           description: "Only staff members can access the Staff Dashboard. Residents should use the Resident Portal.",
@@ -92,7 +96,7 @@ export function Sidebar() {
     }
     
     // General role check for other portals
-    if (!requiredRoles.includes(userRole)) {
+    if (!requiredRoles.includes(currentUserRole)) {
       toast({
         title: "Access Denied",
         description: `You need ${requiredRoles.join(' or ')} access to view the ${portalName}.`,
@@ -445,6 +449,7 @@ export function Sidebar() {
             onClick={() => {
               localStorage.removeItem("token");
               localStorage.removeItem("userRole");
+              localStorage.removeItem("userData");
               queryClient.clear();
               window.location.href = "/";
             }}

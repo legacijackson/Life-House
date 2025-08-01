@@ -120,6 +120,9 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
       if (data.user?.role) {
         localStorage.setItem("userRole", data.user.role);
       }
+      if (data.user) {
+        localStorage.setItem("userData", JSON.stringify(data.user));
+      }
       
       // Validate role access for target portal
       if (targetPortal && !validatePortalAccess(data.user?.role, targetPortal)) {
@@ -161,6 +164,9 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
       }
       if (data.user?.role) {
         localStorage.setItem("userRole", data.user.role);
+      }
+      if (data.user) {
+        localStorage.setItem("userData", JSON.stringify(data.user));
       }
       toast.success("Welcome to Life House! Your account has been created.");
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

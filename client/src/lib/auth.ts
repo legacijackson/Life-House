@@ -6,14 +6,21 @@ export interface User {
 }
 
 export const getCurrentUser = (): User | null => {
-  // In a real implementation, this would validate JWT tokens
-  // For now, return a mock user for development
-  return {
-    id: "cm-user-1",
-    role: "CaseManager",
-    name: "Sarah Martinez",
-    email: "sarah.martinez@example.com"
-  };
+  // Check if user has a valid token and is actually logged in
+  const token = localStorage.getItem('token');
+  const userRole = localStorage.getItem('userRole');
+  const userData = localStorage.getItem('userData');
+  
+  // Only return user if they have proper authentication tokens
+  if (token && userRole && userData) {
+    try {
+      return JSON.parse(userData);
+    } catch {
+      return null;
+    }
+  }
+  
+  return null;
 };
 
 export const hasRole = (user: User | null, roles: string[]): boolean => {
