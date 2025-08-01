@@ -181,6 +181,16 @@ export function PortalLoginModal({ isOpen, onClose }: PortalLoginModalProps) {
           </TabsList>
           
           <TabsContent value="login" className="mt-4">
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Portal Access:</strong>
+              </p>
+              <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                <li>• <strong>Residents:</strong> Use resident credentials to access Resident Portal</li>
+                <li>• <strong>Staff:</strong> Use staff credentials to access Staff Dashboard</li>
+                <li>• <strong>Admins:</strong> Can access all portals</li>
+              </ul>
+            </div>
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                 <FormField

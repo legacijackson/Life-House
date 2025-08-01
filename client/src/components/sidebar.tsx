@@ -64,6 +64,32 @@ export function Sidebar() {
     }
     
     const userRole = (user as any)?.role;
+    
+    // Special case for Resident Portal - only residents and admins can access
+    if (portalName === "Resident Portal") {
+      if (userRole !== "Resident" && userRole !== "Admin") {
+        toast({
+          title: "Access Denied",
+          description: "Only residents can access the Resident Portal. Staff must use the Staff Dashboard.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    
+    // Special case for Staff Dashboard - case managers, intake, and admins only
+    if (portalName === "Staff Dashboard") {
+      if (!["CaseManager", "Intake", "Admin"].includes(userRole)) {
+        toast({
+          title: "Access Denied", 
+          description: "Only staff members can access the Staff Dashboard. Residents should use the Resident Portal.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    
+    // General role check for other portals
     if (!requiredRoles.includes(userRole)) {
       toast({
         title: "Access Denied",
