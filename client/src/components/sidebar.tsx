@@ -363,7 +363,7 @@ export function Sidebar() {
           </div>
           
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{(user as any)?.name || (user as any)?.email}</p>
+            <p className="text-sm font-medium text-gray-900 truncate">Guest User</p>
             <p className="text-xs text-gray-500 truncate">{(user as any)?.role}</p>
           </div>
           <button className="text-gray-400 hover:text-gray-600">
