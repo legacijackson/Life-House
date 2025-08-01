@@ -147,7 +147,7 @@ export function PublicMobileNav({ children }: PublicMobileNavProps) {
           <div className="space-y-3">
             <Button 
               onClick={() => {
-                window.location.href = '/#apply';
+                window.location.href = '/apply';
                 closeSidebar();
               }}
               className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
