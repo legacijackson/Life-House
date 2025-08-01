@@ -413,21 +413,40 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
                   control={signupForm.control}
                   name="role"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Account Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select account type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Resident">Resident</SelectItem>
-                          <SelectItem value="CaseManager">Case Manager</SelectItem>
-                          <SelectItem value="Admin">Administrator</SelectItem>
-                          <SelectItem value="Partner">Partner Organization</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <FormItem className="space-y-3">
+                      <FormLabel>I am creating an account as:</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Resident" id="signup-resident" />
+                            <FormLabel htmlFor="signup-resident" className="font-normal cursor-pointer">
+                              Resident - Access my personal dashboard and resources
+                            </FormLabel>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="CaseManager" id="signup-casemanager" />
+                            <FormLabel htmlFor="signup-casemanager" className="font-normal cursor-pointer">
+                              Case Manager - Manage residents and case notes
+                            </FormLabel>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Admin" id="signup-admin" />
+                            <FormLabel htmlFor="signup-admin" className="font-normal cursor-pointer">
+                              Administrator - Full system access
+                            </FormLabel>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Partner" id="signup-partner" />
+                            <FormLabel htmlFor="signup-partner" className="font-normal cursor-pointer">
+                              Partner Organization - Community resource provider
+                            </FormLabel>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
