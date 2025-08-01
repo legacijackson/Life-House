@@ -65,6 +65,54 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
+  // Add swipe gesture support
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    let isSwipeGesture = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (!isMobile) return;
+      
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      
+      // Only trigger swipe if starting from left edge (within 30px)
+      if (startX <= 30) {
+        isSwipeGesture = true;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isMobile || !isSwipeGesture) return;
+      
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = Math.abs(touch.clientY - startY);
+      
+      // Check if swipe is horizontal and from left edge
+      if (deltaX > 50 && deltaY < 100) {
+        setIsSidebarOpen(true);
+        isSwipeGesture = false;
+      }
+    };
+
+    const handleTouchEnd = () => {
+      isSwipeGesture = false;
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile]);
+
   const closeSidebar = () => {
     setIsSidebarOpen(false);
   };

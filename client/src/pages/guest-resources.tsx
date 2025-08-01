@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, ExternalLink, Phone, Globe, MapPin } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { PublicMobileNav } from "@/components/public-mobile-nav";
 
 interface Resource {
   id: string;
@@ -50,7 +51,8 @@ export default function GuestResourcesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <PublicMobileNav>
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -166,6 +168,7 @@ export default function GuestResourcesPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </PublicMobileNav>
   );
 }

@@ -38,6 +38,7 @@ The application uses a monorepo structure separating client, server, shared, and
 - **Geofence Validation**: Implemented for check-in functionality.
 - **Reporting System**: Comprehensive reports page with various report types and download functionality.
 - **AI Chatbot Widget**: Floating AI assistant with Life House-specific knowledge base.
+- **Mobile Navigation**: Swipe gesture support and hamburger menu for mobile devices on both public and authenticated pages.
 
 ## External Dependencies
 
