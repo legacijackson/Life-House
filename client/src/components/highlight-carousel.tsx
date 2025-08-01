@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, ChevronRight } from "lucide-react";
 import { Resource } from "@shared/schema";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface HighlightCarouselProps {
@@ -134,59 +134,128 @@ export default function HighlightCarousel({ onResourceClick }: HighlightCarousel
       </div>
 
       <Dialog open={!!selectedResource} onOpenChange={() => setSelectedResource(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <DialogTitle className="text-2xl">{selectedResource?.name}</DialogTitle>
-                {selectedResource?.categories && Array.isArray(selectedResource.categories) && (
-                  <div className="flex gap-2 mt-2 flex-wrap">
-                    {(selectedResource.categories as string[]).map((cat, idx) => (
-                      <Badge 
-                        key={idx} 
-                        variant="outline" 
-                        className={`text-xs ${getCategoryColor(cat)}`}
-                      >
-                        {cat}
-                      </Badge>
-                    ))}
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <div className="relative">
+            {/* Header with gradient background */}
+            <div className={`p-8 pb-6 ${
+              Array.isArray(selectedResource?.categories) && selectedResource.categories[0] === 'financial' ? 'bg-gradient-to-br from-blue-50 to-blue-100' :
+              Array.isArray(selectedResource?.categories) && selectedResource.categories[0] === 'healing' ? 'bg-gradient-to-br from-purple-50 to-purple-100' :
+              Array.isArray(selectedResource?.categories) && selectedResource.categories[0] === 'housing' ? 'bg-gradient-to-br from-green-50 to-green-100' :
+              Array.isArray(selectedResource?.categories) && selectedResource.categories[0] === 'jobreadiness' ? 'bg-gradient-to-br from-orange-50 to-orange-100' :
+              Array.isArray(selectedResource?.categories) && selectedResource.categories[0] === 'community' ? 'bg-gradient-to-br from-pink-50 to-pink-100' :
+              'bg-gradient-to-br from-gray-50 to-gray-100'
+            }`}>
+              <DialogHeader>
+                <div className="flex items-start gap-4">
+                  {selectedResource?.image && (
+                    <div className="w-16 h-16 rounded-full bg-white shadow-md flex items-center justify-center flex-shrink-0">
+                      <img src={selectedResource.image} alt={selectedResource.name} className="w-12 h-12" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
+                      {selectedResource?.name}
+                    </DialogTitle>
+                    {selectedResource?.summary && (
+                      <p className="text-gray-700 font-medium">
+                        {selectedResource.summary}
+                      </p>
+                    )}
                   </div>
+                </div>
+              </DialogHeader>
+            </div>
+            
+            <ScrollArea className="max-h-[calc(90vh-200px)]">
+              <div className="p-8 pt-6 space-y-8">
+                {/* Main Description */}
+                {selectedResource?.description && (
+                  <section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-1 h-6 bg-green-600 mr-3 rounded-full"></span>
+                      Program Overview
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed">
+                      {String(selectedResource.description)}
+                    </p>
+                  </section>
                 )}
+
+                {/* Key Features */}
+                {selectedResource?.tags && Array.isArray(selectedResource.tags) && selectedResource.tags.length > 0 && (
+                  <section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-1 h-6 bg-blue-600 mr-3 rounded-full"></span>
+                      Key Features
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {(selectedResource.tags as string[]).map((tag, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          <span className="text-gray-700 text-sm capitalize">
+                            {tag.replace(/-/g, ' ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                
+                {/* Eligibility */}
+                {selectedResource?.eligibility && (
+                  <section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-1 h-6 bg-purple-600 mr-3 rounded-full"></span>
+                      Who Can Apply
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700">{String(selectedResource.eligibility || '')}</p>
+                    </div>
+                  </section>
+                )}
+
+                {/* Categories */}
+                {selectedResource?.categories && Array.isArray(selectedResource.categories) && (
+                  <section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                      <span className="w-1 h-6 bg-orange-600 mr-3 rounded-full"></span>
+                      Program Categories
+                    </h3>
+                    <div className="flex gap-2 flex-wrap">
+                      {(selectedResource.categories as string[]).map((cat, idx) => (
+                        <Badge 
+                          key={idx} 
+                          className={`${getCategoryColor(cat)} text-sm px-4 py-1.5`}
+                        >
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Provider Info */}
+                <section className="border-t pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>{selectedResource?.isLifehouse ? 'Life House Program' : 'Partner Service'}</span>
+                    </div>
+                    
+                    {selectedResource?.url && (
+                      <Button 
+                        className="bg-green-600 hover:bg-green-700 text-white shadow-md"
+                        onClick={() => window.open(selectedResource.url!, '_blank')}
+                      >
+                        Learn More
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </section>
               </div>
-              {selectedResource?.image && (
-                <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center ml-4">
-                  <img src={selectedResource.image} alt={selectedResource.name} className="w-16 h-16" />
-                </div>
-              )}
-            </div>
-          </DialogHeader>
-          
-          <ScrollArea className="mt-4 max-h-[60vh]">
-            <div className="space-y-4">
-              <DialogDescription className="text-base text-gray-700">
-                {selectedResource?.description}
-              </DialogDescription>
-              
-              {selectedResource?.eligibility && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Eligibility</h3>
-                  <p className="text-gray-600">{selectedResource.eligibility}</p>
-                </div>
-              )}
-              
-              {selectedResource?.url && (
-                <div className="pt-4">
-                  <Button 
-                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-                    onClick={() => window.open(selectedResource.url!, '_blank')}
-                  >
-                    Visit Program Website
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+            </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </>
