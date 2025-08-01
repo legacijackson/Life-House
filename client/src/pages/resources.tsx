@@ -42,14 +42,12 @@ function SimplifiedSidebar() {
       {/* Navigation */}
       <nav className="p-4">
         {/* Resources - Current Page */}
-        <Link href="/resources">
-          <a className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-            "bg-gray-100 text-gray-900"
-          )}>
-            <FileBox className="h-5 w-5" />
-            <span className="font-medium">Resources</span>
-          </a>
+        <Link href="/resources" className={cn(
+          "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
+          "bg-gray-100 text-gray-900"
+        )}>
+          <FileBox className="h-5 w-5" />
+          <span className="font-medium">Resources</span>
         </Link>
 
         {/* Portal Features Section */}
@@ -59,34 +57,28 @@ function SimplifiedSidebar() {
           </h3>
           
           <div className="space-y-1">
-            <Link href="/portal">
-              <a className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <Users className="h-5 w-5 text-gray-500" />
-                  <span className="text-gray-700">Resident Portal</span>
-                </div>
-                <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
-              </a>
+            <Link href="/portal" className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-gray-500" />
+                <span className="text-gray-700">Resident Portal</span>
+              </div>
+              <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
             </Link>
 
-            <Link href="/dashboard">
-              <a className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <ChartBar className="h-5 w-5 text-gray-500" />
-                  <span className="text-gray-700">Staff Dashboard</span>
-                </div>
-                <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
-              </a>
+            <Link href="/dashboard" className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <ChartBar className="h-5 w-5 text-gray-500" />
+                <span className="text-gray-700">Staff Dashboard</span>
+              </div>
+              <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
             </Link>
 
-            <Link href="/admin">
-              <a className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <Settings className="h-5 w-5 text-gray-500" />
-                  <span className="text-gray-700">Admin Panel</span>
-                </div>
-                <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
-              </a>
+            <Link href="/admin" className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-3">
+                <Settings className="h-5 w-5 text-gray-500" />
+                <span className="text-gray-700">Admin Panel</span>
+              </div>
+              <Badge className="bg-green-50 text-green-700 text-xs">New</Badge>
             </Link>
           </div>
         </div>
