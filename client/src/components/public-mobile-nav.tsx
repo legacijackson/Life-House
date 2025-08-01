@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, Home, FileText, Phone, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
+import { PortalLoginModal } from "@/components/portal-login-modal";
 
 interface PublicMobileNavProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface PublicMobileNavProps {
 export function PublicMobileNav({ children }: PublicMobileNavProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -157,7 +159,7 @@ export function PublicMobileNav({ children }: PublicMobileNavProps) {
             <Button 
               variant="outline"
               onClick={() => {
-                window.location.href = '/app';
+                setIsLoginModalOpen(true);
                 closeSidebar();
               }}
               className="w-full border-green-600 text-green-600 hover:bg-green-50"
@@ -213,6 +215,12 @@ export function PublicMobileNav({ children }: PublicMobileNavProps) {
           {children}
         </main>
       </div>
+
+      {/* Portal Login Modal */}
+      <PortalLoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+      />
     </div>
   );
 }
