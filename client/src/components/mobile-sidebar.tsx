@@ -3,6 +3,9 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, filterSidebarItems } from "@/lib/rbac";
+import { toast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
+import { PortalLoginModal } from "@/components/portal-login-modal";
 import { 
   LayoutDashboard,
   Users,
@@ -45,6 +48,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
   const [location] = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const { data: user, isLoading } = useCurrentUser();
 
   useEffect(() => {
@@ -62,6 +66,35 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
 
   const closeSidebar = () => {
     setIsSidebarOpen(false);
+  };
+
+  // Helper function to check if user has required role for portal access
+  const checkPortalAccess = (portalName: string, requiredRoles: string[]) => {
+    if (!user) {
+      setIsLoginModalOpen(true);
+      return false;
+    }
+    
+    const userRole = (user as any)?.role;
+    if (!requiredRoles.includes(userRole)) {
+      toast({
+        title: "Access Denied",
+        description: `You need ${requiredRoles.join(' or ')} access to view the ${portalName}.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Portal access handler
+  const handlePortalClick = (href: string, portalName: string, requiredRoles: string[]) => {
+    const hasAccess = checkPortalAccess(portalName, requiredRoles);
+    if (hasAccess) {
+      window.location.href = href;
+      closeSidebar();
+    }
   };
 
   // Don't render if user is not authenticated
@@ -82,7 +115,6 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
 
   // Filter navigation items based on user role
   const filteredNavigation = filterSidebarItems(navigation, (user as any)?.role);
-  const filteredPortalNavigation = filterSidebarItems(newPortalNavigation, (user as any)?.role);
 
   const SidebarContent = () => (
     <aside className={cn(
@@ -175,27 +207,42 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
           <ul className="mt-2 space-y-2">
             {newPortalNavigation.map((item) => {
               const isActive = location === item.href;
+              
+              // Define required roles for each portal
+              const getRequiredRoles = (itemName: string) => {
+                switch (itemName) {
+                  case "Resident Portal":
+                    return ["Resident"];
+                  case "Staff Dashboard":
+                    return ["CaseManager", "Intake", "Admin"];
+                  case "Admin Panel":
+                    return ["Admin"];
+                  default:
+                    return [];
+                }
+              };
+              
+              const requiredRoles = getRequiredRoles(item.name);
+              
               return (
                 <li key={item.name}>
-                  <Link href={item.href}>
-                    <span 
-                      className={cn(
-                        "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer",
-                        isActive 
-                          ? "text-primary bg-primary/10" 
-                          : "text-gray-700 hover:text-primary hover:bg-primary/5"
-                      )}
-                      onClick={isMobile ? closeSidebar : undefined}
-                    >
-                      <item.icon className="w-5 h-5 mr-3" />
-                      {item.name}
-                      {item.badge && (
-                        <span className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
-                    </span>
-                  </Link>
+                  <button
+                    onClick={() => handlePortalClick(item.href, item.name, requiredRoles)}
+                    className={cn(
+                      "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer text-left",
+                      isActive 
+                        ? "text-primary bg-primary/10" 
+                        : "text-gray-700 hover:text-primary hover:bg-primary/5"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5 mr-3" />
+                    {item.name}
+                    {item.badge && (
+                      <span className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
                 </li>
               );
             })}
@@ -233,7 +280,16 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
             <p className="text-sm font-medium text-gray-900 truncate">Sarah Martinez</p>
             <p className="text-xs text-gray-500 truncate">Case Manager</p>
           </div>
-          <button className="text-gray-400 hover:text-gray-600">
+          <button 
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("userRole");
+              queryClient.clear();
+              window.location.href = "/";
+            }}
+            className="text-gray-400 hover:text-gray-600"
+            title="Logout"
+          >
             <LogOut className="w-5 h-5" />
           </button>
         </div>
@@ -282,6 +338,12 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
           {children}
         </main>
       </div>
+      
+      {/* Portal Login Modal */}
+      <PortalLoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+      />
     </div>
   );
 }

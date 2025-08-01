@@ -30,6 +30,7 @@ import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
+import { PortalLoginModal } from "@/components/portal-login-modal";
 
 const navigation = [
   { name: "Resources", href: "/app/resources", icon: Archive },
@@ -53,6 +54,35 @@ export function Sidebar() {
   const [location] = useLocation();
   const { data: user, isLoading } = useCurrentUser();
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  
+  // Helper function to check if user has required role for portal access
+  const checkPortalAccess = (portalName: string, requiredRoles: string[]) => {
+    if (!user) {
+      setIsLoginModalOpen(true);
+      return false;
+    }
+    
+    const userRole = (user as any)?.role;
+    if (!requiredRoles.includes(userRole)) {
+      toast({
+        title: "Access Denied",
+        description: `You need ${requiredRoles.join(' or ')} access to view the ${portalName}.`,
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Portal access handler
+  const handlePortalClick = (href: string, portalName: string, requiredRoles: string[]) => {
+    const hasAccess = checkPortalAccess(portalName, requiredRoles);
+    if (hasAccess) {
+      window.location.href = href;
+    }
+  };
   
   // Don't render sidebar if user is not authenticated
   if (isLoading) {
@@ -75,7 +105,7 @@ export function Sidebar() {
       const formData = new FormData();
       formData.append('avatar', file);
       
-      const response = await fetch(`/api/users/${user?.id}/avatar`, {
+      const response = await fetch(`/api/users/${(user as any)?.id}/avatar`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken') || 'mock-token-1'}`,
@@ -104,7 +134,7 @@ export function Sidebar() {
 
   const selectAvatarMutation = useMutation({
     mutationFn: async (avatarUrl: string) => {
-      const response = await fetch(`/api/users/${user?.id}/avatar-preset`, {
+      const response = await fetch(`/api/users/${(user as any)?.id}/avatar-preset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +175,6 @@ export function Sidebar() {
 
   // Filter navigation items based on user role
   const filteredNavigation = filterSidebarItems(navigation, (user as any)?.role);
-  const filteredPortalNavigation = filterSidebarItems(newPortalNavigation, (user as any)?.role);
 
   return (
     <aside className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
@@ -259,32 +288,50 @@ export function Sidebar() {
         </ul>
 
         {/* New Portal Features */}
-        {filteredPortalNavigation.length > 0 && (
+        {newPortalNavigation.length > 0 && (
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="px-3 py-2">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Portal Features</p>
             </div>
             <ul className="mt-2 space-y-2">
-            {filteredPortalNavigation.map((item) => {
+            {newPortalNavigation.map((item) => {
               const isActive = location === item.href;
+              
+              // Define required roles for each portal
+              const getRequiredRoles = (itemName: string) => {
+                switch (itemName) {
+                  case "Resident Portal":
+                    return ["Resident"];
+                  case "Staff Dashboard":
+                    return ["CaseManager", "Intake", "Admin"];
+                  case "Admin Panel":
+                    return ["Admin"];
+                  default:
+                    return [];
+                }
+              };
+              
+              const requiredRoles = getRequiredRoles(item.name);
+              
               return (
                 <li key={item.name}>
-                  <Link href={item.href}>
-                    <span className={cn(
-                      "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer",
+                  <button
+                    onClick={() => handlePortalClick(item.href, item.name, requiredRoles)}
+                    className={cn(
+                      "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer text-left",
                       isActive 
                         ? "text-primary bg-primary/10" 
                         : "text-gray-700 hover:text-primary hover:bg-primary/5"
-                    )}>
-                      <item.icon className="w-5 h-5 mr-3" />
-                      {item.name}
-                      {item.badge && (
-                        <span className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
-                    </span>
-                  </Link>
+                    )}
+                  >
+                    <item.icon className="w-5 h-5 mr-3" />
+                    {item.name}
+                    {item.badge && (
+                      <span className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
                 </li>
               );
             })}
@@ -366,11 +413,26 @@ export function Sidebar() {
             <p className="text-sm font-medium text-gray-900 truncate">Guest User</p>
             <p className="text-xs text-gray-500 truncate">{(user as any)?.role}</p>
           </div>
-          <button className="text-gray-400 hover:text-gray-600">
+          <button 
+            onClick={() => {
+              localStorage.removeItem("token");
+              localStorage.removeItem("userRole");
+              queryClient.clear();
+              window.location.href = "/";
+            }}
+            className="text-gray-400 hover:text-gray-600"
+            title="Logout"
+          >
             <LogOut className="w-5 h-5" />
           </button>
         </div>
       </div>
+      
+      {/* Portal Login Modal */}
+      <PortalLoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+      />
     </aside>
   );
 }

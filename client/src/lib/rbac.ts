@@ -82,9 +82,9 @@ export function hasPermission(
 export function usePermission(resource: string, action: string): boolean {
   const { data: user } = useCurrentUser();
   
-  if (!user) return false;
+  if (!user || !(user as any)?.role) return false;
   
-  return hasPermission(user.role, resource, action);
+  return hasPermission((user as any).role, resource, action);
 }
 
 // Component wrapper to conditionally render based on permissions
