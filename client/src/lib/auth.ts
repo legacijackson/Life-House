@@ -8,12 +8,23 @@ export interface User {
 export const getCurrentUser = (): User | null => {
   // Check if user has a valid token and is actually logged in
   const token = localStorage.getItem('token');
-  const userRole = localStorage.getItem('userRole');
   const userData = localStorage.getItem('userData');
   
   // Only return user if they have proper authentication tokens
-  if (token && userRole && userData) {
+  if (token && userData && token.startsWith('mock-token-')) {
+    // For development only - in production, validate JWT properly
     try {
+      return JSON.parse(userData);
+    } catch {
+      return null;
+    }
+  }
+  
+  // For production - user must have a real JWT token
+  if (token && userData && !token.startsWith('mock-token-')) {
+    try {
+      // In production, you'd validate the JWT token here
+      // For now, trust the stored user data if token exists
       return JSON.parse(userData);
     } catch {
       return null;

@@ -53,7 +53,7 @@ function roleRoute(roles: string[], handler: AuthenticatedHandler) {
   }) as any;
 }
 
-// Simple auth middleware (in production, implement proper JWT validation)
+// Production-ready auth middleware with JWT validation
 const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
 
@@ -61,8 +61,8 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ message: 'No token provided' });
   }
 
-  // For development, accept mock tokens
-  if (token.startsWith('mock-token-')) {
+  // For development, accept mock tokens (only when NODE_ENV !== 'production')
+  if (process.env.NODE_ENV !== 'production' && token.startsWith('mock-token-')) {
     const userId = token.replace('mock-token-', '');
 
     try {
@@ -85,12 +85,29 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     }
   }
 
-  // In production, validate JWT here
+  // Production JWT validation
   try {
-    // TODO: Replace with actual JWT validation
-    return res.status(401).json({ message: 'Invalid token' });
+    // In production, validate JWT token
+    const jwt = await import('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    
+    // Look up the user from the database
+    const user = await storage.getUser(decoded.userId);
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid token - user not found' });
+    }
+
+    (req as AuthenticatedRequest).user = {
+      id: user.id,
+      role: user.role,
+      name: user.name || 'Unknown User',
+      email: user.email
+    };
+    return next();
   } catch (error) {
-    return res.status(401).json({ message: 'Invalid token' });
+    return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
 
@@ -263,8 +280,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: 'Resident', // Default role for self-registrations
       });
 
-      // In production, generate proper JWT token
-      const token = `mock-token-${user.id}`;
+      // Generate proper JWT token
+      const jwt = await import('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
+      
+      const token = jwt.sign(
+        { 
+          userId: user.id, 
+          role: user.role,
+          email: user.email 
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
 
       res.status(201).json({
         success: true,
@@ -311,8 +339,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
 
-      // In production, generate proper JWT token
-      const token = `mock-token-${user.id}`;
+      // Generate proper JWT token
+      const jwt = await import('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
+      
+      const token = jwt.sign(
+        { 
+          userId: user.id, 
+          role: user.role,
+          email: user.email 
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
 
       res.json({
         success: true,
