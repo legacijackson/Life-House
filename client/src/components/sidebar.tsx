@@ -225,7 +225,7 @@ export function Sidebar() {
           
           <div>
             <p className="text-sm font-medium text-gray-900">{(user as any)?.name || (user as any)?.email}</p>
-            <p className="text-xs text-gray-500">{(user as any)?.role}</p>
+            <p className="text-xs text-gray-500">Guest</p>
           </div>
         </div>
       </div>
