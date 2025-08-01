@@ -38,8 +38,8 @@ export function PublicMobileNav({ children }: PublicMobileNavProps) {
       startX = touch.clientX;
       startY = touch.clientY;
       
-      // Only trigger swipe if starting from left edge (within 30px)
-      if (startX <= 30) {
+      // Trigger swipe if starting from left edge (within 30px) OR if sidebar is open
+      if (startX <= 30 || isSidebarOpen) {
         isSwipeGesture = true;
       }
     };
@@ -51,10 +51,17 @@ export function PublicMobileNav({ children }: PublicMobileNavProps) {
       const deltaX = touch.clientX - startX;
       const deltaY = Math.abs(touch.clientY - startY);
       
-      // Check if swipe is horizontal and from left edge
-      if (deltaX > 50 && deltaY < 100) {
-        setIsSidebarOpen(true);
-        isSwipeGesture = false;
+      // Check if swipe is horizontal
+      if (Math.abs(deltaX) > 50 && deltaY < 100) {
+        if (deltaX > 0 && startX <= 30 && !isSidebarOpen) {
+          // Right swipe from left edge - open sidebar
+          setIsSidebarOpen(true);
+          isSwipeGesture = false;
+        } else if (deltaX < 0 && isSidebarOpen) {
+          // Left swipe when sidebar is open - close sidebar
+          setIsSidebarOpen(false);
+          isSwipeGesture = false;
+        }
       }
     };
 
@@ -71,7 +78,7 @@ export function PublicMobileNav({ children }: PublicMobileNavProps) {
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isMobile]);
+  }, [isMobile, isSidebarOpen]);
 
   const closeSidebar = () => {
     setIsSidebarOpen(false);
