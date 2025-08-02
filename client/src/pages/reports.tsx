@@ -40,10 +40,10 @@ interface ReportType {
 
 // Fetch report templates from database
 const useReportTemplates = () => {
-  const { token } = useAuth();
   return useQuery({
     queryKey: ['reportTemplates'],
     queryFn: async () => {
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/reports/templates', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -57,10 +57,10 @@ const useReportTemplates = () => {
 
 // Fetch generated reports
 const useReports = () => {
-  const { token } = useAuth();
   return useQuery({
     queryKey: ['reports'],
     queryFn: async () => {
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/reports', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -74,11 +74,11 @@ const useReports = () => {
 
 // Generate report mutation
 const useGenerateReport = () => {
-  const { token } = useAuth();
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async ({ reportType, parameters, name }: { reportType: string; parameters: any; name: string }) => {
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/reports/generate', {
         method: 'POST',
         headers: {
@@ -150,7 +150,7 @@ export default function Reports() {
 
   const handleDownloadReport = async (reportId: string, reportName: string) => {
     try {
-      const { token } = useAuth();
+      const token = localStorage.getItem('token');
       const response = await fetch(`/api/reports/${reportId}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -234,9 +234,9 @@ export default function Reports() {
                       <SelectValue placeholder="Select a report type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {reportTypes.map(report => (
-                        <SelectItem key={report.id} value={report.id}>
-                          {report.name}
+                      {filteredTemplates.map(template => (
+                        <SelectItem key={template.type} value={template.type}>
+                          {template.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -34,6 +34,7 @@ import { PortalLoginModal } from "@/components/portal-login-modal";
 
 const navigation = [
   { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
 ];
 
 const newPortalNavigation = [
