@@ -2528,7 +2528,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
   }));
 
   // Donation Goals Routes
-  app.get('/api/donation-goals', async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/donation-goals', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { isActive, category } = req.query;
       const filters: any = {};
@@ -2541,9 +2541,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       console.error('Error fetching donation goals:', error);
       res.status(500).json({ message: 'Failed to fetch donation goals' });
     }
-  });
+  }));
 
-  app.get('/api/donation-goals/:id', async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/donation-goals/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const goal = await storage.getDonationGoal(req.params.id);
       if (!goal) {
@@ -2554,7 +2554,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       console.error('Error fetching donation goal:', error);
       res.status(500).json({ message: 'Failed to fetch donation goal' });
     }
-  });
+  }));
 
   app.post('/api/donation-goals', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -2950,7 +2950,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       console.error('Kit webhook error:', error);
       res.status(200).json({ received: true }); // Always return 200 to Kit
     }
-  }));
+  });
 
   // Create HTTP server
   const httpServer = createServer(app);
