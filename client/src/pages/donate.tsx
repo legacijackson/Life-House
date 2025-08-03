@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedButton } from "@/components/ui/animated-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnimatedInput } from "@/components/ui/animated-input";
 import { AnimatedSelect } from "@/components/ui/animated-select";
 import { SelectItem } from "@/components/ui/select";
 import { AnimatedCheckbox } from "@/components/ui/animated-checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Home, Heart, DollarSign, Users, Shield, Target } from "lucide-react";
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
