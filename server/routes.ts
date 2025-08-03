@@ -865,7 +865,8 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       const config = {
         slackWebhookUrl: process.env.SLACK_WEBHOOK_URL || '',
         s3BucketName: process.env.S3_BUCKET_NAME || '',
-        s3Region: process.env.S3_REGION || 'us-west-2',
+        s3Region: process.env.S3_REGION || 'sfo3',
+        s3EndpointUrl: process.env.S3_ENDPOINT_URL || 'https://sfo3.digitaloceanspaces.com',
         emailNotifications: true,
         nightlyCrawlerEnabled: true,
         stopArmsReminders: true,
@@ -880,8 +881,27 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
 
   app.patch('/api/admin/config', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const updates = req.body;
+      
+      // Validate the request body
+      if (!updates || typeof updates !== 'object') {
+        return res.status(400).json({ message: 'Invalid configuration data' });
+      }
+
       // In production, save config to database
-      console.log('Updated admin config:', req.body);
+      console.log('Updated admin config:', updates);
+      
+      // Update environment variables if needed
+      if (updates.slackWebhookUrl) {
+        process.env.SLACK_WEBHOOK_URL = updates.slackWebhookUrl;
+      }
+      if (updates.s3BucketName) {
+        process.env.S3_BUCKET_NAME = updates.s3BucketName;
+      }
+      if (updates.s3Region) {
+        process.env.S3_REGION = updates.s3Region;
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error('Admin config update error:', error);
@@ -912,15 +932,97 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     try {
       const { type } = req.params;
 
-      // In production, test actual connections
-      const success = Math.random() > 0.3; // Simulate 70% success rate
+      if (type === 's3') {
+        // Test S3/DigitalOcean Spaces connection
+        const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+        const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+        const bucketName = process.env.S3_BUCKET_NAME;
+        const region = process.env.S3_REGION;
+        const endpointUrl = process.env.S3_ENDPOINT_URL;
 
-      res.json({
-        success,
-        message: success 
-          ? `${type} connection test successful` 
-          : `${type} connection test failed - check configuration`
-      });
+        if (!accessKeyId || !secretAccessKey || !bucketName) {
+          return res.json({
+            success: false,
+            message: 'S3 credentials not configured. Please add AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and S3_BUCKET_NAME to your secrets.'
+          });
+        }
+
+        try {
+          // Import AWS SDK
+          const { S3Client, HeadBucketCommand } = await import('@aws-sdk/client-s3');
+          
+          const s3Client = new S3Client({
+            region: region || 'sfo3',
+            endpoint: endpointUrl || 'https://sfo3.digitaloceanspaces.com',
+            credentials: {
+              accessKeyId,
+              secretAccessKey,
+            },
+            forcePathStyle: false,
+          });
+
+          // Test bucket access
+          await s3Client.send(new HeadBucketCommand({ Bucket: bucketName }));
+          
+          res.json({
+            success: true,
+            message: `S3 connection successful. Connected to bucket: ${bucketName}`
+          });
+        } catch (s3Error: any) {
+          console.error('S3 connection test failed:', s3Error);
+          res.json({
+            success: false,
+            message: `S3 connection failed: ${s3Error.message || 'Unknown error'}`
+          });
+        }
+      } else if (type === 'slack') {
+        // Test Slack webhook
+        const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+        
+        if (!webhookUrl) {
+          return res.json({
+            success: false,
+            message: 'Slack webhook URL not configured. Please add SLACK_WEBHOOK_URL to your secrets.'
+          });
+        }
+
+        try {
+          const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: 'Life House Admin Panel - Connection test successful! 🎉',
+              username: 'Life House Bot',
+              icon_emoji: ':house:'
+            }),
+          });
+
+          if (response.ok) {
+            res.json({
+              success: true,
+              message: 'Slack connection successful. Test message sent to channel.'
+            });
+          } else {
+            res.json({
+              success: false,
+              message: `Slack connection failed: ${response.status} ${response.statusText}`
+            });
+          }
+        } catch (slackError: any) {
+          console.error('Slack connection test failed:', slackError);
+          res.json({
+            success: false,
+            message: `Slack connection failed: ${slackError.message || 'Unknown error'}`
+          });
+        }
+      } else {
+        res.json({
+          success: false,
+          message: `Unknown connection type: ${type}`
+        });
+      }
     } catch (error) {
       console.error('Connection test error:', error);
       res.status(500).json({ message: 'Failed to test connection' });
