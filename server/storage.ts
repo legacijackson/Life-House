@@ -21,6 +21,12 @@ import {
   homepageContent,
   reportTemplates,
   reports,
+  donors,
+  donorDonations,
+  donationGoals,
+  donorSubscriptions,
+  prospectiveResidents,
+  crmActivities,
   type User,
   type InsertUser,
   type ResidentProfile,
@@ -47,6 +53,18 @@ import {
   type InsertPartner,
   type HomepageContent,
   type InsertHomepageContent,
+  type Donor,
+  type InsertDonor,
+  type DonorDonation,
+  type InsertDonorDonation,
+  type DonationGoal,
+  type InsertDonationGoal,
+  type DonorSubscription,
+  type InsertDonorSubscription,
+  type ProspectiveResident,
+  type InsertProspectiveResident,
+  type CrmActivity,
+  type InsertCrmActivity,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, gte, lte } from "drizzle-orm";
@@ -133,6 +151,46 @@ export interface IStorage {
   updateReport(reportId: string, updates: any): Promise<any>;
   getReports(filters?: any): Promise<any[]>;
   generateReportData(reportType: string, parameters: any): Promise<any>;
+
+  // Donor operations
+  getDonors(filters?: { donorType?: string; email?: string }): Promise<Donor[]>;
+  getDonor(id: string): Promise<Donor | undefined>;
+  createDonor(donor: InsertDonor): Promise<Donor>;
+  updateDonor(id: string, updates: Partial<Donor>): Promise<Donor>;
+  deleteDonor(id: string): Promise<void>;
+  findDonorByEmail(email: string): Promise<Donor | undefined>;
+
+  // Donor donation operations
+  getDonorDonations(filters?: { donorId?: string; campaignId?: string; status?: string }): Promise<DonorDonation[]>;
+  createDonorDonation(donation: InsertDonorDonation): Promise<DonorDonation>;
+  updateDonorDonation(id: string, updates: Partial<DonorDonation>): Promise<DonorDonation>;
+  getDonorTotalDonations(donorId: string): Promise<number>;
+
+  // Donation goal operations
+  getDonationGoals(filters?: { isActive?: boolean; category?: string }): Promise<DonationGoal[]>;
+  getDonationGoal(id: string): Promise<DonationGoal | undefined>;
+  createDonationGoal(goal: InsertDonationGoal): Promise<DonationGoal>;
+  updateDonationGoal(id: string, updates: Partial<DonationGoal>): Promise<DonationGoal>;
+  deleteDonationGoal(id: string): Promise<void>;
+
+  // Donor subscription operations
+  getDonorSubscriptions(filters?: { donorId?: string; status?: string }): Promise<DonorSubscription[]>;
+  createDonorSubscription(subscription: InsertDonorSubscription): Promise<DonorSubscription>;
+  updateDonorSubscription(id: string, updates: Partial<DonorSubscription>): Promise<DonorSubscription>;
+  cancelDonorSubscription(id: string): Promise<void>;
+
+  // Prospective resident operations
+  getProspectiveResidents(filters?: { status?: string; assignedTo?: string; priority?: string }): Promise<ProspectiveResident[]>;
+  getProspectiveResident(id: string): Promise<ProspectiveResident | undefined>;
+  createProspectiveResident(resident: InsertProspectiveResident): Promise<ProspectiveResident>;
+  updateProspectiveResident(id: string, updates: Partial<ProspectiveResident>): Promise<ProspectiveResident>;
+  deleteProspectiveResident(id: string): Promise<void>;
+
+  // CRM activity operations
+  getCrmActivities(filters?: { entityType?: string; entityId?: string; performedBy?: string }): Promise<CrmActivity[]>;
+  createCrmActivity(activity: InsertCrmActivity): Promise<CrmActivity>;
+  updateCrmActivity(id: string, updates: Partial<CrmActivity>): Promise<CrmActivity>;
+  deleteCrmActivity(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -887,6 +945,277 @@ export class DatabaseStorage implements IStorage {
       console.error('Error generating report data:', error);
       throw error;
     }
+  }
+
+  // Donor operations
+  async getDonors(filters?: { donorType?: string; email?: string }): Promise<Donor[]> {
+    const conditions = [];
+    if (filters?.donorType) {
+      conditions.push(eq(donors.donorType, filters.donorType));
+    }
+    if (filters?.email) {
+      conditions.push(eq(donors.email, filters.email));
+    }
+
+    const query = db.select().from(donors);
+    const finalQuery = conditions.length > 0 
+      ? query.where(and(...conditions))
+      : query;
+
+    return await finalQuery.orderBy(desc(donors.totalDonated));
+  }
+
+  async getDonor(id: string): Promise<Donor | undefined> {
+    const [donor] = await db.select().from(donors).where(eq(donors.id, id));
+    return donor;
+  }
+
+  async createDonor(donor: InsertDonor): Promise<Donor> {
+    const [newDonor] = await db.insert(donors).values(donor).returning();
+    return newDonor;
+  }
+
+  async updateDonor(id: string, updates: Partial<Donor>): Promise<Donor> {
+    const [updated] = await db
+      .update(donors)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(donors.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDonor(id: string): Promise<void> {
+    await db.delete(donors).where(eq(donors.id, id));
+  }
+
+  async findDonorByEmail(email: string): Promise<Donor | undefined> {
+    const [donor] = await db.select().from(donors).where(eq(donors.email, email));
+    return donor;
+  }
+
+  // Donor donation operations
+  async getDonorDonations(filters?: { donorId?: string; campaignId?: string; status?: string }): Promise<DonorDonation[]> {
+    const conditions = [];
+    if (filters?.donorId) {
+      conditions.push(eq(donorDonations.donorId, filters.donorId));
+    }
+    if (filters?.campaignId) {
+      conditions.push(eq(donorDonations.campaignId, filters.campaignId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(donorDonations.status, filters.status));
+    }
+
+    const query = db.select().from(donorDonations);
+    const finalQuery = conditions.length > 0 
+      ? query.where(and(...conditions))
+      : query;
+
+    return await finalQuery.orderBy(desc(donorDonations.createdAt));
+  }
+
+  async createDonorDonation(donation: InsertDonorDonation): Promise<DonorDonation> {
+    const [newDonation] = await db.insert(donorDonations).values(donation).returning();
+    
+    // Update donor's total donated and last donation date
+    const donor = await this.getDonor(newDonation.donorId);
+    if (donor) {
+      const total = await this.getDonorTotalDonations(newDonation.donorId);
+      await this.updateDonor(newDonation.donorId, {
+        totalDonated: total.toString(),
+        lastDonationDate: new Date()
+      });
+    }
+
+    // Update campaign current amount if applicable
+    if (newDonation.campaignId) {
+      const goal = await this.getDonationGoal(newDonation.campaignId);
+      if (goal) {
+        const currentAmount = parseFloat(goal.currentAmount || '0') + parseFloat(newDonation.amount);
+        await this.updateDonationGoal(newDonation.campaignId, {
+          currentAmount: currentAmount.toString()
+        });
+      }
+    }
+
+    return newDonation;
+  }
+
+  async updateDonorDonation(id: string, updates: Partial<DonorDonation>): Promise<DonorDonation> {
+    const [updated] = await db
+      .update(donorDonations)
+      .set(updates)
+      .where(eq(donorDonations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getDonorTotalDonations(donorId: string): Promise<number> {
+    const donations = await this.getDonorDonations({ donorId });
+    return donations.reduce((sum, d) => sum + parseFloat(d.amount), 0);
+  }
+
+  // Donation goal operations
+  async getDonationGoals(filters?: { isActive?: boolean; category?: string }): Promise<DonationGoal[]> {
+    const conditions = [];
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(donationGoals.isActive, filters.isActive));
+    }
+    if (filters?.category) {
+      conditions.push(eq(donationGoals.category, filters.category));
+    }
+
+    const query = db.select().from(donationGoals);
+    const finalQuery = conditions.length > 0 
+      ? query.where(and(...conditions))
+      : query;
+
+    return await finalQuery.orderBy(desc(donationGoals.createdAt));
+  }
+
+  async getDonationGoal(id: string): Promise<DonationGoal | undefined> {
+    const [goal] = await db.select().from(donationGoals).where(eq(donationGoals.id, id));
+    return goal;
+  }
+
+  async createDonationGoal(goal: InsertDonationGoal): Promise<DonationGoal> {
+    const [newGoal] = await db.insert(donationGoals).values(goal).returning();
+    return newGoal;
+  }
+
+  async updateDonationGoal(id: string, updates: Partial<DonationGoal>): Promise<DonationGoal> {
+    const [updated] = await db
+      .update(donationGoals)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(donationGoals.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDonationGoal(id: string): Promise<void> {
+    await db.delete(donationGoals).where(eq(donationGoals.id, id));
+  }
+
+  // Donor subscription operations
+  async getDonorSubscriptions(filters?: { donorId?: string; status?: string }): Promise<DonorSubscription[]> {
+    const conditions = [];
+    if (filters?.donorId) {
+      conditions.push(eq(donorSubscriptions.donorId, filters.donorId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(donorSubscriptions.status, filters.status));
+    }
+
+    const query = db.select().from(donorSubscriptions);
+    const finalQuery = conditions.length > 0 
+      ? query.where(and(...conditions))
+      : query;
+
+    return await finalQuery.orderBy(desc(donorSubscriptions.createdAt));
+  }
+
+  async createDonorSubscription(subscription: InsertDonorSubscription): Promise<DonorSubscription> {
+    const [newSubscription] = await db.insert(donorSubscriptions).values(subscription).returning();
+    return newSubscription;
+  }
+
+  async updateDonorSubscription(id: string, updates: Partial<DonorSubscription>): Promise<DonorSubscription> {
+    const [updated] = await db
+      .update(donorSubscriptions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(donorSubscriptions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async cancelDonorSubscription(id: string): Promise<void> {
+    await this.updateDonorSubscription(id, {
+      status: 'cancelled',
+      cancelledAt: new Date()
+    });
+  }
+
+  // Prospective resident operations
+  async getProspectiveResidents(filters?: { status?: string; assignedTo?: string; priority?: string }): Promise<ProspectiveResident[]> {
+    const conditions = [];
+    if (filters?.status) {
+      conditions.push(eq(prospectiveResidents.status, filters.status));
+    }
+    if (filters?.assignedTo) {
+      conditions.push(eq(prospectiveResidents.assignedTo, filters.assignedTo));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(prospectiveResidents.priority, filters.priority));
+    }
+
+    const query = db.select().from(prospectiveResidents);
+    const finalQuery = conditions.length > 0 
+      ? query.where(and(...conditions))
+      : query;
+
+    return await finalQuery.orderBy(desc(prospectiveResidents.createdAt));
+  }
+
+  async getProspectiveResident(id: string): Promise<ProspectiveResident | undefined> {
+    const [resident] = await db.select().from(prospectiveResidents).where(eq(prospectiveResidents.id, id));
+    return resident;
+  }
+
+  async createProspectiveResident(resident: InsertProspectiveResident): Promise<ProspectiveResident> {
+    const [newResident] = await db.insert(prospectiveResidents).values(resident).returning();
+    return newResident;
+  }
+
+  async updateProspectiveResident(id: string, updates: Partial<ProspectiveResident>): Promise<ProspectiveResident> {
+    const [updated] = await db
+      .update(prospectiveResidents)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(prospectiveResidents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteProspectiveResident(id: string): Promise<void> {
+    await db.delete(prospectiveResidents).where(eq(prospectiveResidents.id, id));
+  }
+
+  // CRM activity operations
+  async getCrmActivities(filters?: { entityType?: string; entityId?: string; performedBy?: string }): Promise<CrmActivity[]> {
+    const conditions = [];
+    if (filters?.entityType) {
+      conditions.push(eq(crmActivities.entityType, filters.entityType));
+    }
+    if (filters?.entityId) {
+      conditions.push(eq(crmActivities.entityId, filters.entityId));
+    }
+    if (filters?.performedBy) {
+      conditions.push(eq(crmActivities.performedBy, filters.performedBy));
+    }
+
+    const query = db.select().from(crmActivities);
+    const finalQuery = conditions.length > 0 
+      ? query.where(and(...conditions))
+      : query;
+
+    return await finalQuery.orderBy(desc(crmActivities.createdAt));
+  }
+
+  async createCrmActivity(activity: InsertCrmActivity): Promise<CrmActivity> {
+    const [newActivity] = await db.insert(crmActivities).values(activity).returning();
+    return newActivity;
+  }
+
+  async updateCrmActivity(id: string, updates: Partial<CrmActivity>): Promise<CrmActivity> {
+    const [updated] = await db
+      .update(crmActivities)
+      .set(updates)
+      .where(eq(crmActivities.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCrmActivity(id: string): Promise<void> {
+    await db.delete(crmActivities).where(eq(crmActivities.id, id));
   }
 }
 

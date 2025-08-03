@@ -506,6 +506,147 @@ export const homepageContent = pgTable("homepage_content", {
   index("homepage_content_section_idx").on(table.section),
 ]);
 
+// Donors table
+export const donors = pgTable("donors", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id).unique(), // optional link to user account
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  company: varchar("company"),
+  address: text("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  zipCode: varchar("zip_code"),
+  isAnonymous: boolean("is_anonymous").default(false),
+  notes: text("notes"),
+  tags: text("tags").array(), // ["major_donor", "monthly", "corporate"]
+  totalDonated: decimal("total_donated", { precision: 10, scale: 2 }).default("0"),
+  lastDonationDate: timestamp("last_donation_date"),
+  donorType: varchar("donor_type"), // individual, corporate, foundation
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("donors_email_idx").on(table.email),
+  index("donors_type_idx").on(table.donorType),
+  index("donors_total_donated_idx").on(table.totalDonated),
+]);
+
+// Donor Donations table (renamed to avoid conflict with existing donations table)
+export const donorDonations = pgTable("donor_donations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  donorId: uuid("donor_id").references(() => donors.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  frequency: donationFrequencyEnum("frequency").default("one_time"),
+  designation: donationDesignationEnum("designation").default("general"),
+  dedicatedTo: text("dedicated_to"), // in memory/honor of
+  campaignId: uuid("campaign_id").references(() => donationGoals.id),
+  paymentMethod: varchar("payment_method"), // stripe, check, cash, etc.
+  stripePaymentId: varchar("stripe_payment_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"), // for recurring donations
+  status: varchar("status").default("completed"), // completed, pending, failed, refunded
+  receiptSent: boolean("receipt_sent").default(false),
+  taxDeductible: boolean("tax_deductible").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+}, (table) => [
+  index("donor_donations_donor_idx").on(table.donorId),
+  index("donor_donations_campaign_idx").on(table.campaignId),
+  index("donor_donations_created_at_idx").on(table.createdAt),
+  index("donor_donations_status_idx").on(table.status),
+]);
+
+// Donation Goals/Campaigns table
+export const donationGoals = pgTable("donation_goals", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  targetAmount: decimal("target_amount", { precision: 10, scale: 2 }).notNull(),
+  currentAmount: decimal("current_amount", { precision: 10, scale: 2 }).default("0"),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  imageUrl: varchar("image_url"),
+  category: varchar("category"), // annual, emergency, project, etc.
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("donation_goals_active_idx").on(table.isActive),
+  index("donation_goals_dates_idx").on(table.startDate, table.endDate),
+]);
+
+// Donor Subscriptions table (for recurring donations)
+export const donorSubscriptions = pgTable("donor_subscriptions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  donorId: uuid("donor_id").references(() => donors.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  frequency: donationFrequencyEnum("frequency").default("monthly"),
+  stripeSubscriptionId: varchar("stripe_subscription_id").unique(),
+  status: varchar("status").default("active"), // active, paused, cancelled
+  nextPaymentDate: timestamp("next_payment_date"),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  pausedAt: timestamp("paused_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("donor_subscriptions_donor_idx").on(table.donorId),
+  index("donor_subscriptions_status_idx").on(table.status),
+]);
+
+// Prospective Residents table (for CRM tracking)
+export const prospectiveResidents = pgTable("prospective_residents", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationId: uuid("application_id").references(() => applications.id).unique(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone").notNull(),
+  dateOfBirth: timestamp("date_of_birth"),
+  referralSource: referralSourceEnum("referral_source"),
+  status: varchar("status").notNull().default("new"), // new, pending, approved, denied, on_hold, waitlisted
+  priority: varchar("priority").default("normal"), // low, normal, high, urgent
+  assignedTo: uuid("assigned_to").references(() => users.id),
+  intakeDate: timestamp("intake_date"),
+  lastContactDate: timestamp("last_contact_date"),
+  nextFollowUpDate: timestamp("next_follow_up_date"),
+  notes: text("notes"),
+  tags: text("tags").array(), // ["veteran", "medical_needs", "family"]
+  denialReason: text("denial_reason"),
+  holdReason: text("hold_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("prospective_residents_status_idx").on(table.status),
+  index("prospective_residents_assigned_idx").on(table.assignedTo),
+  index("prospective_residents_priority_idx").on(table.priority),
+]);
+
+// CRM Activities table (for tracking all interactions)
+export const crmActivities = pgTable("crm_activities", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityType: varchar("entity_type").notNull(), // donor, resident, prospective_resident, partner
+  entityId: uuid("entity_id").notNull(),
+  activityType: varchar("activity_type").notNull(), // call, email, meeting, donation, note
+  subject: varchar("subject").notNull(),
+  description: text("description"),
+  outcome: varchar("outcome"), // successful, no_answer, left_message, etc.
+  nextAction: text("next_action"),
+  performedBy: uuid("performed_by").references(() => users.id).notNull(),
+  scheduledFor: timestamp("scheduled_for"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("crm_activities_entity_idx").on(table.entityType, table.entityId),
+  index("crm_activities_type_idx").on(table.activityType),
+  index("crm_activities_performed_by_idx").on(table.performedBy),
+  index("crm_activities_scheduled_idx").on(table.scheduledFor),
+]);
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   residentProfile: one(residentProfiles, {
@@ -745,6 +886,47 @@ export const insertHomepageContentSchema = createInsertSchema(homepageContent).o
   updatedAt: true,
 });
 
+export const insertDonorSchema = createInsertSchema(donors).omit({
+  id: true,
+  totalDonated: true,
+  lastDonationDate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDonorDonationSchema = createInsertSchema(donorDonations).omit({
+  id: true,
+  stripePaymentId: true,
+  stripeSubscriptionId: true,
+  receiptSent: true,
+  createdAt: true,
+  processedAt: true,
+});
+
+export const insertDonationGoalSchema = createInsertSchema(donationGoals).omit({
+  id: true,
+  currentAmount: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDonorSubscriptionSchema = createInsertSchema(donorSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProspectiveResidentSchema = createInsertSchema(prospectiveResidents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCrmActivitySchema = createInsertSchema(crmActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -784,3 +966,15 @@ export type FAQFeedback = typeof faqFeedback.$inferSelect;
 export type InsertFAQFeedback = z.infer<typeof insertFaqFeedbackSchema>;
 export type HomepageContent = typeof homepageContent.$inferSelect;
 export type InsertHomepageContent = z.infer<typeof insertHomepageContentSchema>;
+export type Donor = typeof donors.$inferSelect;
+export type InsertDonor = z.infer<typeof insertDonorSchema>;
+export type DonorDonation = typeof donorDonations.$inferSelect;
+export type InsertDonorDonation = z.infer<typeof insertDonorDonationSchema>;
+export type DonationGoal = typeof donationGoals.$inferSelect;
+export type InsertDonationGoal = z.infer<typeof insertDonationGoalSchema>;
+export type DonorSubscription = typeof donorSubscriptions.$inferSelect;
+export type InsertDonorSubscription = z.infer<typeof insertDonorSubscriptionSchema>;
+export type ProspectiveResident = typeof prospectiveResidents.$inferSelect;
+export type InsertProspectiveResident = z.infer<typeof insertProspectiveResidentSchema>;
+export type CrmActivity = typeof crmActivities.$inferSelect;
+export type InsertCrmActivity = z.infer<typeof insertCrmActivitySchema>;

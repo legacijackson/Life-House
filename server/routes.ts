@@ -2315,6 +2315,320 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
   }
 });
 
+  // Donor Management Routes
+  app.get('/api/donors', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { donorType, email } = req.query;
+      const filters: any = {};
+      if (donorType) filters.donorType = donorType as string;
+      if (email) filters.email = email as string;
+
+      const donors = await storage.getDonors(filters);
+      res.json(donors);
+    } catch (error) {
+      console.error('Error fetching donors:', error);
+      res.status(500).json({ message: 'Failed to fetch donors' });
+    }
+  }));
+
+  app.get('/api/donors/:id', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const donor = await storage.getDonor(req.params.id);
+      if (!donor) {
+        return res.status(404).json({ message: 'Donor not found' });
+      }
+      res.json(donor);
+    } catch (error) {
+      console.error('Error fetching donor:', error);
+      res.status(500).json({ message: 'Failed to fetch donor' });
+    }
+  }));
+
+  app.post('/api/donors', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const donor = await storage.createDonor(req.body);
+      res.status(201).json(donor);
+    } catch (error) {
+      console.error('Error creating donor:', error);
+      res.status(500).json({ message: 'Failed to create donor' });
+    }
+  }));
+
+  app.put('/api/donors/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const donor = await storage.updateDonor(req.params.id, req.body);
+      res.json(donor);
+    } catch (error) {
+      console.error('Error updating donor:', error);
+      res.status(500).json({ message: 'Failed to update donor' });
+    }
+  }));
+
+  app.delete('/api/donors/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await storage.deleteDonor(req.params.id);
+      res.json({ message: 'Donor deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting donor:', error);
+      res.status(500).json({ message: 'Failed to delete donor' });
+    }
+  }));
+
+  // Donor Donations Routes
+  app.get('/api/donor-donations', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { donorId, campaignId, status } = req.query;
+      const filters: any = {};
+      if (donorId) filters.donorId = donorId as string;
+      if (campaignId) filters.campaignId = campaignId as string;
+      if (status) filters.status = status as string;
+
+      const donations = await storage.getDonorDonations(filters);
+      res.json(donations);
+    } catch (error) {
+      console.error('Error fetching donations:', error);
+      res.status(500).json({ message: 'Failed to fetch donations' });
+    }
+  }));
+
+  app.post('/api/donor-donations', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const donation = await storage.createDonorDonation(req.body);
+      res.status(201).json(donation);
+    } catch (error) {
+      console.error('Error creating donation:', error);
+      res.status(500).json({ message: 'Failed to create donation' });
+    }
+  }));
+
+  app.put('/api/donor-donations/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const donation = await storage.updateDonorDonation(req.params.id, req.body);
+      res.json(donation);
+    } catch (error) {
+      console.error('Error updating donation:', error);
+      res.status(500).json({ message: 'Failed to update donation' });
+    }
+  }));
+
+  // Donation Goals Routes
+  app.get('/api/donation-goals', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { isActive, category } = req.query;
+      const filters: any = {};
+      if (isActive !== undefined) filters.isActive = isActive === 'true';
+      if (category) filters.category = category as string;
+
+      const goals = await storage.getDonationGoals(filters);
+      res.json(goals);
+    } catch (error) {
+      console.error('Error fetching donation goals:', error);
+      res.status(500).json({ message: 'Failed to fetch donation goals' });
+    }
+  });
+
+  app.get('/api/donation-goals/:id', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const goal = await storage.getDonationGoal(req.params.id);
+      if (!goal) {
+        return res.status(404).json({ message: 'Donation goal not found' });
+      }
+      res.json(goal);
+    } catch (error) {
+      console.error('Error fetching donation goal:', error);
+      res.status(500).json({ message: 'Failed to fetch donation goal' });
+    }
+  });
+
+  app.post('/api/donation-goals', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const goal = await storage.createDonationGoal({
+        ...req.body,
+        createdBy: req.user.id
+      });
+      res.status(201).json(goal);
+    } catch (error) {
+      console.error('Error creating donation goal:', error);
+      res.status(500).json({ message: 'Failed to create donation goal' });
+    }
+  }));
+
+  app.put('/api/donation-goals/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const goal = await storage.updateDonationGoal(req.params.id, req.body);
+      res.json(goal);
+    } catch (error) {
+      console.error('Error updating donation goal:', error);
+      res.status(500).json({ message: 'Failed to update donation goal' });
+    }
+  }));
+
+  app.delete('/api/donation-goals/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await storage.deleteDonationGoal(req.params.id);
+      res.json({ message: 'Donation goal deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting donation goal:', error);
+      res.status(500).json({ message: 'Failed to delete donation goal' });
+    }
+  }));
+
+  // Donor Subscriptions Routes
+  app.get('/api/donor-subscriptions', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { donorId, status } = req.query;
+      const filters: any = {};
+      if (donorId) filters.donorId = donorId as string;
+      if (status) filters.status = status as string;
+
+      const subscriptions = await storage.getDonorSubscriptions(filters);
+      res.json(subscriptions);
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
+      res.status(500).json({ message: 'Failed to fetch subscriptions' });
+    }
+  }));
+
+  app.post('/api/donor-subscriptions', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const subscription = await storage.createDonorSubscription(req.body);
+      res.status(201).json(subscription);
+    } catch (error) {
+      console.error('Error creating subscription:', error);
+      res.status(500).json({ message: 'Failed to create subscription' });
+    }
+  }));
+
+  app.put('/api/donor-subscriptions/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const subscription = await storage.updateDonorSubscription(req.params.id, req.body);
+      res.json(subscription);
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      res.status(500).json({ message: 'Failed to update subscription' });
+    }
+  }));
+
+  app.post('/api/donor-subscriptions/:id/cancel', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await storage.cancelDonorSubscription(req.params.id);
+      res.json({ message: 'Subscription cancelled successfully' });
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      res.status(500).json({ message: 'Failed to cancel subscription' });
+    }
+  }));
+
+  // Prospective Residents Routes
+  app.get('/api/prospective-residents', roleRoute(['Admin', 'CaseManager', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { status, assignedTo, priority } = req.query;
+      const filters: any = {};
+      if (status) filters.status = status as string;
+      if (assignedTo) filters.assignedTo = assignedTo as string;
+      if (priority) filters.priority = priority as string;
+
+      const residents = await storage.getProspectiveResidents(filters);
+      res.json(residents);
+    } catch (error) {
+      console.error('Error fetching prospective residents:', error);
+      res.status(500).json({ message: 'Failed to fetch prospective residents' });
+    }
+  }));
+
+  app.get('/api/prospective-residents/:id', roleRoute(['Admin', 'CaseManager', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const resident = await storage.getProspectiveResident(req.params.id);
+      if (!resident) {
+        return res.status(404).json({ message: 'Prospective resident not found' });
+      }
+      res.json(resident);
+    } catch (error) {
+      console.error('Error fetching prospective resident:', error);
+      res.status(500).json({ message: 'Failed to fetch prospective resident' });
+    }
+  }));
+
+  app.post('/api/prospective-residents', roleRoute(['Admin', 'CaseManager', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const resident = await storage.createProspectiveResident(req.body);
+      res.status(201).json(resident);
+    } catch (error) {
+      console.error('Error creating prospective resident:', error);
+      res.status(500).json({ message: 'Failed to create prospective resident' });
+    }
+  }));
+
+  app.put('/api/prospective-residents/:id', roleRoute(['Admin', 'CaseManager', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const resident = await storage.updateProspectiveResident(req.params.id, req.body);
+      res.json(resident);
+    } catch (error) {
+      console.error('Error updating prospective resident:', error);
+      res.status(500).json({ message: 'Failed to update prospective resident' });
+    }
+  }));
+
+  app.delete('/api/prospective-residents/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await storage.deleteProspectiveResident(req.params.id);
+      res.json({ message: 'Prospective resident deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting prospective resident:', error);
+      res.status(500).json({ message: 'Failed to delete prospective resident' });
+    }
+  }));
+
+  // CRM Activities Routes
+  app.get('/api/crm-activities', roleRoute(['Admin', 'CaseManager', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { entityType, entityId, performedBy } = req.query;
+      const filters: any = {};
+      if (entityType) filters.entityType = entityType as string;
+      if (entityId) filters.entityId = entityId as string;
+      if (performedBy) filters.performedBy = performedBy as string;
+
+      const activities = await storage.getCrmActivities(filters);
+      res.json(activities);
+    } catch (error) {
+      console.error('Error fetching CRM activities:', error);
+      res.status(500).json({ message: 'Failed to fetch CRM activities' });
+    }
+  }));
+
+  app.post('/api/crm-activities', roleRoute(['Admin', 'CaseManager', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const activity = await storage.createCrmActivity({
+        ...req.body,
+        performedBy: req.user.id
+      });
+      res.status(201).json(activity);
+    } catch (error) {
+      console.error('Error creating CRM activity:', error);
+      res.status(500).json({ message: 'Failed to create CRM activity' });
+    }
+  }));
+
+  app.put('/api/crm-activities/:id', roleRoute(['Admin', 'CaseManager', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const activity = await storage.updateCrmActivity(req.params.id, req.body);
+      res.json(activity);
+    } catch (error) {
+      console.error('Error updating CRM activity:', error);
+      res.status(500).json({ message: 'Failed to update CRM activity' });
+    }
+  }));
+
+  app.delete('/api/crm-activities/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await storage.deleteCrmActivity(req.params.id);
+      res.json({ message: 'CRM activity deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting CRM activity:', error);
+      res.status(500).json({ message: 'Failed to delete CRM activity' });
+    }
+  }));
+
   // Create HTTP server
   const httpServer = createServer(app);
 
