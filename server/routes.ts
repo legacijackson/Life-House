@@ -881,7 +881,19 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
 
   app.patch('/api/admin/config', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const updates = req.body;
+      let updates;
+      
+      // Handle potential double-encoded JSON
+      if (typeof req.body === 'string') {
+        try {
+          updates = JSON.parse(req.body);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          return res.status(400).json({ message: 'Invalid JSON format' });
+        }
+      } else {
+        updates = req.body;
+      }
       
       // Validate the request body
       if (!updates || typeof updates !== 'object') {

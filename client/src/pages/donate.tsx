@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { AnimatedInput } from "@/components/ui/animated-input";
 import { AnimatedSelect } from "@/components/ui/animated-select";
-import { SelectItem } from "@/components/ui/select";
 import { AnimatedCheckbox } from "@/components/ui/animated-checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Home, Heart, DollarSign, Users, Shield, Target } from "lucide-react";
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
@@ -51,28 +54,28 @@ export default function Donate() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearErrors();
-    
+
     const finalAmount = amount === 'custom' ? customAmount : amount;
-    
+
     // Validate form
     const validationErrors: Record<string, string> = {};
-    
+
     if (!formData.isAnonymous) {
       const firstNameValidation = validators.name(formData.firstName);
       if (!firstNameValidation.isValid) validationErrors.firstName = firstNameValidation.message!;
-      
+
       const lastNameValidation = validators.name(formData.lastName);
       if (!lastNameValidation.isValid) validationErrors.lastName = lastNameValidation.message!;
-      
+
       const emailValidation = validators.email(formData.email);
       if (!emailValidation.isValid) validationErrors.email = emailValidation.message!;
-      
+
       if (formData.phone) {
         const phoneValidation = validators.phone(formData.phone);
         if (!phoneValidation.isValid) validationErrors.phone = phoneValidation.message!;
       }
     }
-    
+
     const amountValidation = validators.donationAmount(finalAmount);
     if (!amountValidation.isValid) validationErrors.amount = amountValidation.message!;
 
@@ -88,7 +91,7 @@ export default function Donate() {
     }
 
     setSubmitting(true);
-    
+
     try {
       // For monthly donations, redirect to Stripe
       if (donationType === 'monthly') {
@@ -164,7 +167,7 @@ export default function Donate() {
             <Link href="/">
               <div className="flex items-center space-x-3 cursor-pointer">
                 <Logo className="w-8 h-8" />
-                
+
               </div>
             </Link>
             <Link href="/">
@@ -187,7 +190,7 @@ export default function Donate() {
               <span className="font-bold text-blue-700"> job training</span>, and 
               <span className="font-bold text-purple-700"> life transformation</span> for formerly incarcerated individuals.
             </p>
-            
+
             {/* Impact Stats */}
             <div className="grid md:grid-cols-3 gap-6 max-w-2xl mx-auto">
               <Card className="border-0 bg-gradient-to-br from-green-100 to-green-50">
@@ -304,7 +307,7 @@ export default function Donate() {
                   {/* Donor Information */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Donor Information</h3>
-                    
+
                     <motion.div 
                       variants={fieldGroupVariants}
                       className="grid md:grid-cols-2 gap-4"
