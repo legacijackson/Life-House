@@ -27,7 +27,9 @@ import {
   UserPlus,
   DollarSign,
   Target,
-  TrendingUp
+  TrendingUp,
+  Download,
+  Loader2
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -471,6 +473,366 @@ function DonorManagement() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Kit Integration Component
+function KitIntegration() {
+  const [activeView, setActiveView] = useState<'status' | 'forms' | 'subscribers' | 'sync'>('status');
+  const [syncLoading, setSyncLoading] = useState(false);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch Kit status
+  const { data: kitStatus, isLoading: statusLoading } = useQuery({
+    queryKey: ['/api/kit/status'],
+  });
+
+  // Fetch Kit forms
+  const { data: kitForms = [], isLoading: formsLoading } = useQuery({
+    queryKey: ['/api/kit/forms'],
+    enabled: activeView === 'forms'
+  });
+
+  // Fetch Kit subscribers
+  const { data: kitSubscribers = [], isLoading: subscribersLoading } = useQuery({
+    queryKey: ['/api/kit/subscribers'],
+    enabled: activeView === 'subscribers'
+  });
+
+  // Fetch Kit tags
+  const { data: kitTags = [], isLoading: tagsLoading } = useQuery({
+    queryKey: ['/api/kit/tags'],
+    enabled: activeView === 'subscribers'
+  });
+
+  // Sync mutations
+  const syncCrmToKitMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/kit/sync/crm-to-kit', {
+        method: 'POST',
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: `Successfully synced ${data.synced} contacts to Kit` });
+      queryClient.invalidateQueries({ queryKey: ['/api/kit/subscribers'] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Sync failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const syncKitToCrmMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/kit/sync/kit-to-crm', {
+        method: 'POST',
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: `Successfully synced ${data.synced} contacts from Kit` });
+      queryClient.invalidateQueries({ queryKey: ['/api/donors'] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Sync failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleDownloadForm = async (formId: string, formName: string) => {
+    try {
+      const response = await fetch(`/api/kit/forms/${formId}/download`);
+      const blob = await response.blob();
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${formName}_subscribers.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({ title: "Form data downloaded successfully" });
+    } catch (error) {
+      toast({ title: "Download failed", variant: "destructive" });
+    }
+  };
+
+  const openFormPage = (formId: string) => {
+    window.open(`/api/kit/forms/${formId}/page`, '_blank');
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Kit (ConvertKit) Integration</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Tabs value={activeView} onValueChange={(v) => setActiveView(v as any)}>
+                <TabsList>
+                  <TabsTrigger value="status">Status</TabsTrigger>
+                  <TabsTrigger value="forms">Forms</TabsTrigger>
+                  <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
+                  <TabsTrigger value="sync">Sync</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {activeView === 'status' && (
+            <div className="space-y-4">
+              {statusLoading ? (
+                <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-20 rounded" />
+              ) : (
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">API Connection Status</h3>
+                      <p className="text-sm text-gray-600">{kitStatus?.message || 'Status unknown'}</p>
+                    </div>
+                    <Badge variant={kitStatus?.connected ? 'default' : 'destructive'}>
+                      {kitStatus?.connected ? 'Connected' : 'Disconnected'}
+                    </Badge>
+                  </div>
+                  {kitStatus?.connected && (
+                    <div className="mt-4 text-sm text-gray-600">
+                      <p>Tags available: {kitStatus.tagCount}</p>
+                    </div>
+                  )}
+                  {!kitStatus?.connected && (
+                    <div className="mt-4 p-3 bg-yellow-50 rounded border border-yellow-200">
+                      <p className="text-sm text-yellow-800">
+                        To configure Kit integration:
+                      </p>
+                      <ol className="text-sm text-yellow-800 mt-2 ml-4 list-decimal">
+                        <li>Add KIT_API_KEY to your Replit Secrets</li>
+                        <li>Optionally add KIT_API_SECRET for webhook verification</li>
+                        <li>Your Kit API key can be found in your Kit account settings</li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeView === 'forms' && (
+            <div className="space-y-4">
+              {formsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-700 h-20 rounded" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {kitForms.map((form: any) => (
+                    <Card key={form.id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{form.name}</h3>
+                          {form.description && (
+                            <p className="text-sm text-gray-600 mt-1">{form.description}</p>
+                          )}
+                          <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                            <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
+                            <Badge variant={form.archived ? 'secondary' : 'default'}>
+                              {form.archived ? 'Archived' : 'Active'}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openFormPage(form.id)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadForm(form.id, form.name)}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                  {kitForms.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No forms found in your Kit account
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeView === 'subscribers' && (
+            <div className="space-y-4">
+              {subscribersLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-700 h-16 rounded" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold">Subscribers ({kitSubscribers.length})</h3>
+                    {kitTags.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600">Tags:</span>
+                        {kitTags.slice(0, 5).map((tag: any) => (
+                          <Badge key={tag.id} variant="outline" className="text-xs">
+                            {tag.name}
+                          </Badge>
+                        ))}
+                        {kitTags.length > 5 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{kitTags.length - 5} more
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {kitSubscribers.map((subscriber: any) => (
+                    <div key={subscriber.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                            {subscriber.first_name ? subscriber.first_name.charAt(0) : subscriber.email_address.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold">
+                              {subscriber.first_name && subscriber.last_name 
+                                ? `${subscriber.first_name} ${subscriber.last_name}` 
+                                : subscriber.email_address}
+                            </h4>
+                            <p className="text-sm text-gray-600">{subscriber.email_address}</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Badge variant={subscriber.state === 'active' ? 'default' : 'secondary'}>
+                                {subscriber.state}
+                              </Badge>
+                              {subscriber.tags?.map((tag: any) => (
+                                <Badge key={tag.id} variant="outline" className="text-xs">
+                                  {tag.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Joined: {new Date(subscriber.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                  {kitSubscribers.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      No subscribers found in your Kit account
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeView === 'sync' && (
+            <div className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-2">Sync CRM to Kit</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Push all donors from your CRM to Kit as subscribers
+                    </p>
+                    <Button
+                      onClick={() => syncCrmToKitMutation.mutate()}
+                      disabled={syncCrmToKitMutation.isPending}
+                      className="w-full"
+                    >
+                      {syncCrmToKitMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Sync to Kit
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-2">Sync Kit to CRM</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Pull all Kit subscribers into your CRM as donors
+                    </p>
+                    <Button
+                      onClick={() => syncKitToCrmMutation.mutate()}
+                      disabled={syncKitToCrmMutation.isPending}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {syncKitToCrmMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Sync from Kit
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-4">Webhook Configuration</h3>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gray-50 rounded border">
+                      <h4 className="font-medium mb-2">Webhook URL</h4>
+                      <code className="text-sm bg-white p-2 rounded border block">
+                        {window.location.origin}/api/kit/webhooks/subscriber
+                      </code>
+                      <p className="text-sm text-gray-600 mt-2">
+                        Configure this URL in your Kit account webhooks to enable real-time sync
+                      </p>
+                    </div>
+                    <div className="p-4 bg-blue-50 rounded border border-blue-200">
+                      <h4 className="font-medium mb-2 text-blue-900">Recommended Events</h4>
+                      <ul className="text-sm text-blue-800 space-y-1">
+                        <li>• subscriber.subscriber_activate</li>
+                        <li>• subscriber.subscriber_unsubscribe</li>
+                        <li>• subscriber.subscriber_tag</li>
+                        <li>• subscriber.subscriber_untag</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -966,7 +1328,7 @@ export default function AdminPanel() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Users
@@ -978,6 +1340,10 @@ export default function AdminPanel() {
           <TabsTrigger value="crm" className="flex items-center gap-2">
             <UserPlus className="h-4 w-4" />
             CRM
+          </TabsTrigger>
+          <TabsTrigger value="kit" className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Kit
           </TabsTrigger>
           <TabsTrigger value="properties" className="flex items-center gap-2">
             <Home className="h-4 w-4" />
@@ -1103,6 +1469,11 @@ export default function AdminPanel() {
         {/* CRM Tab */}
         <TabsContent value="crm" className="space-y-6">
           <CrmManagement />
+        </TabsContent>
+
+        {/* Kit Integration Tab */}
+        <TabsContent value="kit" className="space-y-6">
+          <KitIntegration />
         </TabsContent>
 
         {/* Settings Tab */}

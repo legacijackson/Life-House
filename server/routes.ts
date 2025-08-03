@@ -867,6 +867,8 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         s3BucketName: process.env.S3_BUCKET_NAME || '',
         s3Region: process.env.S3_REGION || 'sfo3',
         s3EndpointUrl: process.env.S3_ENDPOINT_URL || 'https://sfo3.digitaloceanspaces.com',
+        kitApiKey: process.env.KIT_API_KEY || '',
+        kitApiSecret: process.env.KIT_API_SECRET || '',
         emailNotifications: true,
         nightlyCrawlerEnabled: true,
         stopArmsReminders: true,
@@ -2740,6 +2742,213 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (error) {
       console.error('Error deleting CRM activity:', error);
       res.status(500).json({ message: 'Failed to delete CRM activity' });
+    }
+  }));
+
+  // Kit (ConvertKit) Integration Routes
+  app.get('/api/kit/status', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      
+      // Test Kit API connection
+      try {
+        const tags = await kitService.getTags();
+        res.json({
+          connected: true,
+          message: 'Kit API connection successful',
+          tagCount: tags.length
+        });
+      } catch (error: any) {
+        res.json({
+          connected: false,
+          message: `Kit API connection failed: ${error.message}`
+        });
+      }
+    } catch (error) {
+      console.error('Kit status check error:', error);
+      res.status(500).json({ message: 'Failed to check Kit status' });
+    }
+  }));
+
+  app.get('/api/kit/subscribers', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      const { page = 1 } = req.query;
+      
+      const subscribers = await kitService.getSubscribers(Number(page));
+      res.json(subscribers);
+    } catch (error: any) {
+      console.error('Kit subscribers fetch error:', error);
+      res.status(500).json({ message: `Failed to fetch subscribers: ${error.message}` });
+    }
+  }));
+
+  app.get('/api/kit/forms', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      
+      const forms = await kitService.getForms();
+      res.json(forms);
+    } catch (error: any) {
+      console.error('Kit forms fetch error:', error);
+      res.status(500).json({ message: `Failed to fetch forms: ${error.message}` });
+    }
+  }));
+
+  app.get('/api/kit/forms/:id/page', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      const { id } = req.params;
+      
+      const form = await kitService.getForm(id);
+      if (!form) {
+        return res.status(404).json({ message: 'Form not found' });
+      }
+
+      // Generate HTML page for the form
+      const formPageHtml = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${form.name} - Life House</title>
+          <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .form-container { background: #f9f9f9; padding: 30px; border-radius: 8px; }
+            h1 { color: #333; margin-bottom: 20px; }
+            .description { color: #666; margin-bottom: 30px; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          <div class="form-container">
+            <h1>${form.name}</h1>
+            ${form.description ? `<p class="description">${form.description}</p>` : ''}
+            <script async data-uid="${form.id}" src="https://kit.com/ck.js"></script>
+          </div>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      res.send(formPageHtml);
+    } catch (error: any) {
+      console.error('Kit form page error:', error);
+      res.status(500).json({ message: `Failed to generate form page: ${error.message}` });
+    }
+  }));
+
+  app.get('/api/kit/forms/:id/download', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      const { id } = req.params;
+      
+      const form = await kitService.getForm(id);
+      if (!form) {
+        return res.status(404).json({ message: 'Form not found' });
+      }
+
+      const subscribers = await kitService.getFormSubscribers(id);
+      
+      // Generate CSV data
+      const csvHeaders = ['Email', 'First Name', 'Last Name', 'Created At', 'State'];
+      const csvRows = subscribers.map(sub => [
+        sub.email_address,
+        sub.first_name || '',
+        sub.last_name || '',
+        sub.created_at,
+        sub.state
+      ]);
+
+      const csvContent = [csvHeaders, ...csvRows]
+        .map(row => row.map(field => `"${field}"`).join(','))
+        .join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${form.name}_subscribers.csv"`);
+      res.send(csvContent);
+    } catch (error: any) {
+      console.error('Kit form download error:', error);
+      res.status(500).json({ message: `Failed to download form data: ${error.message}` });
+    }
+  }));
+
+  app.get('/api/kit/tags', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      
+      const tags = await kitService.getTags();
+      res.json(tags);
+    } catch (error: any) {
+      console.error('Kit tags fetch error:', error);
+      res.status(500).json({ message: `Failed to fetch tags: ${error.message}` });
+    }
+  }));
+
+  app.post('/api/kit/sync/crm-to-kit', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      
+      const result = await kitService.bulkSyncCRMToKit();
+      res.json({
+        success: true,
+        message: `Synced ${result.synced} contacts to Kit`,
+        ...result
+      });
+    } catch (error: any) {
+      console.error('CRM to Kit sync error:', error);
+      res.status(500).json({ message: `Sync failed: ${error.message}` });
+    }
+  }));
+
+  app.post('/api/kit/sync/kit-to-crm', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      
+      const result = await kitService.bulkSyncKitToCRM();
+      res.json({
+        success: true,
+        message: `Synced ${result.synced} contacts from Kit`,
+        ...result
+      });
+    } catch (error: any) {
+      console.error('Kit to CRM sync error:', error);
+      res.status(500).json({ message: `Sync failed: ${error.message}` });
+    }
+  }));
+
+  app.post('/api/kit/sync/contact', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      const contactData = req.body;
+      
+      const subscriber = await kitService.syncContactToKit(contactData);
+      res.json({
+        success: true,
+        message: 'Contact synced to Kit successfully',
+        subscriber
+      });
+    } catch (error: any) {
+      console.error('Contact sync error:', error);
+      res.status(500).json({ message: `Contact sync failed: ${error.message}` });
+    }
+  }));
+
+  app.post('/api/kit/webhooks/subscriber', async (req: Request, res: Response) => {
+    try {
+      const { kitService } = await import('./kit-integration');
+      const webhookData = req.body;
+      
+      // Handle Kit webhook for subscriber events
+      if (webhookData.subscriber) {
+        await kitService.syncKitContactToCRM(webhookData.subscriber);
+        console.log('Webhook processed: subscriber synced from Kit');
+      }
+      
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error('Kit webhook error:', error);
+      res.status(200).json({ received: true }); // Always return 200 to Kit
     }
   }));
 
