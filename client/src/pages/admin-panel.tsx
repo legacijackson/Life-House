@@ -81,6 +81,31 @@ interface AuditLogEntry {
   details?: any;
 }
 
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+  role: string;
+  isActive: boolean;
+  lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Property {
+  id: string;
+  name: string;
+  address: string;
+  type: string;
+  capacity: number;
+  currentOccupancy: number;
+  isActive: boolean;
+  manager?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface Donor {
   id: string;
   userId?: string;
@@ -185,12 +210,12 @@ function DonorManagement() {
   const queryClient = useQueryClient();
 
   // Fetch donors
-  const { data: donors = [], isLoading: donorsLoading } = useQuery({
+  const { data: donors = [], isLoading: donorsLoading } = useQuery<Donor[]>({
     queryKey: ['/api/donors'],
   });
 
   // Fetch donation goals
-  const { data: donationGoals = [] } = useQuery({
+  const { data: donationGoals = [] } = useQuery<DonationGoal[]>({
     queryKey: ['/api/donation-goals'],
   });
 
@@ -847,12 +872,12 @@ function CrmManagement() {
   const queryClient = useQueryClient();
 
   // Fetch prospective residents
-  const { data: prospects = [], isLoading: prospectsLoading } = useQuery({
+  const { data: prospects = [], isLoading: prospectsLoading } = useQuery<ProspectiveResident[]>({
     queryKey: ['/api/prospective-residents'],
   });
 
   // Fetch CRM activities
-  const { data: activities = [], isLoading: activitiesLoading } = useQuery({
+  const { data: activities = [], isLoading: activitiesLoading } = useQuery<CrmActivity[]>({
     queryKey: ['/api/crm-activities'],
   });
 
@@ -1159,32 +1184,32 @@ export default function AdminPanel() {
   const [editingContent, setEditingContent] = useState<Record<string, any>>({});
 
   // Fetch admin data
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ['/api/admin/users'],
     enabled: activeTab === 'users'
   });
 
-  const { data: properties = [], isLoading: propertiesLoading } = useQuery({
+  const { data: properties = [], isLoading: propertiesLoading } = useQuery<Property[]>({
     queryKey: ['/api/admin/properties'],
     enabled: activeTab === 'properties'
   });
 
-  const { data: homepagePhotos = [], isLoading: photosLoading } = useQuery({
+  const { data: homepagePhotos = [], isLoading: photosLoading } = useQuery<HomepagePhoto[]>({
     queryKey: ['/api/admin/homepage-photos'],
     enabled: activeTab === 'settings'
   });
 
-  const { data: systemSettings = [], isLoading: settingsLoading } = useQuery({
+  const { data: systemSettings = [], isLoading: settingsLoading } = useQuery<SystemSetting[]>({
     queryKey: ['/api/admin/settings'],
     enabled: activeTab === 'settings'
   });
 
-  const { data: auditLogs = [], isLoading: logsLoading } = useQuery({
+  const { data: auditLogs = [], isLoading: logsLoading } = useQuery<AuditLogEntry[]>({
     queryKey: ['/api/admin/audit-logs'],
     enabled: activeTab === 'logs'
   });
 
-  const { data: homepageContent = [], isLoading: contentLoading } = useQuery({
+  const { data: homepageContent = [], isLoading: contentLoading } = useQuery<HomepageContent[]>({
     queryKey: ['/api/admin/homepage-content'],
     enabled: activeTab === 'content'
   });
