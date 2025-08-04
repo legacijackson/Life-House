@@ -89,14 +89,16 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   // Production JWT validation
   try {
     // In production, validate JWT token
-    const jwt = await import('jsonwebtoken');
     const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
     
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
-    // Look up the user from the database
-    const user = await storage.getUser(decoded.userId);
+    // Look up the user from the database using the correct field name
+    const userId = decoded.userId || decoded.id;
+    const user = await storage.getUser(userId);
+    
     if (!user) {
+      console.error('User not found in database:', userId);
       return res.status(401).json({ message: 'Invalid token - user not found' });
     }
 
@@ -108,6 +110,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     };
     return next();
   } catch (error) {
+    console.error('JWT validation error:', error);
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
@@ -331,7 +334,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Generate proper JWT token
-      const jwt = await import('jsonwebtoken');
       const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
       
       const token = jwt.sign(
@@ -363,6 +365,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to create account' });
     }
   });
+
+  // Auth check endpoint
+  app.get('/api/auth/user', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    res.json({
+      success: true,
+      user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+      }
+    });
+  }));
 
   // User login - simplified for development
   app.post('/api/login', async (req: Request, res: Response) => {
