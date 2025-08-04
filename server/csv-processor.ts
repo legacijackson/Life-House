@@ -72,6 +72,12 @@ export class CSVProcessor {
 
   private async processBatch(rows: CSVRow[], fileName: string): Promise<ProcessedResource[]> {
     try {
+      // Check if OpenAI API is available
+      if (!process.env.OPENAI_API_KEY) {
+        console.log('[CSVProcessor] OpenAI API key not available, using fallback processing');
+        return this.fallbackProcessBatch(rows, fileName);
+      }
+
       // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -189,8 +195,75 @@ ${JSON.stringify(rows, null, 2)}`
 
     } catch (error) {
       console.error('[CSVProcessor] Error processing batch:', error);
-      return []; // Return empty array instead of throwing to continue processing other batches
+      // If OpenAI fails, use fallback processing
+      if (error.status === 429 || error.code === 'insufficient_quota') {
+        console.log('[CSVProcessor] OpenAI quota exceeded, using fallback processing');
+        return this.fallbackProcessBatch(rows, fileName);
+      }
+      return []; // Return empty array for other errors
     }
+  }
+
+  private fallbackProcessBatch(rows: CSVRow[], fileName: string): ProcessedResource[] {
+    console.log(`[CSVProcessor] Processing ${rows.length} rows with fallback method`);
+    
+    return rows.map((row, index) => {
+      // Extract basic information from CSV columns
+      const name = row['Organization Name'] || row['Name'] || row['Service Provider'] || `Resource ${index + 1}`;
+      const description = row['Description'] || row['Services'] || row['Program Description'] || 'Community resource for reentry support';
+      const address = row['Address'] || row['Street Address'] || '';
+      const city = row['City'] || 'Oakland';
+      const state = row['State'] || 'CA';
+      const zip = row['ZIP'] || row['Zip Code'] || '';
+      const phone = row['Phone'] || row['Contact Phone'] || '';
+      const email = row['Email'] || row['Contact Email'] || '';
+      const website = row['Website'] || row['URL'] || '';
+      
+      // Determine category based on keywords in name/description
+      let category: ProcessedResource['category'] = 'emergency';
+      const text = (name + ' ' + description).toLowerCase();
+      
+      if (text.includes('housing') || text.includes('shelter') || text.includes('transitional')) {
+        category = 'housing';
+      } else if (text.includes('employment') || text.includes('job') || text.includes('work')) {
+        category = 'employment';
+      } else if (text.includes('food') || text.includes('meal') || text.includes('nutrition')) {
+        category = 'food';
+      } else if (text.includes('health') || text.includes('medical') || text.includes('clinic')) {
+        category = 'healthcare';
+      } else if (text.includes('legal') || text.includes('law') || text.includes('court')) {
+        category = 'legal';
+      } else if (text.includes('education') || text.includes('school') || text.includes('training')) {
+        category = 'education';
+      } else if (text.includes('transport') || text.includes('bus') || text.includes('travel')) {
+        category = 'transport';
+      } else if (text.includes('family') || text.includes('child') || text.includes('parent')) {
+        category = 'family';
+      } else if (text.includes('financial') || text.includes('money') || text.includes('benefit')) {
+        category = 'money';
+      }
+
+      return {
+        name: name.trim(),
+        description: description.trim(),
+        category,
+        eligibility: row['Eligibility'] || 'General eligibility requirements may apply',
+        geo: {
+          zip: zip.trim(),
+          city: city.trim(),
+          county: row['County'] || 'Alameda',
+          state: state.trim()
+        },
+        url: website.trim() || undefined,
+        contact: {
+          phone: phone.trim() || undefined,
+          email: email.trim() || undefined,
+          address: address.trim() || undefined
+        },
+        languages: ['en'], // Default to English
+        tags: [category, 'reentry', 'community resource']
+      };
+    }).filter(resource => resource.name && resource.description);
   }
 
   async saveProcessedResources(processedResources: ProcessedResource[]): Promise<void> {

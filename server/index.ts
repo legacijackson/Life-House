@@ -76,7 +76,7 @@ async function processUploadedCSVFiles() {
     const { storage } = await import('./storage');
     const existingResources = await storage.getResources();
     
-    if (existingResources.length > 10) {
+    if (existingResources.length > 50) {
       console.log(`[Startup] Database already contains ${existingResources.length} external resources, skipping CSV processing`);
       return;
     }
