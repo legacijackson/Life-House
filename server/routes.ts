@@ -112,7 +112,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-// Configure multer for file uploads
+// Configure multer for CSV file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -123,6 +123,44 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only CSV files are allowed'));
+    }
+  }
+});
+
+// Configure multer for document uploads
+const documentStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/documents')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+
+const uploadDocument = multer({
+  storage: documentStorage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allowed file types
+    const allowedMimes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'text/plain',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed'));
     }
   }
 });
@@ -1862,6 +1900,120 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       res.status(500).json({ error: 'Failed to upload avatar' });
     }
   });
+
+  // Document upload
+  app.post('/api/documents', requireAuth, uploadDocument.single('file'), authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const { ownerType, ownerId, title } = req.body;
+      
+      if (!ownerType || !ownerId || !title) {
+        return res.status(400).json({ error: 'Missing required fields: ownerType, ownerId, title' });
+      }
+
+      // Create document record in database
+      const document = await storage.createDocument({
+        ownerType,
+        ownerId,
+        title,
+        mime: req.file.mimetype,
+        size: req.file.size,
+        storagePath: req.file.path,
+        checksum: null // TODO: Calculate file checksum
+      });
+
+      res.status(201).json({
+        success: true,
+        document
+      });
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      res.status(500).json({ error: 'Failed to upload document' });
+    }
+  }));
+
+  // List documents
+  app.get('/api/documents', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { ownerType, ownerId } = req.query;
+      
+      const filters: any = {};
+      if (ownerType) filters.ownerType = ownerType as string;
+      if (ownerId) filters.ownerId = ownerId as string;
+
+      const documents = await storage.getDocuments(filters);
+      res.json(documents);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      res.status(500).json({ error: 'Failed to fetch documents' });
+    }
+  }));
+
+  // Get document details
+  app.get('/api/documents/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      res.json(document);
+    } catch (error) {
+      console.error('Error fetching document:', error);
+      res.status(500).json({ error: 'Failed to fetch document' });
+    }
+  }));
+
+  // Download document
+  app.get('/api/documents/:id/download', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      // Send file
+      res.download(document.storagePath, document.title);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      res.status(500).json({ error: 'Failed to download document' });
+    }
+  }));
+
+  // Delete document
+  app.delete('/api/documents/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      // Delete file from disk
+      const fs = await import('fs/promises');
+      try {
+        await fs.unlink(document.storagePath);
+      } catch (error) {
+        console.error('Error deleting file from disk:', error);
+      }
+
+      // Delete document record
+      await storage.deleteDocument(id);
+
+      res.json({ success: true, message: 'Document deleted' });
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      res.status(500).json({ error: 'Failed to delete document' });
+    }
+  }));
 
   // Soft delete notes
   app.delete('/api/notes/:id', async (req: Request, res: Response) => {

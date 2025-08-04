@@ -39,6 +39,9 @@ The application uses a monorepo structure separating client, server, shared, and
 - **Reporting System**: Comprehensive reports page with various report types and download functionality.
 - **AI Chatbot Widget**: Floating AI assistant with Life House-specific knowledge base.
 - **Mobile Navigation**: Swipe gesture support and hamburger menu for mobile devices on both public and authenticated pages.
+- **Programs System**: Comprehensive program management with 7 flagship programs (STOP TouchPoint, STOP ARMS, Building Your Dream Legacy, Fatherhood Focus, Men's Circle, Re-entry Navigation, Financial Literacy), session scheduling, and attendance tracking.
+- **Messaging System**: Internal communication platform with threading support and read receipts.
+- **Notifications System**: Multi-channel notification system with priority levels and link tracking.
 
 ## External Dependencies
 

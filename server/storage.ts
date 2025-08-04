@@ -19,6 +19,7 @@ import {
   auditLog,
   documents,
   homepageContent,
+  type Document as DBDocument,
   reportTemplates,
   reports,
   donors,
@@ -191,6 +192,14 @@ export interface IStorage {
   createCrmActivity(activity: InsertCrmActivity): Promise<CrmActivity>;
   updateCrmActivity(id: string, updates: Partial<CrmActivity>): Promise<CrmActivity>;
   deleteCrmActivity(id: string): Promise<void>;
+
+  // Document operations
+  getDocuments(filters?: { ownerType?: string; ownerId?: string }): Promise<DBDocument[]>;
+  getDocument(id: string): Promise<DBDocument | undefined>;
+  createDocument(document: Omit<DBDocument, 'id' | 'uploadedAt'>): Promise<DBDocument>;
+  updateDocument(id: string, updates: Partial<DBDocument>): Promise<DBDocument>;
+  deleteDocument(id: string): Promise<void>;
+  getDocumentsByOwner(ownerType: string, ownerId: string): Promise<DBDocument[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1216,6 +1225,58 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCrmActivity(id: string): Promise<void> {
     await db.delete(crmActivities).where(eq(crmActivities.id, id));
+  }
+
+  // Document operations
+  async getDocuments(filters?: { ownerType?: string; ownerId?: string }): Promise<DBDocument[]> {
+    const conditions = [];
+    if (filters?.ownerType) {
+      conditions.push(eq(documents.ownerType, filters.ownerType));
+    }
+    if (filters?.ownerId) {
+      conditions.push(eq(documents.ownerId, filters.ownerId));
+    }
+
+    const query = db.select().from(documents);
+    const finalQuery = conditions.length > 0 
+      ? query.where(and(...conditions))
+      : query;
+
+    return await finalQuery.orderBy(desc(documents.uploadedAt));
+  }
+
+  async getDocument(id: string): Promise<DBDocument | undefined> {
+    const [document] = await db.select().from(documents).where(eq(documents.id, id));
+    return document;
+  }
+
+  async createDocument(document: Omit<DBDocument, 'id' | 'uploadedAt'>): Promise<DBDocument> {
+    const [newDocument] = await db.insert(documents).values(document).returning();
+    return newDocument;
+  }
+
+  async updateDocument(id: string, updates: Partial<DBDocument>): Promise<DBDocument> {
+    const [updated] = await db
+      .update(documents)
+      .set(updates)
+      .where(eq(documents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    await db.delete(documents).where(eq(documents.id, id));
+  }
+
+  async getDocumentsByOwner(ownerType: string, ownerId: string): Promise<DBDocument[]> {
+    return await db
+      .select()
+      .from(documents)
+      .where(and(
+        eq(documents.ownerType, ownerType),
+        eq(documents.ownerId, ownerId)
+      ))
+      .orderBy(desc(documents.uploadedAt));
   }
 }
 

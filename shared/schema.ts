@@ -32,6 +32,8 @@ export const referralSourceEnum = pgEnum("referral_source", ["self", "parole", "
 export const referralStatusEnum = pgEnum("referral_status", ["new", "in_review", "accepted", "waitlist", "declined"]);
 export const eventTypeEnum = pgEnum("event_type", ["workshop", "one_on_one", "coaching", "check_in"]);
 export const fundingStreamEnum = pgEnum("funding_stream", ["STOP", "ECM", "CommunitySupport", "Other"]);
+export const programTypeEnum = pgEnum("program_type", ["mandatory", "optional"]);
+export const programFrequencyEnum = pgEnum("program_frequency", ["daily", "weekly", "twice_weekly", "monthly", "as_needed"]);
 export const noteTypeEnum = pgEnum("note_type", ["STOP_progress", "ECM_encounter", "Workshop", "Coaching", "Incident", "Other"]);
 export const resourceCategoryEnum = pgEnum("resource_category", [
   "housing", "food", "id_docs", "healthcare", "sud_mh_referral", 
@@ -47,6 +49,9 @@ export const ticketStatusEnum = pgEnum("ticket_status", ["new", "assigned", "in_
 export const donationFrequencyEnum = pgEnum("donation_frequency", ["one_time", "monthly"]);
 export const donationDesignationEnum = pgEnum("donation_designation", ["general", "sponsor_resident"]);
 export const applicationStatusEnum = pgEnum("application_status", ["new", "under_review", "approved", "waitlisted", "denied"]);
+export const sessionStatusEnum = pgEnum("session_status", ["planned", "completed", "cancelled"]);
+export const notificationStatusEnum = pgEnum("notification_status", ["unread", "read", "archived"]);
+export const notificationPriorityEnum = pgEnum("notification_priority", ["low", "normal", "high", "urgent"]);
 
 // Session storage table (required for auth)
 export const sessions = pgTable(
@@ -148,6 +153,62 @@ export const programEnrollments = pgTable("program_enrollments", {
   index("program_enrollments_stage_idx").on(table.stage),
 ]);
 
+// Programs table for Life House offerings
+export const programs = pgTable("programs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  type: programTypeEnum("type").notNull(), // mandatory, optional
+  frequency: programFrequencyEnum("frequency").notNull(), // daily, weekly, twice_weekly, monthly, as_needed
+  durationMinutes: integer("duration_minutes").notNull(),
+  maxParticipants: integer("max_participants"),
+  isActive: boolean("is_active").default(true),
+  requirements: text("requirements"),
+  objectives: jsonb("objectives"), // array of program objectives
+  curriculum: jsonb("curriculum"), // structured curriculum data
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("programs_type_idx").on(table.type),
+  index("programs_active_idx").on(table.isActive),
+]);
+
+// Program sessions table
+export const programSessions = pgTable("program_sessions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  programId: uuid("program_id").references(() => programs.id).notNull(),
+  title: varchar("title", { length: 140 }).notNull(),
+  icon: varchar("icon"),
+  dateStart: timestamp("date_start").notNull(),
+  dateEnd: timestamp("date_end").notNull(),
+  location: varchar("location"),
+  facilitatorId: uuid("facilitator_id").references(() => users.id),
+  status: sessionStatusEnum("status").default("planned"),
+  tags: jsonb("tags"), // array of strings
+  maxParticipants: integer("max_participants"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("program_sessions_program_id_idx").on(table.programId),
+  index("program_sessions_date_start_idx").on(table.dateStart),
+  index("program_sessions_status_idx").on(table.status),
+]);
+
+// Session attendance records
+export const sessionAttendance = pgTable("session_attendance", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").references(() => programSessions.id).notNull(),
+  residentId: uuid("resident_id").references(() => users.id).notNull(),
+  checkedInAt: timestamp("checked_in_at"),
+  checkedOutAt: timestamp("checked_out_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("session_attendance_unique_idx").on(table.sessionId, table.residentId),
+  index("session_attendance_session_id_idx").on(table.sessionId),
+  index("session_attendance_resident_id_idx").on(table.residentId),
+]);
+
 export const attendance = pgTable("attendance", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   residentId: uuid("resident_id").references(() => users.id).notNull(),
@@ -188,9 +249,13 @@ export const caseNotes = pgTable("case_notes", {
   tags: jsonb("tags"), // array of strings
   private: boolean("private").default(true),
   aiReason: text("ai_reason"), // AI rationale for note generation
+  programId: uuid("program_id").references(() => programs.id), // Link to program
+  priority: ticketPriorityEnum("priority").default("normal"),
+  confidential: boolean("confidential").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("case_notes_resident_created_at_idx").on(table.residentId, table.createdAt),
+  index("case_notes_program_id_idx").on(table.programId),
 ]);
 
 export const resources = pgTable("resources", {
@@ -647,6 +712,51 @@ export const crmActivities = pgTable("crm_activities", {
   index("crm_activities_scheduled_idx").on(table.scheduledFor),
 ]);
 
+// Messages table for internal communication
+export const messages = pgTable("messages", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromUserId: uuid("from_user_id").references(() => users.id).notNull(),
+  toUserId: uuid("to_user_id").references(() => users.id).notNull(),
+  subject: varchar("subject").notNull(),
+  body: text("body").notNull(),
+  isRead: boolean("is_read").default(false),
+  isArchived: boolean("is_archived").default(false),
+  parentId: uuid("parent_id"), // For threading - will add reference in relations
+  attachments: jsonb("attachments"), // array of document IDs
+  createdAt: timestamp("created_at").defaultNow(),
+  readAt: timestamp("read_at"),
+}, (table) => [
+  index("messages_from_user_idx").on(table.fromUserId),
+  index("messages_to_user_idx").on(table.toUserId),
+  index("messages_is_read_idx").on(table.isRead),
+  index("messages_created_at_idx").on(table.createdAt),
+]);
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  type: varchar("type").notNull(), // case_note, message, ticket, event_reminder, etc.
+  title: varchar("title").notNull(),
+  body: text("body"),
+  status: notificationStatusEnum("status").default("unread"),
+  priority: notificationPriorityEnum("priority").default("normal"),
+  linkType: varchar("link_type"), // case_note, ticket, message, etc.
+  linkId: uuid("link_id"), // ID of related entity
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  readAt: timestamp("read_at"),
+  archivedAt: timestamp("archived_at"),
+}, (table) => [
+  index("notifications_user_id_idx").on(table.userId),
+  index("notifications_status_idx").on(table.status),
+  index("notifications_type_idx").on(table.type),
+  index("notifications_priority_idx").on(table.priority),
+  index("notifications_created_at_idx").on(table.createdAt),
+]);
+
+
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   residentProfile: one(residentProfiles, {
@@ -717,6 +827,10 @@ export const caseNotesRelations = relations(caseNotes, ({ one }) => ({
   creator: one(users, {
     fields: [caseNotes.createdBy],
     references: [users.id],
+  }),
+  program: one(programs, {
+    fields: [caseNotes.programId],
+    references: [programs.id],
   }),
 }));
 
@@ -790,6 +904,65 @@ export const faqFeedbackRelations = relations(faqFeedback, ({ one }) => ({
   }),
   user: one(users, {
     fields: [faqFeedback.userId],
+    references: [users.id],
+  }),
+}));
+
+// Program relations
+export const programsRelations = relations(programs, ({ many }) => ({
+  sessions: many(programSessions),
+  caseNotes: many(caseNotes),
+}));
+
+export const programSessionsRelations = relations(programSessions, ({ one, many }) => ({
+  program: one(programs, {
+    fields: [programSessions.programId],
+    references: [programs.id],
+  }),
+  facilitator: one(users, {
+    fields: [programSessions.facilitatorId],
+    references: [users.id],
+  }),
+  attendance: many(sessionAttendance),
+}));
+
+export const sessionAttendanceRelations = relations(sessionAttendance, ({ one }) => ({
+  session: one(programSessions, {
+    fields: [sessionAttendance.sessionId],
+    references: [programSessions.id],
+  }),
+  resident: one(users, {
+    fields: [sessionAttendance.residentId],
+    references: [users.id],
+  }),
+}));
+
+// Message relations
+export const messagesRelations = relations(messages, ({ one, many }) => ({
+  fromUser: one(users, {
+    fields: [messages.fromUserId],
+    references: [users.id],
+    relationName: "sentMessages",
+  }),
+  toUser: one(users, {
+    fields: [messages.toUserId],
+    references: [users.id],
+    relationName: "receivedMessages",
+  }),
+  parent: one(messages, {
+    fields: [messages.parentId],
+    references: [messages.id],
+    relationName: "parentMessage",
+  }),
+  replies: many(messages, {
+    relationName: "parentMessage",
+  }),
+}));
+
+// Notification relations
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
     references: [users.id],
   }),
 }));
@@ -927,6 +1100,33 @@ export const insertCrmActivitySchema = createInsertSchema(crmActivities).omit({
   createdAt: true,
 });
 
+export const insertProgramSchema = createInsertSchema(programs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProgramSessionSchema = createInsertSchema(programSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSessionAttendanceSchema = createInsertSchema(sessionAttendance).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -978,3 +1178,13 @@ export type ProspectiveResident = typeof prospectiveResidents.$inferSelect;
 export type InsertProspectiveResident = z.infer<typeof insertProspectiveResidentSchema>;
 export type CrmActivity = typeof crmActivities.$inferSelect;
 export type InsertCrmActivity = z.infer<typeof insertCrmActivitySchema>;
+export type Program = typeof programs.$inferSelect;
+export type InsertProgram = z.infer<typeof insertProgramSchema>;
+export type ProgramSession = typeof programSessions.$inferSelect;
+export type InsertProgramSession = z.infer<typeof insertProgramSessionSchema>;
+export type SessionAttendance = typeof sessionAttendance.$inferSelect;
+export type InsertSessionAttendance = z.infer<typeof insertSessionAttendanceSchema>;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

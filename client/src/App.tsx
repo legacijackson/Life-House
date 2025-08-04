@@ -34,6 +34,7 @@ import AdminPanelPage from "@/pages/admin-panel";
 import FirstLoginWizard from "@/pages/first-login-wizard";
 import IntakeReferrals from "@/pages/intake-referrals";
 import NotFound from "@/pages/not-found";
+import DocumentsPage from "@/pages/documents";
 
 // Protected routes wrapper
 function ProtectedRoutes() {
@@ -59,6 +60,7 @@ function ProtectedRoutes() {
         <Route path="/app/first-login" component={FirstLoginWizard} />
         <Route path="/app/partner-portal" component={PartnerPortal} />
         <Route path="/app/profile" component={ProfilePage} />
+        <Route path="/app/documents" component={DocumentsPage} />
       </Switch>
     </RouteGuard>
   );
