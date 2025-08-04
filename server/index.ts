@@ -48,8 +48,8 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // Process CSV files from attached_assets directory at startup
-  await processUploadedCSVFiles();
+  // Skip CSV processing at startup to avoid OpenAI quota issues
+  // await processUploadedCSVFiles();
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

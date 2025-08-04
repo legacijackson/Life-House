@@ -42,6 +42,7 @@ The application uses a monorepo structure separating client, server, shared, and
 - **Programs System**: Comprehensive program management with 7 flagship programs (STOP TouchPoint, STOP ARMS, Building Your Dream Legacy, Fatherhood Focus, Men's Circle, Re-entry Navigation, Financial Literacy), session scheduling, and attendance tracking.
 - **Messaging System**: Internal communication platform with threading support and read receipts.
 - **Notifications System**: Multi-channel notification system with priority levels and link tracking.
+- **Document Management System**: Complete file storage system with upload/download, e-signature canvas, and rich text editor (CR-16 completed).
 
 ## External Dependencies
 
