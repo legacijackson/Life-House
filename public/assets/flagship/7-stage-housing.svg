@@ -68,3 +68,8 @@
     From Intake to Legacy
   </text>
 </svg>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="32" cy="32" r="30" fill="#4577F0" fill-opacity="0.1"/>
+<path d="M32 12l-16 12v24h12V36h8v12h12V24L32 12z" fill="#4577F0"/>
+<path d="M28 32h8v4h-8zM20 40h4v4h-4zM40 40h4v4h-4z" fill="#4577F0" fill-opacity="0.7"/>
+</svg>

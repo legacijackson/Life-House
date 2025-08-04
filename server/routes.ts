@@ -2105,6 +2105,34 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     }
   }));
 
+  // Health check endpoint
+  app.get('/health', (req: Request, res: Response) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      service: 'Life House Reentry Services'
+    });
+  });
+
+  // Force 500 endpoint for testing health monitoring
+  app.get('/api/force500', (req: Request, res: Response) => {
+    res.status(500).json({ 
+      error: 'Simulated server error for health monitoring test',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Highlight resources endpoint for flagship programs
+  app.get('/api/resources/highlight', async (req: Request, res: Response) => {
+    try {
+      const highlightResources = await storage.getHighlightResources();
+      res.json(highlightResources);
+    } catch (error) {
+      console.error('Error fetching highlight resources:', error);
+      res.status(500).json({ message: 'Failed to fetch highlight resources' });
+    }
+  });
+
   // Unified resources endpoint (CR-42: Role-based data scoping)
   app.get('/api/resources', async (req: Request, res: Response) => {
     try {

@@ -59,3 +59,8 @@
     Healing Together
   </text>
 </svg>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="32" cy="32" r="30" fill="#9E45EF" fill-opacity="0.1"/>
+<path d="M32 44c6.627 0 12-5.373 12-12s-5.373-12-12-12-12 5.373-12 12 5.373 12 12 12z" fill="#9E45EF"/>
+<path d="M20 20h24v4H20zM20 40h24v4H20zM16 28h32v8H16z" fill="#9E45EF" fill-opacity="0.6"/>
+</svg>

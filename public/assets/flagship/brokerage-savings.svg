@@ -50,3 +50,8 @@
     Build Your Future
   </text>
 </svg>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="32" cy="32" r="30" fill="#24B556" fill-opacity="0.1"/>
+<path d="M32 8C18.75 8 8 18.75 8 32s10.75 24 24 24 24-10.75 24-24S45.25 8 32 8zm12 36h-8v-8h-8v8h-8V20h8v8h8v-8h8v24z" fill="#24B556"/>
+<path d="M28 40l8-8-8-8v16z" fill="#24B556"/>
+</svg>

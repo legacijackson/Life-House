@@ -54,3 +54,9 @@
     640+ in 6 Months
   </text>
 </svg>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="32" cy="32" r="30" fill="#24B556" fill-opacity="0.1"/>
+<rect x="16" y="20" width="32" height="20" rx="4" fill="#24B556" fill-opacity="0.2"/>
+<path d="M20 28h24v4H20zM20 36h16v4H20z" fill="#24B556"/>
+<path d="M42 18l6 6-6 6-2-2 2-2h-4v-4h4l-2-2 2-2z" fill="#24B556"/>
+</svg>

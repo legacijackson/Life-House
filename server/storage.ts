@@ -511,10 +511,10 @@ export class DatabaseStorage implements IStorage {
   async createOrUpdateResource(resource: InsertResource): Promise<Resource> {
     // Check if resource already exists by name
     const existing = await this.findResourceByName(resource.name);
-    
+
     if (existing) {
       console.log(`[Storage] Resource "${resource.name}" already exists, updating instead`);
-      
+
       // Update existing resource with new data, preserving certain fields
       const [updated] = await db
         .update(resources)
@@ -533,7 +533,7 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(resources.id, existing.id))
         .returning();
-        
+
       return updated;
     } else {
       // Create new resource
@@ -543,7 +543,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getHighlightResources(): Promise<Resource[]> {
-    return await db
+    const resources = await db
       .select()
       .from(resources)
       .where(and(
@@ -551,6 +551,7 @@ export class DatabaseStorage implements IStorage {
         eq(resources.status, 'active')
       ))
       .orderBy(resources.name);
+    return resources;
   }
 
   async updateResource(id: string, updates: Partial<Resource>): Promise<Resource> {
@@ -871,7 +872,7 @@ export class DatabaseStorage implements IStorage {
   async getReports(filters: any = {}) {
     try {
       let whereConditions = [];
-      
+
       if (filters.type) {
         whereConditions.push(eq(reports.type, filters.type));
       }
@@ -884,7 +885,7 @@ export class DatabaseStorage implements IStorage {
       const finalQuery = whereConditions.length > 0 
         ? query.where(and(...whereConditions))
         : query;
-      
+
       const reportsList = await finalQuery.orderBy(desc(reports.generatedAt));
       return reportsList;
     } catch (error) {
@@ -1025,7 +1026,7 @@ export class DatabaseStorage implements IStorage {
 
   async createDonorDonation(donation: InsertDonorDonation): Promise<DonorDonation> {
     const [newDonation] = await db.insert(donorDonations).values(donation).returning();
-    
+
     // Update donor's total donated and last donation date
     const donor = await this.getDonor(newDonation.donorId);
     if (donor) {

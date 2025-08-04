@@ -63,3 +63,9 @@
     Earn While Learning
   </text>
 </svg>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="32" cy="32" r="30" fill="#24B556" fill-opacity="0.1"/>
+<rect x="12" y="16" width="40" height="32" rx="2" fill="#24B556" fill-opacity="0.2"/>
+<path d="M16 24h32v4H16zM16 32h24v4H16zM16 40h20v4H16z" fill="#24B556"/>
+<circle cx="44" cy="20" r="4" fill="#24B556"/>
+</svg>

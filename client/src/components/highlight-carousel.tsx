@@ -1,219 +1,111 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 
-interface Resource {
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, Building, Heart, Briefcase, DollarSign, GraduationCap, Smartphone } from 'lucide-react';
+
+interface HighlightResource {
   id: string;
-  name: string;
-  summary?: string;
-  description?: string;
-  categories?: string[];
-  url?: string;
+  title: string;
+  description: string;
   category: string;
-  image?: string;
+  url?: string;
+  status: string;
 }
 
+const categoryIcons = {
+  financial: DollarSign,
+  housing: Building,
+  healing: Heart,
+  jobreadiness: Briefcase,
+  business: Briefcase,
+  community: GraduationCap,
+  default: Smartphone
+};
+
+const categoryColors = {
+  financial: "bg-green-100 text-green-800",
+  housing: "bg-blue-100 text-blue-800", 
+  healing: "bg-purple-100 text-purple-800",
+  jobreadiness: "bg-orange-100 text-orange-800",
+  business: "bg-indigo-100 text-indigo-800",
+  community: "bg-pink-100 text-pink-800",
+  default: "bg-gray-100 text-gray-800"
+};
+
 export function HighlightCarousel() {
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
-  
-  const { data: highlightResources, isLoading } = useQuery({
+  const { data: resources = [] } = useQuery({
     queryKey: ['/api/resources/highlight'],
     queryFn: async () => {
       const response = await fetch('/api/resources/highlight');
       if (!response.ok) throw new Error('Failed to fetch highlight resources');
-      return response.json() as Promise<Resource[]>;
+      return response.json();
     }
   });
 
-  if (isLoading) {
+  if (!resources.length) {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex-shrink-0 w-80">
-            <Skeleton className="h-48 w-full" />
-          </div>
-        ))}
+      <div className="text-center py-8">
+        <Heart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500">No flagship programs available at this time.</p>
       </div>
     );
   }
 
-  if (!highlightResources || highlightResources.length === 0) {
-    return null;
-  }
-
   return (
-    <>
-      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-purple-500 scrollbar-track-gray-100">
-        {highlightResources.map((resource) => (
-          <Card
-            key={resource.id}
-            className="flex-shrink-0 w-80 p-4 cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 hover:border-purple-400"
-            onClick={() => setSelectedResource(resource)}
-          >
-            <div className="h-full flex flex-col">
-              {/* Image placeholder with gradient background */}
-              <div className="h-32 mb-3 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center overflow-hidden">
-                {resource.image ? (
-                  <img 
-                    src={resource.image} 
-                    alt={resource.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-white text-center p-4">
-                    <svg 
-                      className="w-16 h-16 mx-auto mb-2" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" 
-                      />
-                    </svg>
-                    <span className="text-sm font-medium">Life House</span>
+    <div className="relative">
+      <div className="overflow-x-auto pb-4">
+        <div className="flex gap-4 min-w-max">
+          {resources.map((resource: HighlightResource) => {
+            const IconComponent = categoryIcons[resource.category as keyof typeof categoryIcons] || categoryIcons.default;
+            const colorClass = categoryColors[resource.category as keyof typeof categoryColors] || categoryColors.default;
+            
+            return (
+              <Card key={resource.id} className="w-80 flex-shrink-0 border-2 border-transparent bg-gradient-to-br from-purple-50 to-blue-50 hover:border-purple-200 transition-all duration-300 hover:shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <IconComponent className="h-5 w-5 text-purple-600" />
+                      <Badge className={colorClass}>
+                        {resource.category}
+                      </Badge>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* Content */}
-              <h3 className="font-semibold text-lg mb-2 line-clamp-2">
-                {resource.name}
-              </h3>
-              
-              {/* Category badges */}
-              <div className="flex flex-wrap gap-1 mb-3">
-                {resource.categories && resource.categories.length > 0 ? (
-                  resource.categories.slice(0, 3).map((cat, idx) => (
-                    <Badge 
-                      key={idx} 
-                      variant="secondary" 
-                      className="text-xs bg-purple-100 text-purple-700"
-                    >
-                      {cat}
-                    </Badge>
-                  ))
-                ) : (
-                  <Badge variant="secondary" className="text-xs">
-                    {resource.category}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Summary */}
-              <p className="text-sm text-gray-600 line-clamp-3 flex-grow">
-                {resource.summary || resource.description || 'Learn more about this Life House program.'}
-              </p>
-
-              {/* Learn More button */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="mt-3 text-purple-600 hover:text-purple-700 p-0 h-auto font-medium"
-              >
-                Learn More 
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          </Card>
-        ))}
+                  
+                  <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+                    {resource.title}
+                  </h3>
+                  
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                    {resource.description}
+                  </p>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-purple-600 font-medium">
+                      Life House Program
+                    </span>
+                    {resource.url && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => window.open(resource.url, '_blank')}
+                        className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Learn More
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
-
-      {/* Resource Detail Modal */}
-      <Dialog open={!!selectedResource} onOpenChange={() => setSelectedResource(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">
-              {selectedResource?.name}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="mt-4">
-            {/* Full image */}
-            <div className="h-48 mb-4 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center overflow-hidden">
-              {selectedResource?.image ? (
-                <img 
-                  src={selectedResource.image} 
-                  alt={selectedResource.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-white text-center">
-                  <svg 
-                    className="w-24 h-24 mx-auto mb-2" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" 
-                    />
-                  </svg>
-                  <span className="text-lg font-medium">Life House Program</span>
-                </div>
-              )}
-            </div>
-
-            {/* Categories */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {selectedResource?.categories?.map((cat, idx) => (
-                <Badge 
-                  key={idx} 
-                  className="bg-purple-100 text-purple-700"
-                >
-                  {cat}
-                </Badge>
-              ))}
-            </div>
-
-            {/* Summary */}
-            {selectedResource?.summary && (
-              <div className="mb-4">
-                <h3 className="font-semibold mb-2">Summary</h3>
-                <p className="text-gray-600">{selectedResource.summary}</p>
-              </div>
-            )}
-
-            {/* Full Description */}
-            <DialogDescription className="text-base">
-              {selectedResource?.description || selectedResource?.summary || 
-                'This Life House program is designed to support residents in their journey toward stability and success.'}
-            </DialogDescription>
-
-            {/* Program URL */}
-            {selectedResource?.url && (
-              <div className="mt-6">
-                <Button asChild className="w-full">
-                  <a 
-                    href={selectedResource.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    Visit Program Website
-                  </a>
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }
+
+export default HighlightCarousel;
