@@ -121,3 +121,70 @@ setInterval(monitor, CHECK_INTERVAL);
 
 // Export for testing
 module.exports = { checkHealth, sendSlackAlert };
+const fetch = require('node-fetch');
+
+// Health ping function for monitoring
+async function healthPing() {
+  const startTime = Date.now();
+  
+  try {
+    const response = await fetch('http://localhost:5000/health', {
+      method: 'GET',
+      timeout: 5000
+    });
+    
+    const responseTime = Date.now() - startTime;
+    
+    if (!response.ok) {
+      console.error(`Health check failed with status: ${response.status}`);
+      
+      // In production, this would send to Slack
+      const alertMessage = {
+        text: `🚨 Life House App Health Check Failed`,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Status:* ${response.status}\n*Response Time:* ${responseTime}ms\n*Time:* ${new Date().toISOString()}`
+            }
+          }
+        ]
+      };
+      
+      console.log('Alert payload:', JSON.stringify(alertMessage, null, 2));
+      return false;
+    }
+    
+    console.log(`✅ Health check passed in ${responseTime}ms`);
+    return true;
+    
+  } catch (error) {
+    console.error('Health check error:', error.message);
+    
+    // In production, this would send to Slack
+    const alertMessage = {
+      text: `🚨 Life House App Down - Connection Failed`,
+      blocks: [
+        {
+          type: "section", 
+          text: {
+            type: "mrkdwn",
+            text: `*Error:* ${error.message}\n*Time:* ${new Date().toISOString()}\n*Stack:* \`\`\`${error.stack}\`\`\``
+          }
+        }
+      ]
+    };
+    
+    console.log('Alert payload:', JSON.stringify(alertMessage, null, 2));
+    return false;
+  }
+}
+
+// Run every 5 minutes in production
+if (require.main === module) {
+  setInterval(healthPing, 5 * 60 * 1000);
+  healthPing(); // Run once immediately
+}
+
+module.exports = { healthPing };
