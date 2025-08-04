@@ -1,0 +1,537 @@
+# Life House – **Replit Dev & QA Mega‑Prompt**  (v11 – 2 Aug 2025)
+
+> **READ FIRST — EXECUTION ORDER**
+> **Step 0 » Comprehensive Pre‑Flight Script** (added in v11)
+> **Step 1 » Implement Change‑Requests (CR‑1→CR‑51)**
+> **Step 2 » Run Full Automated & Manual QA Matrix (110 + tests)**
+> **Step 3 » Resolve *all* failures, rerun until 100 % Pass**
+> **Step 4 » Attach Artifacts & Ship v1.3.0**
+>
+> This doc now contains **every dev task, DB migration, API spec, RBAC rule, UI component, and test** required to finish the Life House app. Follow the exact order; do not skip any item.
+
+---
+
+## 0  Comprehensive Pre‑Flight Script (to be executed by Replit Assistant)
+
+### 0.1  Data Sanitisation
+
+1. **DROP** all seed/fake rows from `users`, `residents`, `case_notes`, `attendance`, `resources`, `maintenance`, `checkins`, `reports`.
+2. **VERIFY** each table now `COUNT(*) = 0` or only system/admin records.
+3. **Run migration** `2025_08_02_seed_admin.sql` which inserts only:
+
+   * Super Admins → `julius@lifehousereentry.com`, `brittney@lifehousereentry.com`, `kairia@lifehousereentry.com`, `juliusdjackson@gmail.com`.
+4. Output SQL dump `/artifacts/preflight/clean_schema.sql`.
+
+### 0.2  Integration Smoke Test
+
+| Service                                                           | CLI / API Call                                     | Expected               |
+| ----------------------------------------------------------------- | -------------------------------------------------- | ---------------------- |
+| **Stripe**                                                        | `stripe prices list --limit 3`                     | returns ≥3 tier prices |
+| **SendGrid**                                                      | `curl -I https://api.sendgrid.com/v3/user/account` | 200 OK                 |
+| **Slack Bot**                                                     | `curl -X POST chat.postMessage` to #lifehouse‑ops  | 200 OK                 |
+| **OpenAI**                                                        | `curl completions` test                            | 200 OK                 |
+| Upload console output to `/artifacts/preflight/integrations.txt`. |                                                    |                        |
+
+### 0.3  Security Sweep
+
+* Run **OWASP ZAP full scan** against `.replit.dev`; export HTML report `/artifacts/security/zap.html`.
+* Run **npm audit --production**; auto‑fix minor, fail on high/critical.
+* Lint for secrets `git-secrets --scan`.
+
+### 0.4  Notification Hook
+
+* Create Cloud‑function `healthPing` that pings `/health` every 5 min; on non‑200 sends Slack DM to SuperAdmin with stack‑trace.
+* Store function source `/monitor/healthPing.js`; prove with test failure screenshot.
+
+> **Proceed to Step 1 only after all Pre‑Flight artifacts uploaded and validated.**
+
+---
+
+## 1  Change‑Request Matrix (CR‑41 → CR‑51)
+
+*(unchanged from v10.1 but renumbered—CR‑51 already included)*
+
+\[Matrix table retained here…]
+
+---
+
+## 2  RBAC Summary Table
+
+*(unchanged)*
+
+---
+
+## 3  Key DB Migrations
+
+*(unchanged)*
+
+---
+
+## 4  API Additions / Modifications
+
+*(unchanged)*
+
+---
+
+## 5  Front‑End Components
+
+*(unchanged)*
+
+---
+
+## 6  Automated Test Inventory  (now **120 tests**)
+
+We extend previous suites with **10 new Pre‑Flight & Security tests**.
+
+| Suite                     | New Tests                                                   |
+| ------------------------- | ----------------------------------------------------------- |
+| `preflight.cy.js`         | PF‑01 (tables empty), PF‑02 (admins seeded)                 |
+| `integration.cy.js`       | INT‑01 Stripe, INT‑02 SendGrid, INT‑03 Slack, INT‑04 OpenAI |
+| `security.cy.js`          | SEC‑11 ZAP 0 highs, SEC‑12 npm audit 0 highs                |
+| `portal_visibility.cy.js` | F‑61 Resident hides Staff btn, F‑62 CM hides Admin btn      |
+
+All tests must run green in CI.
+
+---
+
+## 7  Manual QA Matrix (unchanged 30 checks)
+
+Add **MQ‑31** — Admin banner appears in View‑As.
+
+---
+
+## 8  Artifacts Folders (added)
+
+```
+/artifacts/preflight/
+  clean_schema.sql
+  integrations.txt
+/artifacts/security/
+  zap.html
+```
+
+---
+
+## 9  Go‑Live Gates (expanded)
+
+28. ✔️ Pre‑Flight artifacts present & verified.
+29. ✔️ ZAP & npm audit show 0 high/critical.
+30. ✔️ HealthPing alert tested (simulate 500).
+
+---
+
+*Save this file as `/README_REPLIT.md`; CI must show **120/120** tests passed.*
+
+*Last updated: 2025‑08‑02*
+
+---
+
+## 13  **CR‑52 — Life House Flagship Resources Section**  *(v12 – 2 Aug 2025)*
+
+### 13.1  Business Goal
+
+Surface Life House–owned programs first, in a branded **“Our Flagship Programs”** row that sits **above the search bar** on `/app/resources` for every visitor (guest, resident, CM, admin). Each program appears as a large card featuring an image, short pitch, category chips, and a **Learn More** click‑through that opens a full‑detail modal. This raises awareness, drives enrollment, and excites donors/partners.
+
+### 13.2  Database Δ
+
+```sql
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS is_lifehouse boolean DEFAULT false;
+-- seed core programs (run once)
+INSERT INTO resources (title, summary, categories, url, is_lifehouse) VALUES
+ ('Life House Brokerage & Savings Program',
+  'Matched‑savings + 5 % brokerage account that turns mandatory 30 % program contributions into a $1,500 nest‑egg for permanent housing.',
+  '{financial,lifedesign}',
+  'https://lifehousereentry.org/brokerage',
+  true),
+ ('Life & Love Design Curriculum',
+  '12‑week healing‑centered coaching that rewires identity, relationships & money habits through CBT‑informed journaling and peer labs.',
+  '{healing,jobreadiness}',
+  'https://lifehousereentry.org/lifedesign',
+  true),
+ ('7‑Stage Reentry Housing Program',
+  'Structured pathway from Intake → Legacy with sober housing, life‑design coaching, job placement, and permanent‑housing navigation.',
+  '{housing,jobreadiness}',
+  'https://lifehousereentry.org/7stages',
+  true),
+ ('Credit‑Repair Clinic (Cure My Credit 700)',
+  'Partner‑led dispute service that lifts FICO ≥ 640 in ~6 mo; offered free to Life House residents, sliding‑scale for community.',
+  '{financial}',
+  'https://www.curemycredit700.com',
+  true),
+ ('Global Investment Co. Financial Literacy',
+  'Self‑paced micro‑courses + live workshops covering budgeting, debt snowball, and beginner investing. Residents earn $25 stipend per module.',
+  '{financial,community}',
+  'https://globalinvestmentcompanies.com/home',
+  true),
+ ('LegacyPlan™ Pathway (Business & Money)',
+  'Gamified mobile curriculum that walks residents through side‑gig ideation, LLC setup, and tax basics. Integrated wallet for savings goals.',
+  '{jobreadiness,financial}',
+  'https://legacyplan.app/b/globalpathway',
+  true),
+ ('Building Your Dream Legacy – Business Coaching',
+  '12‑month accelerator by Kai Shariff turning creative genius into scalable revenue using the Earn‑While‑You‑Learn™ method.',
+  '{business,community}',
+  'https://lifehousereentry.org/legacy‑coaching',
+  true);
+```
+
+### 13.3  API
+
+* **GET `/resources/highlight`**  → returns `SELECT * FROM resources WHERE is_lifehouse=true ORDER BY id`.
+
+### 13.4  Front‑End
+
+* **Component** `HighlightCarousel.tsx`
+
+  * Fetch `/resources/highlight` once.
+  * Render horizontal scroll (Tailwind `flex overflow-x-auto gap-4 pb-2`).
+  * Card (`CardHighlight`) props: `image, title, tags, blurb`. Image fallback = LH logo.
+  * On click open `ResourceModal` using existing Details panel styles.
+* **Placement** in `ResourcesPage`:
+
+  ```tsx
+  <section className="mb-6">
+    <h3 className="text-lg font-semibold mb-2">Our Flagship Programs</h3>
+    <HighlightCarousel />
+  </section>
+  ```
+* **Guest Banner** (blue) now sits **below** highlight section.
+
+### 13.5  Images
+
+Store hero images under `/public/flagship/…`.
+
+| Program               | Image Suggestion                          |
+| --------------------- | ----------------------------------------- |
+| Brokerage & Savings   | piggy‑bank with upward arrow              |
+| Life & Love Design    | people journaling in a circle             |
+| 7‑Stage Housing       | collage of House → Apartment              |
+| Credit Repair         | smiling resident with “+120 FICO” overlay |
+| Financial Literacy    | classroom scene with instructor           |
+| LegacyPlan Pathway    | phone mock‑up of gamified app             |
+| Dream Legacy Coaching | Kai speaking with whiteboard              |
+
+### 13.6  Automated Tests (add F‑63 → F‑66)
+
+| ID   | Scenario                                                         | Role    | Expect                                  |
+| ---- | ---------------------------------------------------------------- | ------- | --------------------------------------- |
+| F‑63 | Visit `/app/resources` as guest                                  | guest   | 7 highlight cards present, banner below |
+| F‑64 | Click card → modal                                               | guest   | modal shows title & summary             |
+| F‑65 | Search filter works independent of highlights                    | any     | highlight row unaffected                |
+| F‑66 | API `/resources/highlight` returns only `is_lifehouse=true` rows | backend | 200 JSON array length == 7              |
+
+### 13.7  Manual QA Add‑Ons
+
+* **MQ‑32** – A11y: cards focusable via keyboard & modal exits with ESC.
+* **MQ‑33** – Banner hides after login.
+
+### 13.8  Docs & Content Source Notes
+
+* Content for **Building Your Dream Legacy** pulled from uploaded PDF – use Chapter 1 tagline and Earn‑While‑You‑Learn summary. fileciteturn4file0L1-L25
+* Credit & finance partner details scraped from public homepages (Replit assistant to run during Pre‑Flight integration tests).
+
+---
+
+All other sections unchanged. Commit this as **v12** into `/README_REPLIT.md`; bump automated test target to **124/124**.
+
+*Last updated: 2025‑08‑02*
+
+---
+
+## 14  **Prompt Suite for Replit Execution**  *(v13 – 2 Aug 2025)*
+
+Below are **copy‑ready blocks** you will paste into Replit in the exact order shown.  Each block is delimited with `<<< >>>`; copy without the markers.
+
+---
+
+### 14.1  PROMPT 1 — ARCHITECT ( for **Replit Agent** )
+
+````
+<<<PROMPT‑1‑START>>>
+You are the **Life House Consulting Architect** assigned to bring the current codebase up to spec **v13**.
+
+### Primary Objective
+Generate **one atomic commit** that aligns data‑models, seed scripts, and folder scaffolding with `/README_REPLIT.md` (v13) *without* breaking any existing feature flags or migrations.
+
+---
+### Pre‑Task Guardrails (fail‑fast)
+1. **Git Status Clean** – abort if `git diff --stat` ≠ 0.
+2. **Env Check** – confirm `DATABASE_URL` and `NODE_ENV=development`.
+3. **Prisma Version** – lock to `>=5.8.0` (to use `referentialActions`).
+4. **Backup** – run `npx prisma migrate diff --from-schema-datamodel ./prisma/schema.prisma --to-database $DATABASE_URL --script > _tmp/backup.sql`.
+
+---
+### Deliverables Checklist
+| # | Deliverable | Tool/Folder |
+|---|-------------|-------------|
+| 1 | **Prisma schema patch** adding / altering models listed below | `/prisma/schema.prisma` |
+| 2 | SQL migration files `YYYYMMDDHH_program_tables` etc. | `/prisma/migrations/*` |
+| 3 | Seed script `seed_programs.ts` (9 rows) | `/prisma/seed/` |
+| 4 | UI stubs **(React + Tailwind)** – empty functional components exporting default:  
+`HighlightCarousel`, `CheckInPage`, `NotificationCenter`, `ImpersonationBanner`, `WarmHandOffPanel` | `/client/src/components/` + `/pages/` |
+| 5 | Jest / Cypress **empty test shells** for new specs F‑45…F‑66 | `/tests/` |
+| 6 | README migration annotation – append migration IDs | `/docs/migrations_log.md` |
+
+---
+### Model Specifications (excerpt)
+```prisma
+model Program {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(40)
+  title     String   @db.VarChar(120)
+  sessions  Session[]
+}
+
+model Session {
+  id            Int        @id @default(autoincrement())
+  program       Program    @relation(fields: [programId], references: [id])
+  programId     Int
+  title         String     @db.VarChar(140)
+  icon          String?
+  dateStart     DateTime
+  dateEnd       DateTime
+  location      String?
+  facilitatorId Int?       // FK → User
+  status        SessionStatus @default(PLANNED)
+  tags          String[]  @db.VarChar(30)
+  attendance    AttendanceRecord[]
+}
+````
+
+*(remaining models in README)*
+
+---
+
+### Migration Strategy
+
+1. Run `npx prisma migrate dev --create-only --name init_v13` to generate SQL.
+2. Edit SQL manually to set columns `NOT NULL DEFAULT` where required for zero‑downtime.
+3. Verify diff: `prisma migrate diff --from-migrations --to-schema-datamodel ./prisma/schema.prisma` → empty.
+
+---
+
+### Seeding
+
+```ts
+// prisma/seed/seed_programs.ts
+import { PrismaClient } from '@prisma/client';
+const db = new PrismaClient();
+await db.program.createMany({ data: [
+  { code: 'LIFEDESIGN', title: 'Life Design' },
+  { code: 'ONE_ON_ONE', title: '1 on 1 Session' },
+  { code: 'GROUP',       title: 'Group Session' },
+  { code: 'FIN_LIT',     title: 'Financial Literacy' },
+  { code: 'CREDIT',      title: 'Credit' },
+  { code: 'BUS_COACH',   title: 'Business Coaching' },
+  { code: 'ONBOARD',     title: 'Onboarding' },
+  { code: 'OFFBOARD',    title: 'Off Boarding' },
+  { code: 'OTHER',       title: 'Other' }
+]});
+```
+
+---
+
+### Commit Convention
+
+Commit message header: `feat(core): align schema with v13 + scaffold components`
+
+* Body → bullet list of changed files.
+* Footer → `BREAKING CHANGE: run prisma migrate deploy`.
+
+---
+
+### Output Format (strict)
+
+```
+📦 Commit Ready
+Added: [file1, file2, …]
+Modified: [schema.prisma, …]
+Skipped tests: 0 (shells only)
+```
+
+Run NO tests, NO `npm i`.  Save and stop.
+<<\<PROMPT‑1‑END>>>
+
+```
+
+---
+### 14.2  PROMPT 2 — BUILD ( for **Replit Advanced Assistant** )
+```
+
+<<\<PROMPT‑2‑START>>>
+
+# Build Phase – Life House v13
+
+## Global Constants
+
+• Brand hex:  **Green #24B556**, **Blue #4577F0**, **Purple #9E45EF**
+• Font stack: `Montserrat, Inter, -apple-system, sans-serif`
+• Geofence radius: **91 m** (100 yd)
+
+## Tasks Checklist (execute sequentially, remove when done)
+
+1 .  **Data Models & Migrations**
+   ◻ If `programs` table missing → create with columns id, code, title.  Seed 9 rows (taxonomy list).
+   ◻ If `sessions` missing → create (id, program\_id FK, title, icon, date\_start, date\_end, location, facilitator\_id, status, tags).
+   ◻ Add column `program_id` to `case_notes` (FK).  Script retro‑fill to null.
+   ◻ Add `is_lifehouse boolean` to `resources` and seed 7 flagship rows (SQL in §13.2).
+   ◻ Add `messages`, `notifications`, `checkins`, `maintenance_history` (see §3 & §4).
+
+2 .  **File Storage**
+   Configure DigitalOcean Spaces bucket `lifehouse` (endpoint `sfo3`); mount via `@aws-sdk/client-s3`.  Upload PDFs & profile pics here.
+
+3 .  **E‑signature Canvas**
+   Implement `/components/EsignCanvas.tsx` (HTML Canvas + date, typed name).  Capture PNG, upload to Spaces.
+
+4 .  **Flagship Carousel**
+   Build HighlightCarousel → GET `/resources/highlight`.  Cards 320 × 180, gradient border (Purple→Blue).  Modal `ResourceModal`.  Include aria labels.
+
+5 .  **Case‑Note AI Helper**
+   Install `openai@^4`.  Create `lib/casenoteAI.ts`.  Function `suggest(text)`: compliance rewrite using GPT‑4, max 400 tokens, cost guardrail `$0.02` per call.  UI: Rename field to *Life House AI Suggestions*.  Add *Generate*, *Apply*, *Cancel* buttons (#24B556 background).  Highlight illegal text in red underline.
+
+6 .  **Priority & Confidential Logic**
+   High/Urgent → email via SendGrid + Slack (#help‑tickets).  Slack token/refresh set in Secrets.  Block note save until compliance passes **unless** Confidential=true.
+
+7 .  **Messages & Notifications**
+   Socket.io real‑time.  Purge records > 2 years nightly.
+
+8 .  **Geofence Check‑In**
+   `GETCurrentPosition` → Haversine distance vs resident.property lat/lon.  Show spinner → success toast or error.
+
+9 .  **Reporting Engine**
+   If result rows ≤ 200 → PDF via Puppeteer; else stream CSV.  Header carries Life House logo and contact info.  Use field multiselect list grouped by page.
+
+10 .  **Image Cropper**
+   Integrate `react-easy-crop`.  Store 1 : 1 cropped JPEG max 256 KB in Spaces.
+
+11 .  **Tests**
+   Populate empty test shells F‑45 … F‑66, PF‑01 … SEC‑12.  Achieve **124/124** green.
+
+12 .  **Secrets**
+   STRIPE\_KEY (test), SENDGRID\_KEY (test), SLACK\_BOT\_TOKEN, SLACK\_REFRESH\_TOKEN, BUCKET\_KEY/SECRET, OPENAI\_KEY.
+
+13 .  **Self‑Check Trigger**
+   When you receive the word **check \<page|function>** run Cypress spec that covers that slice and print pass/fail.
+
+Confirm completion with a single line `BUILD COMPLETE`.  Print failing tests inline if any.
+<<\<PROMPT‑2‑END>>>
+
+```
+
+---
+### 14.3  PROMPT 3 — QA / CLEAN ( for **Replit Advanced Assistant** )
+```
+
+<<\<PROMPT‑3‑START>>>
+
+# **QA + Production‑Clean Phase – Life House v13**
+
+> Run only after `BUILD COMPLETE`.  This script wipes mock data, executes every automated & manual test, performs security + performance sweeps, then packages artifacts so the site can go live with zero junk rows.
+
+---
+
+## 0  Fail‑Fast Preconditions
+
+1. **Git diff** must be clean.
+2. **ENV** must include `NODE_ENV=development`.
+3. **DATABASE\_URL** must point to staging DB (not prod!).
+
+Abort if any fail.
+
+---
+
+## 1  Data‑Purge & Backup
+
+| Step | Command                                              | Expect                              |
+| ---- | ---------------------------------------------------- | ----------------------------------- |
+| 1.1  | `pg_dump --schema-only -f _tmp/preQA_schema.sql`     | file saved                          |
+| 1.2  | `node scripts/purgeMock.js`                          | prints row counts = 0 except admins |
+| 1.3  | `npx prisma db pull && prisma studio --schema-check` | no orphans                          |
+| 1.4  | Save `_tmp/preQA_data.json` (counts by table)        |                                     |
+
+*(purge script truncates residents, case\_notes, attendance, maintenance, resources where is\_lifehouse=false, messages, notifications, sessions, checkins, reports)*
+
+---
+
+## 2  Full Automated Test Battery
+
+Execute sequentially; fail on first red.
+
+1. **Jest** unit tests → green (coverage ≥ 90 %).
+2. **ESLint & Prettier** (`npm run lint`) → 0 errors.
+3. **Cypress** e2e & component (`npm run cypress:ci`) → 124/124 pass.
+4. **Cypress‑axe** a11y scan on `/`, `/login`, `/app/resources` → 0 violations severity > minor.
+5. **Lighthouse CI** PWA & perf; performance ≥ 80, a11y ≥ 90.
+6. **OWASP ZAP** full scan; export `zap.html` (0 high/critical).
+7. **npm audit --omit=dev** → 0 high/critical.
+8. **git‑secrets --scan** → 0 findings.
+
+---
+
+## 3  Live‑Flow Simulation (Smoke)
+
+1. **Flow A** Resident onboarding → completes 10‑screen wizard → verifies PDFs stored in Spaces.
+2. **Flow B** Resident submits maintenance ticket (category Electrical/High) → Slack & SendGrid email received.
+3. **Flow C** Case manager logs attendance with geofence success (use 4630 Lemon Hill Ave test event).
+4. **Flow D** Admin generates 30‑day Case‑Note PDF report > 200 rows (should stream CSV).
+   After each flow, delete the resident/user and verify DB counts return to 0.
+
+---
+
+## 4  Cost & Secrets Audit
+
+* Parse OpenAI & SendGrid usage logs during tests; assert **≤ \$0.50**.
+* Ensure no `.env` keys appear in bundled assets (`grep -R "sk-" build | wc -l == 0`).
+
+---
+
+## 5  HealthPing Verification
+
+1. Temporarily hit `/api/force500` route → expect Slack DM alert with stack trace.
+2. Re‑enable `/health` success → alert resolves.
+
+---
+
+## 6  Artifacts
+
+Store under `/artifacts/qa/DATE/`:
+
+* `clean_schema.sql`, `preQA_data.json`
+* `jest.html`, `cypress-report/`, `axe.json`, `lighthouse.html`, `zap.html`, `audit.json`, `coverage/`
+* `cost_report.txt`
+* Screenshots of HealthPing alert & Flow B email.
+
+---
+
+## 7  Output Format (strict)
+
+On success print exactly:
+
+```
+QA PASS  ✅  (124/124 tests, 0 High vulns, cost $<value>)
+```
+
+On failure, print:
+
+```
+QA FAIL ❌
+| Phase | Error |
+|-------|-------|
+| 2.3 Cypress | 2 tests failed – see /artifacts/qa/<date>/cypress-report |
+```
+
+Include NO other text.
+
+<<\<PROMPT‑3‑END>>>
+
+```
+
+---
+### 14.4  Delivery Instructions
+1 .  **Paste Prompt 1** into the **Replit Agent**; wait for file list summary commit.
+2 .  Review commits (optional).  If fine, **paste Prompt 2** into **Advanced Assistant**; wait for `BUILD COMPLETE`.
+3 .  **Paste Prompt 3** into the same Assistant; expect `QA PASS`.
+4 .  Fill live secrets; click **Deploy**.  Done.
+
+*Last updated: 2025‑08‑02 22:30 UTC*
+```
