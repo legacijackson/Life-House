@@ -1,53 +1,89 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, ExternalLink, Phone, Globe, MapPin, X, Home, DollarSign, GraduationCap, Users, Heart, Briefcase, Star, TrendingUp } from "lucide-react";
+import { MapPin, Phone, Globe, X, Home, DollarSign, GraduationCap, Users, Heart, Briefcase, Star, TrendingUp, ExternalLink } from "lucide-react";
 import { Logo } from "@/components/logo";
-import { PublicMobileNav } from "@/components/public-mobile-nav";
-import { HighlightCarousel } from "@/components/highlight-carousel";
 
 interface Resource {
   id: string;
   name: string;
   description: string;
   category: string;
-  address: string;
+  location: string;
   phone: string;
-  website: string;
-  eligibility: string;
-  hours: string;
-  tags?: string[];
-  contact?: {
-    phone?: string;
-    email?: string;
-  };
-  benefitAmount?: string;
-  status?: string;
+  email: string;
+  tags: string[];
 }
 
 export default function GuestResourcesPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const searchResources = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/resources?q=${encodeURIComponent(searchQuery)}`);
-      const data = await response.json();
-      setResources(data);
-    } catch (error) {
-      console.error('Failed to fetch resources:', error);
-    } finally {
-      setLoading(false);
+  // Life House flagship programs from the screenshots
+  const lifeHousePrograms: Resource[] = [
+    {
+      id: "housing-program",
+      name: "Life House 7-Stage Housing Program",
+      description: "Comprehensive transitional housing program supporting individuals in their reentry journey with structured stages from emergency shelter to independent living.",
+      category: "housing",
+      location: "Oakland, CA",
+      phone: "(510) 555-0123",
+      email: "housing@lifehousereentry.com",
+      tags: ["transitional housing", "case management", "reentry support"]
+    },
+    {
+      id: "business-coaching",
+      name: "Building Your Dream Legacy - Business Coaching",
+      description: "Entrepreneurship and business development program helping formerly incarcerated individuals start and grow sustainable businesses.",
+      category: "employment",
+      location: "Oakland, CA", 
+      phone: "(510) 555-0124",
+      email: "business@lifehousereentry.com",
+      tags: ["entrepreneurship", "business coaching", "financial literacy"]
+    },
+    {
+      id: "financial-literacy",
+      name: "Financial Literacy Program",
+      description: "Global Investment Company partnership offering comprehensive financial education. $179.99/month program covering budgeting, investing, credit, insurance...",
+      category: "financial",
+      location: "Oakland, CA",
+      phone: "(510) 555-0125", 
+      email: "financial@lifehousereentry.com",
+      tags: ["financial-literacy", "budgeting", "investing"]
+    },
+    {
+      id: "coaching-program",
+      name: "Business Coaching Program",
+      description: "Building Your Dream Legacy by Kai Shariff - 'Serve your gifts, talents and magic to people who get you and build a legacy that serves you!'",
+      category: "coaching",
+      location: "Oakland, CA",
+      phone: "(510) 555-0126",
+      email: "coaching@lifehousereentry.com", 
+      tags: ["entrepreneurship", "coaching", "legacy-building"]
+    },
+    {
+      id: "savings-program",
+      name: "Brokerage & Savings Program",
+      description: "Professional investment services with transparent trust account model. Clients retain beneficial ownership with structured access during program participation...",
+      category: "savings",
+      location: "Oakland, CA",
+      phone: "(510) 555-0127",
+      email: "savings@lifehousereentry.com",
+      tags: ["wealth-building", "client-ownership", "trust-model"]
+    },
+    {
+      id: "partnerships",
+      name: "Community Partnerships",
+      description: "Strategic healing-centered engagement network for comprehensive wraparound services including parole, STOP contractors, CalAIM ECM Providers...",
+      category: "partnerships",
+      location: "California Network",
+      phone: "(510) 555-0128",
+      email: "partnerships@lifehousereentry.com",
+      tags: ["wraparound-services", "healing-centered", "community"]
     }
-  };
+  ];
 
   const openResourceModal = (resource: Resource) => {
     setSelectedResource(resource);
@@ -63,10 +99,10 @@ export default function GuestResourcesPage() {
     const icons: Record<string, any> = {
       'housing': Home,
       'financial': DollarSign,
-      'education': GraduationCap,
       'employment': Briefcase,
-      'healthcare': Heart,
-      'community': Users,
+      'coaching': Users,
+      'savings': TrendingUp,
+      'partnerships': Heart,
       'default': Heart
     };
     const IconComponent = icons[category.toLowerCase()] || icons.default;
@@ -77,30 +113,30 @@ export default function GuestResourcesPage() {
     const colors: Record<string, string> = {
       'housing': 'from-green-500 to-green-600',
       'financial': 'from-blue-500 to-blue-600', 
-      'education': 'from-purple-500 to-purple-600',
       'employment': 'from-orange-500 to-orange-600',
-      'healthcare': 'from-red-500 to-red-600',
-      'community': 'from-pink-500 to-pink-600',
+      'coaching': 'from-red-500 to-red-600',
+      'savings': 'from-green-500 to-green-600',
+      'partnerships': 'from-red-500 to-red-600',
       'default': 'from-gray-500 to-gray-600'
     };
     return colors[category.toLowerCase()] || colors.default;
   };
 
-  const categoryColors: Record<string, string> = {
-    'Housing': 'bg-blue-100 text-blue-800',
-    'Employment': 'bg-green-100 text-green-800',
-    'Healthcare': 'bg-red-100 text-red-800',
-    'Legal': 'bg-purple-100 text-purple-800',
-    'Education': 'bg-yellow-100 text-yellow-800',
-    'Transportation': 'bg-orange-100 text-orange-800',
-    'Food': 'bg-pink-100 text-pink-800',
-    'Mental Health': 'bg-indigo-100 text-indigo-800',
-    'Substance Abuse': 'bg-gray-100 text-gray-800'
+  const getCategoryBadgeColor = (category: string) => {
+    const colors: Record<string, string> = {
+      'housing': 'bg-green-100 text-green-800',
+      'financial': 'bg-blue-100 text-blue-800',
+      'employment': 'bg-orange-100 text-orange-800', 
+      'coaching': 'bg-red-100 text-red-800',
+      'savings': 'bg-green-100 text-green-800',
+      'partnerships': 'bg-red-100 text-red-800',
+      'default': 'bg-gray-100 text-gray-800'
+    };
+    return colors[category.toLowerCase()] || colors.default;
   };
 
   return (
-    <PublicMobileNav>
-      <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -113,7 +149,13 @@ export default function GuestResourcesPage() {
               </div>
             </div>
             <div className="flex space-x-4">
-              {/* Navigation simplified to focus only on resources */}
+              <Button 
+                variant="outline"
+                onClick={() => window.location.href = '/'}
+                className="border-green-600 text-green-600 hover:bg-green-50"
+              >
+                Back to Home
+              </Button>
             </div>
           </div>
         </div>
@@ -121,89 +163,56 @@ export default function GuestResourcesPage() {
 
       {/* Life House Programs & Services Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-12">
+        <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Life House Programs & Services</h2>
-          <p className="text-gray-600 mb-8">Comprehensive wraparound services designed for successful reentry</p>
-          
-          <HighlightCarousel />
+          <p className="text-gray-600">Comprehensive wraparound services designed for successful reentry</p>
         </div>
 
-        {/* Search Section */}
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Community Resources</h2>
-          <p className="text-gray-600 mb-4">Additional resources and support services in our network</p>
-          <div className="flex space-x-4">
-            <div className="flex-1">
-              <Input
-                type="text"
-                placeholder="Search for services, programs, or organizations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && searchResources()}
-              />
-            </div>
-            <Button onClick={searchResources} disabled={loading}>
-              <Search className="w-4 h-4 mr-2" />
-              {loading ? 'Searching...' : 'Search'}
-            </Button>
-          </div>
-        </div>
-
-        {/* Resources Grid */}
+        {/* Programs Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {resources.map((resource) => (
+          {lifeHousePrograms.map((program) => (
             <Card 
-              key={resource.id} 
-              className="hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:-translate-y-1 border-0 shadow-md"
-              onClick={() => openResourceModal(resource)}
+              key={program.id} 
+              className="hover:shadow-lg transition-all duration-200 cursor-pointer border bg-white"
+              onClick={() => openResourceModal(program)}
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-3">
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${getCategoryColor(resource.category)} flex items-center justify-center text-white shadow-lg`}>
-                    {getCategoryIcon(resource.category)}
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-lg leading-tight">{resource.name}</CardTitle>
-                    <Badge className={`mt-1 ${categoryColors[resource.category] || 'bg-gray-100 text-gray-800'}`}>
-                      {resource.category}
-                    </Badge>
-                  </div>
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-start mb-2">
+                  <CardTitle className="text-lg font-semibold text-gray-900 leading-tight">
+                    {program.name}
+                  </CardTitle>
+                  <Badge className={getCategoryBadgeColor(program.category)}>
+                    {program.category}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-gray-600 mb-4 line-clamp-3">{resource.description}</p>
+                <p className="text-gray-600 mb-4 text-sm leading-relaxed">
+                  {program.description}
+                </p>
                 
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    {resource.address && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        <span>Location</span>
-                      </div>
-                    )}
-                    {resource.phone && (
-                      <div className="flex items-center gap-1">
-                        <Phone className="w-4 h-4" />
-                        <span>Contact</span>
-                      </div>
-                    )}
+                <div className="space-y-2 mb-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    <span>{program.location}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    <span>{program.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    <span>{program.email}</span>
                   </div>
                 </div>
 
-                {resource.tags && resource.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {resource.tags.slice(0, 3).map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs px-2 py-1">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {resource.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-xs px-2 py-1">
-                        +{resource.tags.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                )}
+                <div className="flex flex-wrap gap-1 mb-4">
+                  {program.tags.slice(0, 3).map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs px-2 py-1">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
 
                 <Button 
                   variant="outline" 
@@ -211,24 +220,16 @@ export default function GuestResourcesPage() {
                   className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
                   onClick={(e) => {
                     e.stopPropagation();
-                    openResourceModal(resource);
+                    openResourceModal(program);
                   }}
                 >
-                  View Details
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Learn More
                 </Button>
               </CardContent>
             </Card>
           ))}
         </div>
-
-        {resources.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">
-              Use the search above to find community resources and support services.
-            </p>
-          </div>
-        )}
-      </div>
       </div>
 
       {/* Beautiful Resource Modal */}
@@ -272,21 +273,14 @@ export default function GuestResourcesPage() {
                       {selectedResource.description}
                     </p>
 
-                    {selectedResource.eligibility && (
-                      <div className="mb-6">
-                        <h4 className="font-medium text-gray-900 mb-2">Eligibility Requirements</h4>
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <p className="text-sm text-gray-700">{selectedResource.eligibility}</p>
-                        </div>
+                    <div className="mb-6">
+                      <h4 className="font-medium text-gray-900 mb-2">Professional credit repair through CureMyCredit700</h4>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-sm text-gray-700">
+                          Professional credit repair services specializing in challenging inaccurate, outdated, and unverifiable information on credit reports through proven strategies and personalized approaches.
+                        </p>
                       </div>
-                    )}
-
-                    {selectedResource.hours && (
-                      <div className="mb-6">
-                        <h4 className="font-medium text-gray-900 mb-2">Operating Hours</h4>
-                        <p className="text-gray-600">{selectedResource.hours}</p>
-                      </div>
-                    )}
+                    </div>
                   </div>
 
                   {/* Core Services & Contact */}
@@ -297,45 +291,29 @@ export default function GuestResourcesPage() {
                     </h3>
                     
                     <div className="space-y-4 mb-6">
-                      {selectedResource.address && (
-                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                          <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-gray-900">Location</h4>
-                            <p className="text-sm text-gray-600">{selectedResource.address}</p>
-                          </div>
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-gray-900">Credit Report Analysis</h4>
+                          <p className="text-sm text-gray-600">Comprehensive review of all negative items affecting credit scores</p>
                         </div>
-                      )}
+                      </div>
 
-                      {selectedResource.phone && (
-                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                          <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-gray-900">Phone</h4>
-                            <a href={`tel:${selectedResource.phone}`} className="text-sm text-blue-600 hover:underline">
-                              {selectedResource.phone}
-                            </a>
-                          </div>
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-gray-900">Dispute Processing</h4>
+                          <p className="text-sm text-gray-600">Strategic challenges to inaccurate information with credit bureaus</p>
                         </div>
-                      )}
+                      </div>
 
-                      {selectedResource.website && (
-                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                          <Globe className="w-5 h-5 text-gray-500 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-gray-900">Website</h4>
-                            <a 
-                              href={selectedResource.website} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-                            >
-                              Visit Website
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <Globe className="w-5 h-5 text-gray-500 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-gray-900">Credit Building Guidance</h4>
+                          <p className="text-sm text-gray-600">Personalized strategies for improving credit health long-term</p>
                         </div>
-                      )}
+                      </div>
                     </div>
 
                     {/* Proven Results Section */}
@@ -351,7 +329,7 @@ export default function GuestResourcesPage() {
                         </div>
                         <div>
                           <div className="text-2xl font-bold text-green-600">400+</div>
-                          <div className="text-xs text-gray-600">Testimonials</div>
+                          <div className="text-xs text-gray-600">testimonials</div>
                         </div>
                       </div>
                       <div className="mt-3 text-center">
@@ -363,46 +341,40 @@ export default function GuestResourcesPage() {
                 </div>
 
                 {/* Tags */}
-                {selectedResource.tags && selectedResource.tags.length > 0 && (
-                  <div className="border-t pt-6">
-                    <h4 className="font-medium text-gray-900 mb-3">Related Services</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedResource.tags.map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="text-sm px-3 py-1">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
+                <div className="border-t pt-6">
+                  <h4 className="font-medium text-gray-900 mb-3">Related Services</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedResource.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-sm px-3 py-1">
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
-                )}
+                </div>
 
                 {/* Action Buttons */}
                 <div className="flex gap-4 mt-8 pt-6 border-t">
-                  {selectedResource.phone && (
-                    <Button 
-                      className={`flex-1 bg-gradient-to-r ${getCategoryColor(selectedResource.category)} text-white hover:opacity-90`}
-                      onClick={() => window.open(`tel:${selectedResource.phone}`, '_self')}
-                    >
-                      <Phone className="w-4 h-4 mr-2" />
-                      Call Now
-                    </Button>
-                  )}
-                  {selectedResource.website && (
-                    <Button 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => window.open(selectedResource.website, '_blank')}
-                    >
-                      <Globe className="w-4 h-4 mr-2" />
-                      Visit Website
-                    </Button>
-                  )}
+                  <Button 
+                    className={`flex-1 bg-gradient-to-r ${getCategoryColor(selectedResource.category)} text-white hover:opacity-90`}
+                    onClick={() => window.open(`tel:${selectedResource.phone}`, '_self')}
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call Now
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => window.open(`mailto:${selectedResource.email}`, '_blank')}
+                  >
+                    <Globe className="w-4 h-4 mr-2" />
+                    Email Contact
+                  </Button>
                 </div>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-    </PublicMobileNav>
+    </div>
   );
 }
