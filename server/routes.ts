@@ -135,6 +135,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Public routes (no auth required)
 
+  // Highlight resources endpoint for program showcase - public access
+  app.get('/api/resources/highlight', async (req: Request, res: Response) => {
+    try {
+      const highlightResources = await storage.getHighlightResources();
+      res.json(highlightResources);
+    } catch (error) {
+      console.error('Error fetching highlight resources:', error);
+      res.status(500).json({ message: 'Failed to fetch highlight resources' });
+    }
+  });
+
   // Housing application submission
   app.post('/api/public/apply', async (req: Request, res: Response) => {
     try {
@@ -2074,16 +2085,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     return app._router.handle(Object.assign(req, { url: '/api/resources' }), res, () => {});
   });
 
-  // Highlight resources endpoint for program showcase
-  app.get('/api/resources/highlight', async (req: Request, res: Response) => {
-    try {
-      const highlightResources = await storage.getHighlightResources();
-      res.json(highlightResources);
-    } catch (error) {
-      console.error('Error fetching highlight resources:', error);
-      res.status(500).json({ message: 'Failed to fetch highlight resources' });
-    }
-  });
+
 
   // Admin Panel API Routes
   app.get('/api/admin/users', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {

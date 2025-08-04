@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Search, ExternalLink, Phone, Globe, MapPin } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { PublicMobileNav } from "@/components/public-mobile-nav";
-import HighlightCarousel from "@/components/highlight-carousel";
+import { HighlightCarousel } from "@/components/highlight-carousel";
 
 interface Resource {
   id: string;

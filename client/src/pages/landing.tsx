@@ -9,7 +9,7 @@ import { ProgramInquiryModal } from "@/components/program-inquiry-modal";
 import { PartnerSignupModal } from "@/components/partner-signup-modal";
 import { ProgramOverviewModal } from "@/components/program-overview-modal";
 import { PublicMobileNav } from "@/components/public-mobile-nav";
-import HighlightCarousel from "@/components/highlight-carousel";
+import { HighlightCarousel } from "@/components/highlight-carousel";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
 import _3 from "@assets/3.png";

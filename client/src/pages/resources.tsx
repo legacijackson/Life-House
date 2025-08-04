@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from '@/lib/rbac';
 import { Search, Heart, TrendingUp, Users, ChartBar, Settings, FileBox } from 'lucide-react';
-import HighlightCarousel from '@/components/highlight-carousel';
+import { HighlightCarousel } from '@/components/highlight-carousel';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 
