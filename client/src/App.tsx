@@ -22,6 +22,7 @@ import CaseNotes from "@/pages/case-notes";
 import ResidentCaseNotes from "@/pages/resident-case-notes";
 import Attendance from "@/pages/attendance";
 import Resources from "@/pages/resources";
+import GuestResources from "@/pages/guest-resources";
 import Properties from "@/pages/properties";
 import Maintenance from "@/pages/maintenance";
 import Reports from "@/pages/reports";
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/apply" component={Apply} />
       <Route path="/refer" component={Refer} />
       <Route path="/donate" component={Donate} />
+      <Route path="/guest-resources" component={GuestResources} />
       <Route path="/resources" component={Resources} />
       <Route path="/app/resources" component={Resources} />
       <Route path="/app/:rest*" component={ProtectedRoutes} />
