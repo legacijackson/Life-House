@@ -536,18 +536,7 @@ export default function GuestResourcesPage() {
                   )}
                 </div>
 
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openResourceModal(resource);
-                  }}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Learn More
-                </Button>
+                
               </CardContent>
             </Card>
           ))}
