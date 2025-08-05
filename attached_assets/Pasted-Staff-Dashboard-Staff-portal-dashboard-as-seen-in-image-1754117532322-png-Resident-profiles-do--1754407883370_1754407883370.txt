@@ -1,0 +1,93 @@
+Staff Dashboard/Staff portal dashboard - (as seen in image_1754117532322.png)
+
+Resident profiles do not have access to the staff dashboard. Make sure their logins do not work here. Admins have access and case workers have access.   admins see total residents in the system. case workers see the total residents assigned to them.   pending intakes for admin is all pending intakes case worker sees pending intakes that have been assigned to their case load (assigned resident count),
+
+Overdue notes box can be clicked and when clicked it shows which notes are over due weekly. 2 session per week - Each resident has a 1-1 and life design session weekly 4 sessions 1 per week - 1 credit, financial literacy, job training and business coaching session per month   3 notes total per week. Require that each resident has a case note created for them 3 times per week a required 1-1, a required life design session, a required personal/professional development session.   residents do not even see the option to access the staff or admin portal from within the resident portal. Staff do not even see the option to see the resident portal unless it is an admin.  
+Change the title of average savings to maintenance tickets. This will count how many maintenance tickets a case workers assigned residents have collectively. For an admin they see all maintenance tickets   add the message and Notification Center icons at the top. Add the Notification Center with the notifications and messages tabs where the my residents section is and move the my residents section beneath that. Also move down the recent activity box and in its place put ‘Upcoming’ which should include notes that are do, intakes, resident sessions and touchpoint.   staff dashboard - quick actions - (as seen in image_1754117532322.png) schedule touchpoint form is the same exact form for ‘Add Session’ button  I had you add next to log attendance on the attendance page. [Case workers can add sessions and invite residents. They can select an icon like a heart or briefcase etc. related to the different types. Enter date. Time. Location for geo location check in when resident logs attendance, enrollment date (date the resident accepted invite. Invite date (date invitation was sent) workshop details, workshop tag and type, relevant stages in the program, facilitator, status (live, upcoming, complete ] 2 session per week - Each resident has a 1-1 and life design session weekly 4 sessions 1 per week - 1 credit, financial literacy, job training and business coaching session per month  plus any additional touchpoints they want to add.   add case note is the same as the case notes form/   change update goals to onboard resident. This button activates a pop up frame window with all of the intake forms.   staff dashboard - quick actions - update goals [changed to onboard resident] - onboarding process and forms. 
+[
+Form / Doc	Purpose	Must include
+House Rules & Resident Handbook acknowledgment	Confirms the resident read the curfew, visitor, sobriety, rent-share, chores and other rules	Signature & date
+Lease / Occupancy Agreement (90-day, auto-renew)	Creates the legal resident file, links them to a specific Elite Holdings property—case-worker chooses the address in a dropdown; admin can change later	Term, rent formula (30 % income), property name, resident & staff e-sign
+Participant Agreement & THPMA clause	Makes clear this is program housing, not permanent tenancy and embeds the mandatory 14-point Transitional Housing Participant Misconduct Act language	
+Safety Checklist & Emergency Plan receipt	Resident walks the house with staff, checking smoke/CO alarms, exits, fire extinguishers, Narcan location, emergency numbers; sign that they understand it	
+Progressive Discipline / Dismissal process acknowledgment	Outlines verbal→written→privilege loss→exit ladder and immediate-exit triggers	
+Off-boarding & After-care roadmap	Explains graduation requirements, 30-day transition rental options, alumni supports	
+Program Overview PDF (read-only)	One-pager on mission, 7-Stage model, core services & funding pathways	
+Resource & Benefit Menu	Auto-generated list of Life House resources matched to the resident’s intake answers; resident “stars” the ones they want	
+Waivers & Consents bundle	• HIPAA-lite ROI • Media release • Activity & transportation waiver • Hold-harmless/indemnify Life House & Elite Holdings for personal property loss and ordinary program risks	
+Grievance & Rights notice	How to complain/appeal, anti-retaliation promise	
+Brokerage account application	Helps advisor set up brokerage account	Fidelity and Charles Schwab brokerage account form information
+All signatures can be captured once with a single multi-tab e-sign packet to keep the UX tight.
+
+B.  ADD 10-Screen Onboarding Flow
+1. Quick Pre-Screen (eligibility & veteran/disability flags)
+2. Full Intake Wizard (demographics, needs, literacy, etc.)
+3. Document Upload (ID, DD-214, benefits letters, etc.)
+4. Lease & Property Assignment – case-worker selects property; resident e-signs.
+5. House Rules + Program Policies – scroll-through PDF → signature.
+6. Safety Walk-Through & Checklist – interactive checklist with photos; sign-off.
+7. Resource & Service Menu – personalized list; resident picks interests, enrolls in classes.
+8. Warnings, Dismissal & Grievance – brief video + acknowledgment ✔.
+9. Off-Boarding Path – explains graduation, savings return, alumni housing help.
+10. Welcome Dashboard – orientation video, staff contacts, first meeting scheduled.
+Each screen auto-saves, shows % complete, and is available in Spanish.
+
+C. Extra Orientation Topics Residents Should Know
+Topic	Why it matters	Source
+Non-discrimination & ADA rights	Required by funders and law, reassures residents	
+Property maintenance & ticketing system	Prevents habitability issues and protects landlord	
+Personal-property liability & renter-insurance advice	Limits Life House/Elite exposure	
+Data privacy (HIPAA-grade but non-clinical)	Builds trust, aligns with Privacy Notice	
+City & fire-safety inspections	Explains occasional visits and resident cooperation	
+
+Implementation Tips for the Case-Management System
+* Property field: use a lookup table of active Elite Holdings addresses; when you change the assignment, the historical lease stays archived in the doc vault.
+* Form triggers: if “Veteran = Yes”, surface VA resource cards; if “Disability = Yes”, push the accommodation request form.
+* Version control: tag each handbook or waiver with a doc-ID & revision date so old signatures remain valid after policy updates.
+* Audit readiness: keep the e-sign packet and safety checklist in a “Signed Docs” folder for each resident; funders often sample these files first.
+* Repopulated fields: once a case worker fills out information they only have to fill that information out once and it will update all other related form fields. Example case worker fills out the name one time and it is automatically added to all subsequent forms so that the case worker doesn’t have to type it in again. 
+With these additions your onboarding is complete, legally tight, and funder-ready.
+] when onboarding is complete it should create a master file with all documents and forms and it should be added to the residents profile for case workers and admins to view. Both the notifications  and upcoming sections monitor onboarding and where the case worker is in the process. And reminds the case worker where to pick up. Case workers have 1 week to finish on boarding once the process begins or it becomes an overdue note and the admin is notified.   onboarding shall be streamlined but personal. Everything is saved automatically when the next button is pressed to prevent losing data. Make sure the system as a de-duplcation process or safeguards so the data is always clean. This process should be intuitive for the case worker and not be overwhelming for the resident. Also add an additional onboard button next to monthly report at the top of the page.   Staff Dashboard/Staff portal dashboard - staff portal left side of screen navigation menu. 
+Dashboard - links to staff portal dashboard. 
+Intake & referrals
+My residents
+Case notes
+Attendance
+Resources
+Maintenance
+Reports 
+Intake & referrals - intake page - (as seen in Screenshot 2025-08-02 at 7.38.18 AM) new section - counts how many new resident applications have been submitted through the application and referral forms and when clicked shows a list of all of the current application forms. When you click on a form it shows the submitted form.   case workers can click review applicant when on the application. The case worker will contact [offline] the prospective residents referrer or the resident directly and then begin the applicant review process.   we do not house sex offenders so we need a Referral list of agencies that do house sex offender registrants, so your staff can make a warm hand-off instead of a cold “no.” if during the intake process a prospective resident discloses that they are registered or are discovered in the review registry check.   
+Field	UI details	Business rule
+“Is any applicant currently required to register for life as a sex offender (e.g., California PC 290)? ( Yes / No )”	• Small blue “?” tooltip next to the question opens:
+> Why we ask: HUD regulations (24 CFR §982.553(a)(2) / PIH Notice 2012-28) prohibit federally-assisted programs from admitting lifetime registrants. This is not housing discrimination because sex-offender status is not a protected class under the Fair Housing Act. HUD	• If No → form continues.
+• If Yes → system immediately sets Referral.status = Declined_Auto (Lifetime 290) and shows the Warm Hand-Off panel (see §3).
+• A red banner appears on the Intake dashboard so staff know the auto-decision happened.
+
+2 ▪ Flow changes (checkpoints)
+Checkpoint	What’s new
+0 Auto-Triage	Adds real-time DOJ/California Megan’s-Law API hit to pre-populate the lifetime-flag where possible.
+2 Eligibility & Risk Gate	The new question sits at the top; an answer of “Yes” triggers the auto-decline without further clicks. Case-workers can still view the file but cannot override (locked by role).
+6 Offer & Deadline	Skipped entirely when the auto-decline fires.
+
+3 ▪ Warm Hand-Off panel (auto-renders after an auto-decline)
+“We can’t admit lifetime registrants, but these Sacramento-area programs do accept PC 290 clients. Your Intake Coordinator can send your application today:”
+Program (click-to-call)	Notes
+Diplomats Center 916-420-4001	18-36 mo. re-entry; sliding-scale; 290-friendly UnCommon Law
+Freedom Through Education 916-393-8387	180-day program; wheelchair accessible; free; 290-friendly UnCommon Law
+Sobriety Brings a Change 916-416-6746	Men only; no stay limit; $300 dep./$700 mo.; 290-friendly UnCommon Law
+Union Gospel Mission 916-447-3268	90-day faith-based shelter; 290-friendly UnCommon Law
+The list is stored in a lookup table so you can add or retire agencies without code changes.
+
+4 ▪ Staff experience
+1. Intake Coordinator opens the referral: a red “Lifetime 290 – Auto-Declined” tag is pinned at the top.
+2. They click “Send Warm Hand-Off” → a templated e-mail/SMS with the table above plus any uploaded ID docs (if the client agrees).
+3. Referral moves to Declined → Referred (kept for audit).
+
+5 ▪ Audit-ready artifacts saved automatically
+File	Where saved
+Tooltip text + legal citation PDF	/Policies/Eligibility/SexOffenderHUD.pdf
+DOJ registry check result	ResidentProfile.backgroundChecks
+Auto-decline reason log	Referral.statusNote
+Warm-hand-off e-mail PDF	Documents/WarmHandOffs/
+  caseworkers can submit and accept acceptable applicants. Or they can waitlist them and decline them  total referrals counts all time referrals 
+Only admins can assign beds. Can managers can view bed assignments
