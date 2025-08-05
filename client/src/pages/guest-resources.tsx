@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { MapPin, Phone, Globe, X, Home, DollarSign, GraduationCap, Users, Heart, Briefcase, Star, TrendingUp, ExternalLink, Search, Scale, Shield, UserCheck } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { LifeHousePrograms } from "@/components/life-house-programs";
 
 interface Resource {
   id: string;
@@ -466,88 +467,79 @@ export default function GuestResourcesPage() {
           </div>
         </div>
 
-        {/* Section Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {activeTab === "life-house" ? "Life House Programs & Services" : "Community Resources"}
-          </h2>
-          <p className="text-gray-600">
-            {activeTab === "life-house" 
-              ? "Comprehensive wraparound services designed for successful reentry"
-              : "Additional resources and support services in our network"
-            }
-          </p>
-        </div>
-
-        {/* Search Bar */}
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-8">
-          <div className="flex space-x-4">
-            <div className="flex-1">
-              <Input
-                type="text"
-                placeholder={`Search ${activeTab === "life-house" ? "Life House programs" : "community resources"}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full"
-              />
+        {/* Search Bar - Only show for community resources */}
+        {activeTab === "community" && (
+          <div className="bg-white rounded-lg shadow-sm border p-4 mb-8">
+            <div className="flex space-x-4">
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  placeholder="Search community resources..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Search className="w-4 h-4" />
+                Search
+              </Button>
             </div>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Search className="w-4 h-4" />
-              Search
-            </Button>
           </div>
-        </div>
+        )}
 
-        {/* Resources Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {getCurrentResources().map((resource) => (
-            <Card 
-              key={resource.id} 
-              className="hover:shadow-lg transition-all duration-200 cursor-pointer border bg-white"
-              onClick={() => openResourceModal(resource)}
-            >
-              <CardHeader className="pb-4">
-                <div className="flex justify-between items-start mb-2">
-                  <CardTitle className="text-lg font-semibold text-gray-900 leading-tight">
-                    {resource.name}
-                  </CardTitle>
-                  <Badge className={getCategoryBadgeColor(resource.category)}>
-                    {resource.category}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                  {resource.description}
-                </p>
-                
-                {resource.phone && (
-                  <div className="flex items-center gap-2 mb-3 text-sm">
-                    <Phone className="w-4 h-4 text-gray-500" />
-                    <a href={`tel:${resource.phone}`} className="text-blue-600 hover:underline">
-                      {resource.phone}
-                    </a>
+        {/* Resources Display */}
+        {activeTab === "life-house" ? (
+          <LifeHousePrograms />
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {getCurrentResources().map((resource) => (
+              <Card 
+                key={resource.id} 
+                className="hover:shadow-lg transition-all duration-200 cursor-pointer border bg-white"
+                onClick={() => openResourceModal(resource)}
+              >
+                <CardHeader className="pb-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <CardTitle className="text-lg font-semibold text-gray-900 leading-tight">
+                      {resource.name}
+                    </CardTitle>
+                    <Badge className={getCategoryBadgeColor(resource.category)}>
+                      {resource.category}
+                    </Badge>
                   </div>
-                )}
-
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {resource.tags.slice(0, 3).map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs px-2 py-1">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {resource.tags.length > 3 && (
-                    <Badge variant="secondary" className="text-xs px-2 py-1">
-                      +{resource.tags.length - 3} more
-                    </Badge>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-gray-600 mb-4 text-sm leading-relaxed">
+                    {resource.description}
+                  </p>
+                  
+                  {resource.phone && (
+                    <div className="flex items-center gap-2 mb-3 text-sm">
+                      <Phone className="w-4 h-4 text-gray-500" />
+                      <a href={`tel:${resource.phone}`} className="text-blue-600 hover:underline">
+                        {resource.phone}
+                      </a>
+                    </div>
                   )}
-                </div>
 
-                
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {resource.tags.slice(0, 3).map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs px-2 py-1">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {resource.tags.length > 3 && (
+                      <Badge variant="secondary" className="text-xs px-2 py-1">
+                        +{resource.tags.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        )}
 
         {/* No Results Message */}
         {getCurrentResources().length === 0 && (
