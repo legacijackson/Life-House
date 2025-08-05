@@ -24,44 +24,60 @@ interface HighlightResource {
 
 const flagshipResources: HighlightResource[] = [
   {
-    id: 'flagship-1',
-    name: 'Life House 7-Stage Housing Program',
-    description: 'Comprehensive transitional housing program supporting individuals in their reentry journey with structured stages from emergency shelter to independent living.',
-    category: 'housing',
-    geo: { city: 'Oakland', state: 'CA' },
-    contact: {
-      phone: '(510) 555-0123',
-      email: 'housing@lifehousereentry.com',
-      address: '123 Housing Way, Oakland CA 94612'
-    },
-    url: 'https://lifehousereentry.com/housing',
-    tags: ['transitional housing', 'case management', 'reentry support']
+    id: 'stop-touchpoint',
+    name: '🛑 STOP TouchPoint',
+    description: 'Strengthening The Opportunity for Peace – Daily accountability check-ins that build consistency, community connection, and help residents stay focused on their recovery and reentry goals.',
+    category: 'Program',
+    geo: { city: 'Sacramento', state: 'CA' },
+    tags: ['daily check-in', 'accountability', 'community support']
   },
   {
-    id: 'flagship-2',
-    name: 'Building Your Dream Legacy - Business Coaching',
-    description: 'Entrepreneurship and business development program helping formerly incarcerated individuals start and grow sustainable businesses.',
-    category: 'employment',
-    geo: { city: 'Oakland', state: 'CA' },
-    contact: {
-      phone: '(510) 555-0124',
-      email: 'business@lifehousereentry.com'
-    },
-    url: 'https://lifehousereentry.com/business',
-    tags: ['entrepreneurship', 'business coaching', 'financial literacy']
+    id: 'stop-arms',
+    name: '🛡️ STOP ARMS',
+    description: 'Addiction Recovery Management System – Comprehensive substance abuse support combining peer mentorship, structured accountability, and evidence-based recovery strategies for lasting sobriety.',
+    category: 'Recovery',
+    geo: { city: 'Sacramento', state: 'CA' },
+    tags: ['addiction recovery', 'peer support', 'sobriety']
   },
   {
-    id: 'flagship-3',
-    name: 'Credit Repair & Financial Literacy',
-    description: 'Comprehensive financial wellness program including credit repair, budgeting, savings, and financial planning for long-term stability.',
-    category: 'money',
-    geo: { city: 'Oakland', state: 'CA' },
-    contact: {
-      phone: '(510) 555-0125',
-      email: 'financial@lifehousereentry.com'
-    },
-    url: 'https://lifehousereentry.com/financial',
-    tags: ['credit repair', 'financial literacy', 'budgeting', 'savings']
+    id: 'dream-legacy',
+    name: '🚀 Building Your Dream Legacy',
+    description: 'Entrepreneurship bootcamp teaching business fundamentals, financial literacy, and practical skills to help residents launch sustainable businesses and create generational wealth.',
+    category: 'Business',
+    geo: { city: 'Sacramento', state: 'CA' },
+    tags: ['entrepreneurship', 'business training', 'financial freedom']
+  },
+  {
+    id: 'fatherhood-focus',
+    name: '👨‍👧‍👦 Fatherhood Focus',
+    description: 'Dedicated program helping fathers rebuild relationships with their children, develop healthy parenting skills, and navigate co-parenting challenges during reentry.',
+    category: 'Family',
+    geo: { city: 'Sacramento', state: 'CA' },
+    tags: ['parenting', 'family reunification', 'co-parenting']
+  },
+  {
+    id: 'mens-circle',
+    name: '🤝 Men\'s Circle',
+    description: 'Weekly peer support group providing a safe space for men to process emotions, build healthy masculinity, and develop brotherhood through vulnerability and authentic connection.',
+    category: 'Support',
+    geo: { city: 'Sacramento', state: 'CA' },
+    tags: ['peer support', 'emotional wellness', 'brotherhood']
+  },
+  {
+    id: 'reentry-navigation',
+    name: '🧭 Re-entry Navigation',
+    description: 'Comprehensive case management helping residents obtain vital documents, access benefits, navigate legal requirements, and connect with essential community resources.',
+    category: 'Services',
+    geo: { city: 'Sacramento', state: 'CA' },
+    tags: ['case management', 'benefits assistance', 'resource connection']
+  },
+  {
+    id: 'financial-literacy',
+    name: '💰 Financial Literacy',
+    description: 'Intensive financial education covering budgeting, credit repair, banking, investing, and building long-term wealth through our unique 25% savings program with brokerage accounts.',
+    category: 'Finance',
+    geo: { city: 'Sacramento', state: 'CA' },
+    tags: ['money management', 'credit repair', 'investment education']
   }
 ];
 
@@ -85,27 +101,15 @@ export function HighlightCarousel() {
               {resource.description}
             </p>
 
-            {/* Contact Information */}
-            <div className="space-y-2 mb-4">
-              {resource.geo && (
+            {/* Location */}
+            {resource.geo && (
+              <div className="mb-4">
                 <div className="flex items-center text-sm text-gray-500">
                   <MapPin className="h-4 w-4 mr-2" />
                   {resource.geo.city}, {resource.geo.state}
                 </div>
-              )}
-              {resource.contact?.phone && (
-                <div className="flex items-center text-sm text-gray-500">
-                  <Phone className="h-4 w-4 mr-2" />
-                  {resource.contact.phone}
-                </div>
-              )}
-              {resource.contact?.email && (
-                <div className="flex items-center text-sm text-gray-500">
-                  <Mail className="h-4 w-4 mr-2" />
-                  {resource.contact.email}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Tags */}
             {resource.tags && resource.tags.length > 0 && (
@@ -118,15 +122,7 @@ export function HighlightCarousel() {
               </div>
             )}
 
-            {/* Action Button */}
-            {resource.url && (
-              <Button variant="outline" size="sm" className="mt-auto" asChild>
-                <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Learn More
-                </a>
-              </Button>
-            )}
+
           </CardContent>
         </Card>
       ))}
