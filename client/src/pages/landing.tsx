@@ -9,7 +9,7 @@ import { ProgramInquiryModal } from "@/components/program-inquiry-modal";
 import { PartnerSignupModal } from "@/components/partner-signup-modal";
 import { ProgramOverviewModal } from "@/components/program-overview-modal";
 
-import { HighlightCarousel } from "@/components/highlight-carousel";
+import { LifeHousePrograms } from "@/components/life-house-programs";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
 import _3 from "@assets/3.png";
@@ -242,13 +242,7 @@ export default function Landing() {
       {/* Program Highlights Section */}
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Flagship Life House Programs</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Discover our evidence-based programs designed to support lasting transformation, financial stability, and successful reentry.
-            </p>
-          </div>
-          <HighlightCarousel />
+          <LifeHousePrograms />
         </div>
       </section>
       
