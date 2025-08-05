@@ -189,7 +189,7 @@ export default function IntakeReferrals() {
     }
   };
 
-  if (!isAdmin && user?.role !== 'CaseManager') {
+  if (!user || (user.role !== 'Admin' && user.role !== 'CaseManager')) {
     return (
       <div className="container mx-auto p-6">
         <Card>
