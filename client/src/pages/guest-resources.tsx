@@ -259,7 +259,7 @@ export default function GuestResourcesPage() {
   const lifeHousePrograms: Resource[] = [
     {
       id: "housing-program",
-      name: "7-Stage Housing Program",
+      name: "Life House 7-Stage Housing Program",
       description: "Comprehensive transitional housing program supporting individuals in their reentry journey with structured stages from emergency shelter to independent living.",
       category: "housing",
       location: "Oakland, CA",
@@ -485,7 +485,7 @@ export default function GuestResourcesPage() {
             <div className="flex-1">
               <Input
                 type="text"
-                placeholder={`Search ${activeTab === "life-house" ? "programs" : "community resources"}...`}
+                placeholder={`Search ${activeTab === "life-house" ? "Life House programs" : "community resources"}...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full"
