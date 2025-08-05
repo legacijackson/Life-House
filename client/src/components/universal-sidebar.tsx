@@ -34,14 +34,40 @@ const publicNavigation = [
   { name: "Contact", href: "#contact", icon: Phone },
 ];
 
-const authenticatedNavigation = [
-  { name: "Dashboard", href: "/app", icon: BarChart3 },
-  { name: "Residents", href: "/app/residents", icon: Users },
+// Resident navigation
+const residentNavigation = [
+  { name: "Dashboard", href: "/app/resident-portal", icon: Home },
+  { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Maintenance", href: "/app/maintenance", icon: Building },
+  { name: "Check-in", href: "/app/check-in", icon: Calendar },
+  { name: "Messages", href: "/app/messages", icon: MessageSquare },
+];
+
+// Case Worker (Staff) navigation
+const caseWorkerNavigation = [
+  { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
+  { name: "Intake & Referrals", href: "/app/intake-referrals", icon: UserPlus },
+  { name: "My Residents", href: "/app/residents", icon: Users },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
+  { name: "Attendance", href: "/app/attendance", icon: Calendar },
+  { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Maintenance", href: "/app/maintenance", icon: Building },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
+];
+
+// Admin navigation
+const adminNavigation = [
+  { name: "Admin Dashboard", href: "/app/admin-panel", icon: Home },
+  { name: "Intake & Referrals", href: "/app/intake-referrals", icon: UserPlus },
+  { name: "My Residents", href: "/app/residents", icon: Users },
+  { name: "Case Notes", href: "/app/case-notes", icon: FileText },
+  { name: "Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Resources", href: "/app/resources", icon: Archive },
   { name: "Properties", href: "/app/properties", icon: Building },
+  { name: "Maintenance", href: "/app/maintenance", icon: Building },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
-  { name: "Admin Panel", href: "/app/admin-panel", icon: Settings },
+  { name: "CRM", href: "/app/crm", icon: Users },
+  { name: "DONOR", href: "/app/donor", icon: DollarSign },
 ];
 
 interface UniversalSidebarProps {
@@ -125,8 +151,26 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
     setIsSidebarOpen(false);
   };
 
-  // Choose navigation based on context
-  const navigation = isAuthenticatedPage && user ? authenticatedNavigation : publicNavigation;
+  // Choose navigation based on context and user role
+  let navigation = publicNavigation;
+  
+  if (isAuthenticatedPage && user) {
+    const userRole = (user as any)?.role;
+    switch (userRole) {
+      case 'Admin':
+        navigation = adminNavigation;
+        break;
+      case 'CaseManager':
+      case 'Intake':
+        navigation = caseWorkerNavigation;
+        break;
+      case 'Resident':
+        navigation = residentNavigation;
+        break;
+      default:
+        navigation = publicNavigation;
+    }
+  }
 
   const SidebarContent = () => (
     <aside className={cn(
@@ -141,7 +185,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
           <Link href="/">
             <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
               <Logo className="w-10 h-10" />
-              
+              <span className="text-lg font-semibold text-gray-900">Life House</span>
             </div>
           </Link>
           {isMobile && (
@@ -243,8 +287,6 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
             );
           })}
         </ul>
-
-        
 
         {/* Portal Access for Authenticated Users */}
         {isAuthenticatedPage && user && (
