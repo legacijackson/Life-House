@@ -14,7 +14,12 @@ import {
   TrendingUp,
   Clock,
   Target,
-  DollarSign
+  DollarSign,
+  Bell,
+  MessageSquare,
+  Home,
+  Wrench,
+  Activity
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -25,7 +30,7 @@ interface StaffDashboardData {
   activeResidents: number;
   pendingIntakes: number;
   overdueNotes: number;
-  avgSavings: number;
+  maintenanceTickets: number;
   completionRate: number;
   recentActivity: Array<{
     id: string;
@@ -33,6 +38,36 @@ interface StaffDashboardData {
     description: string;
     timestamp: string;
     residentName?: string;
+  }>;
+  overdueNotesList?: Array<{
+    id: string;
+    residentId: string;
+    residentName: string;
+    noteType: string;
+    dueDate: string;
+    daysOverdue: number;
+  }>;
+  notifications?: Array<{
+    id: string;
+    type: string;
+    message: string;
+    timestamp: string;
+    read: boolean;
+  }>;
+  messages?: Array<{
+    id: string;
+    from: string;
+    subject: string;
+    preview: string;
+    timestamp: string;
+    read: boolean;
+  }>;
+  upcomingEvents?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    residentName: string;
+    datetime: string;
   }>;
 }
 
@@ -52,6 +87,8 @@ export function StaffDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedResident, setSelectedResident] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'notifications' | 'messages'>('notifications');
+  const [showOverdueModal, setShowOverdueModal] = useState(false);
 
   // Staff dashboard stats
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery<StaffDashboardData>({
@@ -151,6 +188,18 @@ export function StaffDashboard() {
           </div>
           <div className="flex items-center space-x-4">
             <STOPTouchPointCounter />
+            <Button variant="ghost" size="icon" className="relative">
+              <MessageSquare className="w-5 h-5" />
+              <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center bg-red-500 text-white text-xs">
+                {dashboardData?.messages?.filter(m => !m.read).length || 0}
+              </Badge>
+            </Button>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="w-5 h-5" />
+              <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center bg-red-500 text-white text-xs">
+                {dashboardData?.notifications?.filter(n => !n.read).length || 0}
+              </Badge>
+            </Button>
             <Button 
               onClick={handleGenerateMonthlyReport}
               disabled={generateMonthlyReportMutation.isPending}
@@ -192,7 +241,10 @@ export function StaffDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => setShowOverdueModal(true)}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Overdue Notes</CardTitle>
               <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -207,20 +259,130 @@ export function StaffDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Savings</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium">Maintenance Tickets</CardTitle>
+              <Wrench className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                ${dashboardData?.avgSavings || 0}
+                {dashboardData?.maintenanceTickets || 0}
               </div>
-              <p className="text-xs text-gray-500">Per resident</p>
+              <p className="text-xs text-gray-500">Total tickets</p>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Resident Management */}
+          {/* Notification Center */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Center</CardTitle>
+              <div className="flex space-x-2 mt-2">
+                <Button
+                  variant={activeTab === 'notifications' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveTab('notifications')}
+                >
+                  Notifications
+                </Button>
+                <Button
+                  variant={activeTab === 'messages' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveTab('messages')}
+                >
+                  Messages
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {activeTab === 'notifications' ? (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {dashboardData?.notifications?.length ? (
+                    dashboardData.notifications.map(notification => (
+                      <div
+                        key={notification.id}
+                        className={`p-3 rounded-lg border ${
+                          notification.read ? 'bg-white' : 'bg-blue-50 border-blue-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{notification.message}</p>
+                            <p className="text-xs text-gray-500 mt-1">{notification.timestamp}</p>
+                          </div>
+                          {!notification.read && (
+                            <Badge className="bg-blue-500 text-white ml-2">New</Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">No notifications</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {dashboardData?.messages?.length ? (
+                    dashboardData.messages.map(message => (
+                      <div
+                        key={message.id}
+                        className={`p-3 rounded-lg border cursor-pointer hover:bg-gray-50 ${
+                          message.read ? 'bg-white' : 'bg-blue-50 border-blue-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{message.from}</p>
+                            <p className="text-sm text-gray-700">{message.subject}</p>
+                            <p className="text-xs text-gray-500 mt-1">{message.preview}</p>
+                            <p className="text-xs text-gray-400 mt-1">{message.timestamp}</p>
+                          </div>
+                          {!message.read && (
+                            <Badge className="bg-blue-500 text-white ml-2">New</Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">No messages</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Upcoming Events */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-orange-600" />
+                Upcoming
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                {dashboardData?.upcomingEvents?.length ? (
+                  dashboardData.upcomingEvents.map(event => (
+                    <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{event.title}</p>
+                        <p className="text-xs text-gray-600">{event.residentName}</p>
+                        <p className="text-xs text-gray-500 mt-1">{event.datetime}</p>
+                      </div>
+                      <Badge variant="outline" className="ml-2">
+                        {event.type}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-8">No upcoming events</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* My Residents - moved down */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -346,6 +508,48 @@ export function StaffDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Overdue Notes Modal */}
+      {showOverdueModal && dashboardData?.overdueNotesList && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Overdue Case Notes</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowOverdueModal(false)}
+                >
+                  <span className="text-2xl">&times;</span>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[calc(90vh-100px)]">
+              <div className="space-y-4 mt-4">
+                {dashboardData.overdueNotesList.map(note => (
+                  <div key={note.id} className="p-4 border rounded-lg bg-red-50 border-red-200">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-medium text-lg">{note.residentName}</h4>
+                        <p className="text-sm text-gray-700 mt-1">
+                          <span className="font-medium">Note Type:</span> {note.noteType}
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          <span className="font-medium">Due Date:</span> {note.dueDate}
+                        </p>
+                      </div>
+                      <Badge className="bg-red-500 text-white">
+                        {note.daysOverdue} days overdue
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

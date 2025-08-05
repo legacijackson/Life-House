@@ -793,12 +793,22 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   // Staff Dashboard Routes
   app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const userRole = req.user.role;
+      const isAdmin = userRole === 'Admin';
+      const caseManagerId = req.user.id;
+
+      // Get total residents for admin or assigned residents for case managers
+      const totalResidents = isAdmin ? 45 : 12;
+      const activeResidents = isAdmin ? 38 : 10;
+      const pendingIntakes = isAdmin ? 7 : 3;
+      const maintenanceTickets = isAdmin ? 15 : 5;
+
       const dashboardData = {
-        totalResidents: 45,
-        activeResidents: 38,
-        pendingIntakes: 7,
+        totalResidents,
+        activeResidents,
+        pendingIntakes,
         overdueNotes: 3,
-        avgSavings: 1250,
+        maintenanceTickets,
         completionRate: 85,
         recentActivity: [
           {
@@ -813,6 +823,96 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
             type: 'intake',
             description: 'New intake application received',
             timestamp: '4 hours ago'
+          }
+        ],
+        overdueNotesList: [
+          {
+            id: '1',
+            residentId: '1',
+            residentName: 'Marcus Johnson',
+            noteType: '1-on-1 Session',
+            dueDate: '2024-01-28',
+            daysOverdue: 2
+          },
+          {
+            id: '2',
+            residentId: '2',
+            residentName: 'Sarah Williams',
+            noteType: 'Life Design Session',
+            dueDate: '2024-01-27',
+            daysOverdue: 3
+          },
+          {
+            id: '3',
+            residentId: '3',
+            residentName: 'David Rodriguez',
+            noteType: 'Professional Development',
+            dueDate: '2024-01-26',
+            daysOverdue: 4
+          }
+        ],
+        notifications: [
+          {
+            id: '1',
+            type: 'overdue',
+            message: 'You have 3 overdue case notes that need attention',
+            timestamp: '30 minutes ago',
+            read: false
+          },
+          {
+            id: '2',
+            type: 'reminder',
+            message: 'Monthly report due tomorrow',
+            timestamp: '2 hours ago',
+            read: false
+          },
+          {
+            id: '3',
+            type: 'update',
+            message: 'Marcus Johnson advanced to Stage 4',
+            timestamp: '5 hours ago',
+            read: true
+          }
+        ],
+        messages: [
+          {
+            id: '1',
+            from: 'Admin Team',
+            subject: 'Updated onboarding procedures',
+            preview: 'Please review the new onboarding checklist...',
+            timestamp: '1 hour ago',
+            read: false
+          },
+          {
+            id: '2',
+            from: 'Sarah Williams',
+            subject: 'Request for meeting',
+            preview: 'I would like to discuss my housing situation...',
+            timestamp: '3 hours ago',
+            read: true
+          }
+        ],
+        upcomingEvents: [
+          {
+            id: '1',
+            type: '1-on-1',
+            title: 'Weekly Check-in',
+            residentName: 'Marcus Johnson',
+            datetime: 'Today at 2:00 PM'
+          },
+          {
+            id: '2',
+            type: 'Group',
+            title: 'Financial Literacy Workshop',
+            residentName: 'All Residents',
+            datetime: 'Tomorrow at 10:00 AM'
+          },
+          {
+            id: '3',
+            type: 'Assessment',
+            title: 'Stage Review',
+            residentName: 'David Rodriguez',
+            datetime: 'Friday at 3:00 PM'
           }
         ]
       };
@@ -1225,24 +1325,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     }
   }));
 
-  // Staff Dashboard Routes
-  app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const dashboardData = {
-        totalResidents: 45,
-        activeResidents: 38,
-        pendingIntakes: 7,
-        overdueNotes: 3,
-        avgSavings: 1250,
-        touchPoints: 1,
-        reportStatus: 'ready'
-      };
-      res.json(dashboardData);
-    } catch (error) {
-      console.error('Staff dashboard error:', error);
-      res.status(500).json({ message: 'Failed to fetch dashboard data' });
-    }
-  }));
+
 
   app.get('/api/staff/residents', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {

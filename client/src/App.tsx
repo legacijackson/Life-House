@@ -29,7 +29,8 @@ import Maintenance from "@/pages/maintenance";
 import Reports from "@/pages/reports";
 import CheckIn from "@/pages/check-in";
 import { ResidentPortal } from "@/components/resident-portal";
-import { StaffDashboard } from "@/components/staff-dashboard";
+import StaffDashboard from "@/pages/staff-dashboard";
+import StaffLogin from "@/pages/staff-login";
 import { PartnerPortal } from "@/components/partner-portal";
 import ProfilePage from "@/pages/profile";
 import AdminPanelPage from "@/pages/admin-panel";
@@ -43,7 +44,6 @@ function ProtectedRoutes() {
   return (
     <RouteGuard>
       <Switch>
-        <Route path="/app" component={Dashboard} />
         <Route path="/app/intake" component={Intake} />
         <Route path="/app/referrals" component={Referrals} />
         <Route path="/app/residents" component={Residents} />
@@ -79,6 +79,7 @@ function Router() {
         <Route path="/donate" component={Donate} />
         <Route path="/guest-resources" component={GuestResources} />
         <Route path="/resources" component={Resources} />
+        <Route path="/app" component={StaffLogin} />
         <Route path="/app/resources" component={Resources} />
         <Route path="/app/:rest*" component={ProtectedRoutes} />
         <Route component={NotFound} />
