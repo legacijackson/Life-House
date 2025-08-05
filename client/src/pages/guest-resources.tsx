@@ -521,7 +521,14 @@ export default function GuestResourcesPage() {
                   {resource.description}
                 </p>
                 
-                
+                {resource.phone && (
+                  <div className="flex items-center gap-2 mb-3 text-sm">
+                    <Phone className="w-4 h-4 text-gray-500" />
+                    <a href={`tel:${resource.phone}`} className="text-blue-600 hover:underline">
+                      {resource.phone}
+                    </a>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-1 mb-4">
                   {resource.tags.slice(0, 3).map((tag, index) => (
@@ -597,69 +604,76 @@ export default function GuestResourcesPage() {
                       {selectedResource.description}
                     </p>
 
-                    <div className="mb-6">
-                      <h4 className="font-medium text-gray-900 mb-2">Professional credit repair through CureMyCredit700</h4>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-sm text-gray-700">
-                          Professional credit repair services specializing in challenging inaccurate, outdated, and unverifiable information on credit reports through proven strategies and personalized approaches.
-                        </p>
+                    {selectedResource.eligibility && (
+                      <div className="mb-6">
+                        <h4 className="font-medium text-gray-900 mb-2">Eligibility Requirements</h4>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <p className="text-sm text-gray-700">
+                            {selectedResource.eligibility}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Core Services & Contact */}
+                  {/* Contact Information */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Heart className="w-5 h-5 text-red-600" />
-                      Core Services
+                      <Phone className="w-5 h-5 text-blue-600" />
+                      Contact Information
                     </h3>
                     
                     <div className="space-y-4 mb-6">
-                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-gray-900">Credit Report Analysis</h4>
-                          <p className="text-sm text-gray-600">Comprehensive review of all negative items affecting credit scores</p>
+                      {selectedResource.location && (
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-gray-900">Location</h4>
+                            <p className="text-sm text-gray-600">{selectedResource.location}</p>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
-                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-gray-900">Dispute Processing</h4>
-                          <p className="text-sm text-gray-600">Strategic challenges to inaccurate information with credit bureaus</p>
+                      {selectedResource.phone && (
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-gray-900">Phone</h4>
+                            <a href={`tel:${selectedResource.phone}`} className="text-sm text-blue-600 hover:underline">
+                              {selectedResource.phone}
+                            </a>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
-                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <Globe className="w-5 h-5 text-gray-500 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-gray-900">Credit Building Guidance</h4>
-                          <p className="text-sm text-gray-600">Personalized strategies for improving credit health long-term</p>
+                      {selectedResource.email && (
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <Globe className="w-5 h-5 text-gray-500 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-gray-900">Email</h4>
+                            <a href={`mailto:${selectedResource.email}`} className="text-sm text-blue-600 hover:underline">
+                              {selectedResource.email}
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      )}
 
-                    {/* Proven Results Section */}
-                    <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 mb-6">
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Star className="w-5 h-5 text-yellow-500" />
-                        Proven Results
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4 text-center">
-                        <div>
-                          <div className="text-2xl font-bold text-blue-600">4.9/5</div>
-                          <div className="text-xs text-gray-600">Customer Rating</div>
+                      {selectedResource.website && (
+                        <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <Globe className="w-5 h-5 text-gray-500 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-gray-900">Website</h4>
+                            <a 
+                              href={selectedResource.website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              Visit Website
+                            </a>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-2xl font-bold text-green-600">400+</div>
-                          <div className="text-xs text-gray-600">testimonials</div>
-                        </div>
-                      </div>
-                      <div className="mt-3 text-center">
-                        <div className="text-lg font-semibold text-purple-600">3-6 months</div>
-                        <div className="text-xs text-gray-600">Typical Timeline</div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
