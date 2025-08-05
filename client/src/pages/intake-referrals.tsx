@@ -63,7 +63,7 @@ interface Referral {
 
 export default function IntakeReferrals() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: userLoading } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("applications");
   const [searchTerm, setSearchTerm] = useState("");
@@ -90,7 +90,11 @@ export default function IntakeReferrals() {
   // Update application mutation
   const updateApplicationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Application> }) => {
-      return apiRequest('PATCH', `/api/admin/applications/${id}`, data);
+      return apiRequest(`/api/admin/applications/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/applications'] });
@@ -105,7 +109,11 @@ export default function IntakeReferrals() {
   // Update referral mutation
   const updateReferralMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Referral> }) => {
-      return apiRequest('PATCH', `/api/admin/referrals/${id}`, data);
+      return apiRequest(`/api/admin/referrals/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/referrals'] });
@@ -188,6 +196,18 @@ export default function IntakeReferrals() {
         return 'secondary';
     }
   };
+
+  if (userLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user || (user.role !== 'Admin' && user.role !== 'CaseManager')) {
     return (
