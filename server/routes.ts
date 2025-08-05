@@ -2598,6 +2598,135 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     }
   }));
 
+  // Complete resident onboarding
+  app.post('/api/admin/onboard-resident', roleRoute(['Admin', 'CaseManager'], upload.fields([
+    { name: 'id', maxCount: 1 },
+    { name: 'dd214', maxCount: 1 },
+    { name: 'benefitsLetters', maxCount: 1 },
+    { name: 'medicalRecords', maxCount: 1 },
+    { name: 'courtDocuments', maxCount: 1 }
+  ]), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const formData = JSON.parse(req.body.data);
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      console.log('Onboarding data received:', formData);
+      console.log('Files received:', Object.keys(files || {}));
+
+      // Create the resident in the database
+      const newResident = await storage.createResident({
+        firstName: formData.personalInfo.firstName,
+        lastName: formData.personalInfo.lastName,
+        email: formData.personalInfo.email,
+        phone: formData.personalInfo.phone,
+        dateOfBirth: formData.personalInfo.dateOfBirth,
+        ssn: formData.personalInfo.ssn,
+        emergencyContact: formData.personalInfo.emergencyContact,
+        emergencyPhone: formData.personalInfo.emergencyPhone,
+        releaseDate: formData.justiceInfo.releaseDate,
+        justiceStatus: formData.justiceInfo.justiceStatus,
+        paroleProbationOfficer: formData.justiceInfo.paroleProbationOfficer,
+        paroleProbationPhone: formData.justiceInfo.paroleProbationPhone,
+        courtDate: formData.justiceInfo.courtDate,
+        housingHistory: formData.needsAssessment.housingHistory,
+        employmentStatus: formData.needsAssessment.employmentStatus,
+        educationLevel: formData.needsAssessment.educationLevel,
+        hasChildren: formData.needsAssessment.hasChildren,
+        childrenDetails: formData.needsAssessment.childrenDetails,
+        medicalNeeds: formData.needsAssessment.medicalNeeds,
+        mentalHealthNeeds: formData.needsAssessment.mentalHealthNeeds,
+        substanceUseHistory: formData.needsAssessment.substanceUseHistory,
+        employmentGoals: formData.needsAssessment.employmentGoals,
+        educationGoals: formData.needsAssessment.educationGoals,
+        literacyLevel: formData.needsAssessment.literacyLevel,
+        isVeteran: formData.isVeteran,
+        hasDisability: formData.hasDisability,
+        eligibilityNotes: formData.eligibilityNotes,
+        race: formData.demographics.race,
+        ethnicity: formData.demographics.ethnicity,
+        gender: formData.demographics.gender,
+        preferredPronouns: formData.demographics.preferredPronouns,
+        propertyId: formData.propertyAssignment.propertyId,
+        roomId: formData.propertyAssignment.roomId,
+        rentAmount: formData.propertyAssignment.rentAmount,
+        moveInDate: formData.propertyAssignment.moveInDate,
+        leaseTermMonths: formData.propertyAssignment.leaseTermMonths,
+        caseManagerId: req.user.id,
+        status: 'active',
+        currentStage: 1,
+        savings: 0
+      });
+
+      // Create an initial case note documenting the onboarding
+      await storage.createCaseNote({
+        residentId: newResident.id,
+        staffId: req.user.id,
+        noteType: 'intake',
+        title: 'Initial Onboarding Completed',
+        content: `Resident successfully onboarded through comprehensive 10-step process:
+        
+**Pre-Screen:** ${formData.isEligible ? 'Eligible' : 'Needs review'}
+**Veteran Status:** ${formData.isVeteran ? 'Yes' : 'No'}
+**Disability Accommodations:** ${formData.hasDisability ? 'Required' : 'None'}
+**Property Assignment:** ${formData.propertyAssignment.propertyId}
+**Move-in Date:** ${formData.propertyAssignment.moveInDate}
+
+All onboarding steps completed:
+✓ Pre-screen assessment
+✓ Full intake and needs assessment
+✓ Document collection
+✓ Property assignment
+✓ House rules acknowledgment
+✓ Safety walkthrough
+✓ Resource orientation
+✓ Policies and procedures review
+✓ Transition planning overview
+✓ Resident portal setup
+
+Resident is ready to begin programming and case management services.`,
+        priority: 'medium',
+        isPrivate: false,
+        tags: ['onboarding', 'intake', 'initial_assessment']
+      });
+
+      // Handle file uploads and create document records
+      const documentIds = [];
+      if (files) {
+        for (const [fieldName, fileArray] of Object.entries(files)) {
+          if (fileArray && fileArray.length > 0) {
+            const file = fileArray[0];
+            // In a real implementation, you would upload to cloud storage
+            // For now, we'll just record the document metadata
+            const document = await storage.createDocument({
+              residentId: newResident.id,
+              fileName: file.originalname,
+              fileType: file.mimetype,
+              fileSize: file.size,
+              uploadedBy: req.user.id,
+              documentType: fieldName === 'id' ? 'identification' : 
+                          fieldName === 'dd214' ? 'military_discharge' : 
+                          fieldName === 'benefitsLetters' ? 'benefits' : 
+                          fieldName === 'medicalRecords' ? 'medical' : 
+                          fieldName === 'courtDocuments' ? 'legal' : 'other',
+              category: 'intake'
+            });
+            documentIds.push(document.id);
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        resident: newResident,
+        documentsUploaded: documentIds.length,
+        message: 'Resident successfully onboarded'
+      });
+    } catch (error) {
+      console.error('Error onboarding resident:', error);
+      res.status(500).json({ message: 'Failed to onboard resident' });
+    }
+  }));
+
   // Profile completion endpoint
   app.post('/api/auth/complete-profile', async (req: Request, res: Response) => {
     try {

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
 
 
 interface StaffDashboardData {
@@ -579,87 +580,17 @@ export function StaffDashboard() {
         </div>
       )}
 
-      {/* Onboarding Modal */}
-      {showOnboardingModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <CardHeader className="border-b">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">Onboard New Resident</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowOnboardingModal(false)}
-                >
-                  <span className="text-2xl">&times;</span>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[calc(90vh-100px)]">
-              <div className="mt-6">
-                <div className="text-center py-8">
-                  <UserPlus className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-                  <h3 className="text-lg font-medium mb-2">Complete Onboarding Process</h3>
-                  <p className="text-gray-600 mb-6">
-                    This comprehensive onboarding flow includes 10 screens to properly onboard a new resident.
-                  </p>
-                  <div className="space-y-4 max-w-md mx-auto text-left">
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">1.</span>
-                      <span>Quick Pre-Screen (eligibility & veteran/disability flags)</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">2.</span>
-                      <span>Full Intake Wizard (demographics, needs, literacy, etc.)</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">3.</span>
-                      <span>Document Upload (ID, DD-214, benefits letters, etc.)</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">4.</span>
-                      <span>Lease & Property Assignment</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">5.</span>
-                      <span>House Rules + Program Policies</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">6.</span>
-                      <span>Safety Walk-Through & Checklist</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">7.</span>
-                      <span>Resource & Service Menu</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">8.</span>
-                      <span>Warnings, Dismissal & Grievance</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">9.</span>
-                      <span>Off-Boarding Path</span>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <span className="text-purple-600 font-bold">10.</span>
-                      <span>Welcome Dashboard</span>
-                    </div>
-                  </div>
-                  <Button 
-                    className="mt-8"
-                    onClick={() => {
-                      setShowOnboardingModal(false);
-                      setLocation('/app/intake-referrals');
-                    }}
-                  >
-                    Start Onboarding Process
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        isOpen={showOnboardingModal}
+        onClose={() => setShowOnboardingModal(false)}
+        onComplete={() => {
+          toast({
+            title: "Onboarding Completed",
+            description: "New resident has been successfully onboarded."
+          });
+        }}
+      />
     </div>
   );
 }

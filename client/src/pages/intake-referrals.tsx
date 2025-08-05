@@ -197,6 +197,10 @@ export default function IntakeReferrals() {
     }
   };
 
+  // Debug logging
+  console.log('IntakeReferrals - user:', user);
+  console.log('IntakeReferrals - userLoading:', userLoading);
+
   if (userLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -219,6 +223,9 @@ export default function IntakeReferrals() {
             <p className="text-gray-600 dark:text-gray-300">
               You don't have permission to access intake and referrals management.
             </p>
+            <div className="mt-4 text-sm text-gray-500">
+              Debug: User Role = {user?.role || 'No user'} | Loading = {userLoading.toString()}
+            </div>
           </CardContent>
         </Card>
       </div>
