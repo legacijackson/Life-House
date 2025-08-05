@@ -63,6 +63,7 @@ function ProtectedRoutes() {
         <Route path="/app/partner-portal" component={PartnerPortal} />
         <Route path="/app/profile" component={ProfilePage} />
         <Route path="/app/documents" component={DocumentsPage} />
+        <Route component={NotFound} />
       </Switch>
     </RouteGuard>
   );
