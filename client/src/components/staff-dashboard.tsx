@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MobileSidebar } from "@/components/mobile-sidebar";
+
 
 interface StaffDashboardData {
   totalResidents: number;
@@ -126,8 +126,7 @@ export function StaffDashboard() {
 
   if (dashboardLoading) {
     return (
-      <MobileSidebar>
-        <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-gray-50 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="animate-pulse space-y-6">
               <div className="h-8 bg-gray-200 rounded w-1/4"></div>
@@ -139,13 +138,11 @@ export function StaffDashboard() {
             </div>
           </div>
         </div>
-      </MobileSidebar>
     );
   }
 
   return (
-    <MobileSidebar>
-      <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -350,6 +347,5 @@ export function StaffDashboard() {
         </Card>
       </div>
     </div>
-    </MobileSidebar>
   );
 }

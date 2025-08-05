@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Sidebar } from "@/components/sidebar";
-import { MobileSidebar } from "@/components/mobile-sidebar";
+
+
 import { 
   Users, 
   Clock, 
@@ -146,11 +146,8 @@ export default function Intake() {
   };
 
   return (
-    <MobileSidebar>
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar />
-        
-        <main className="flex-1 overflow-y-auto">
+    <div className="flex h-screen overflow-hidden">
+      <main className="flex-1 overflow-y-auto">
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
@@ -442,6 +439,5 @@ export default function Intake() {
         </div>
       </main>
       </div>
-    </MobileSidebar>
   );
 }

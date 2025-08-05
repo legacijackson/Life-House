@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { MobileSidebar } from "@/components/mobile-sidebar";
+
 import { StatsCards } from "@/components/stats-cards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,8 +90,7 @@ export default function Dashboard() {
   };
 
   return (
-    <MobileSidebar>
-      <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto">
         {/* Top Bar */}
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="px-6 py-4">
@@ -331,6 +330,5 @@ export default function Dashboard() {
           />
         )}
       </div>
-    </MobileSidebar>
   );
 }
