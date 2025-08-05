@@ -20,7 +20,7 @@ import Untitled_design__4_ from "@assets/Untitled design (4).png";
 
 export default function Landing() {
   const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
   const [isProgramOverviewModalOpen, setIsProgramOverviewModalOpen] = useState(false);
@@ -54,9 +54,9 @@ export default function Landing() {
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => setIsSignupModalOpen(true)} 
+              onClick={() => setIsLoginModalOpen(true)} 
               className="border-green-600 text-green-600 hover:bg-green-50"
-              data-testid="staff-login-button"
+              data-testid="portal-login-button"
             >
               Portal Login
             </Button>
@@ -544,8 +544,8 @@ export default function Landing() {
         onClose={() => setIsIntakeModalOpen(false)} 
       />
       <PortalLoginModal
-        isOpen={isSignupModalOpen}
-        onClose={() => setIsSignupModalOpen(false)}
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
       />
       <ProgramInquiryModal
         isOpen={isInquiryModalOpen}
