@@ -96,7 +96,7 @@ export default function Landing() {
                 onClick={() => window.location.href = '/donate'}
               >
                 <DollarSign className="w-5 h-5 mr-2" />
-                Donate Monthly
+                Donate
               </Button>
             </div>
             
@@ -518,7 +518,7 @@ export default function Landing() {
                 <li className="cursor-pointer hover:text-white" onClick={() => setIsIntakeModalOpen(true)}>• Apply for Housing</li>
                 <li className="cursor-pointer hover:text-white" onClick={() => window.location.href = '/refer'}>• Refer a Resident</li>
                 <li className="cursor-pointer hover:text-white" onClick={() => setIsPartnerModalOpen(true)}>• Partner With Us</li>
-                <li className="cursor-pointer hover:text-white" onClick={() => window.location.href = '/donate'}>• Donate Monthly</li>
+                <li className="cursor-pointer hover:text-white" onClick={() => window.location.href = '/donate'}>• Donate</li>
               </ul>
             </div>
             
