@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,8 @@ import {
   MessageSquare,
   Home,
   Wrench,
-  Activity
+  Activity,
+  UserPlus
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -86,9 +88,11 @@ interface Resident {
 export function StaffDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
   const [selectedResident, setSelectedResident] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'notifications' | 'messages'>('notifications');
   const [showOverdueModal, setShowOverdueModal] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   // Staff dashboard stats
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery<StaffDashboardData>({
@@ -199,6 +203,13 @@ export function StaffDashboard() {
               <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center bg-red-500 text-white text-xs">
                 {dashboardData?.notifications?.filter(n => !n.read).length || 0}
               </Badge>
+            </Button>
+            <Button 
+              onClick={() => setShowOnboardingModal(true)}
+              variant="outline"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Onboard
             </Button>
             <Button 
               onClick={handleGenerateMonthlyReport}
@@ -492,17 +503,29 @@ export function StaffDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => setLocation('/app/attendance')}
+              >
                 <Calendar className="w-6 h-6 mb-2" />
                 <span>Schedule TouchPoint</span>
               </Button>
-              <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => setLocation('/app/case-notes')}
+              >
                 <FileText className="w-6 h-6 mb-2" />
                 <span>Add Case Note</span>
               </Button>
-              <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-                <Target className="w-6 h-6 mb-2" />
-                <span>Update Goals</span>
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => setShowOnboardingModal(true)}
+              >
+                <UserPlus className="w-6 h-6 mb-2" />
+                <span>Onboard Resident</span>
               </Button>
             </div>
           </CardContent>
@@ -545,6 +568,88 @@ export function StaffDashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Onboarding Modal */}
+      {showOnboardingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Onboard New Resident</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowOnboardingModal(false)}
+                >
+                  <span className="text-2xl">&times;</span>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[calc(90vh-100px)]">
+              <div className="mt-6">
+                <div className="text-center py-8">
+                  <UserPlus className="w-16 h-16 mx-auto mb-4 text-purple-600" />
+                  <h3 className="text-lg font-medium mb-2">Complete Onboarding Process</h3>
+                  <p className="text-gray-600 mb-6">
+                    This comprehensive onboarding flow includes 10 screens to properly onboard a new resident.
+                  </p>
+                  <div className="space-y-4 max-w-md mx-auto text-left">
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">1.</span>
+                      <span>Quick Pre-Screen (eligibility & veteran/disability flags)</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">2.</span>
+                      <span>Full Intake Wizard (demographics, needs, literacy, etc.)</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">3.</span>
+                      <span>Document Upload (ID, DD-214, benefits letters, etc.)</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">4.</span>
+                      <span>Lease & Property Assignment</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">5.</span>
+                      <span>House Rules + Program Policies</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">6.</span>
+                      <span>Safety Walk-Through & Checklist</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">7.</span>
+                      <span>Resource & Service Menu</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">8.</span>
+                      <span>Warnings, Dismissal & Grievance</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">9.</span>
+                      <span>Off-Boarding Path</span>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <span className="text-purple-600 font-bold">10.</span>
+                      <span>Welcome Dashboard</span>
+                    </div>
+                  </div>
+                  <Button 
+                    className="mt-8"
+                    onClick={() => {
+                      setShowOnboardingModal(false);
+                      setLocation('/app/intake-referrals');
+                    }}
+                  >
+                    Start Onboarding Process
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

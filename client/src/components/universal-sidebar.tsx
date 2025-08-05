@@ -45,7 +45,7 @@ const residentNavigation = [
 
 // Case Worker (Staff) navigation
 const caseWorkerNavigation = [
-  { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
+  { name: "Dashboard", href: "/app/staff-dashboard", icon: Home },
   { name: "Intake & Referrals", href: "/app/intake-referrals", icon: UserPlus },
   { name: "My Residents", href: "/app/residents", icon: Users },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },

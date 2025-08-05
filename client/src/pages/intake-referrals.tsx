@@ -76,16 +76,14 @@ export default function IntakeReferrals() {
   const isAdmin = user?.role === 'Admin';
 
   // Fetch applications
-  const { data: applications = [], isLoading: applicationsLoading } = useQuery({
-    queryKey: ['/api/admin/applications', statusFilter],
-    queryFn: () => apiRequest('GET', `/api/admin/applications?status=${statusFilter}`),
+  const { data: applications = [], isLoading: applicationsLoading } = useQuery<Application[]>({
+    queryKey: [`/api/admin/applications?status=${statusFilter}`],
     enabled: activeTab === 'applications'
   });
 
   // Fetch referrals
-  const { data: referrals = [], isLoading: referralsLoading } = useQuery({
-    queryKey: ['/api/admin/referrals', statusFilter],
-    queryFn: () => apiRequest('GET', `/api/admin/referrals?status=${statusFilter}`),
+  const { data: referrals = [], isLoading: referralsLoading } = useQuery<Referral[]>({
+    queryKey: [`/api/admin/referrals?status=${statusFilter}`],
     enabled: activeTab === 'referrals'
   });
 
