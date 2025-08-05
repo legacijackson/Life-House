@@ -8,7 +8,7 @@ import { PortalLoginModal } from "@/components/portal-login-modal";
 import { ProgramInquiryModal } from "@/components/program-inquiry-modal";
 import { PartnerSignupModal } from "@/components/partner-signup-modal";
 import { ProgramOverviewModal } from "@/components/program-overview-modal";
-import { PublicMobileNav } from "@/components/public-mobile-nav";
+
 import { HighlightCarousel } from "@/components/highlight-carousel";
 import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
 
@@ -26,8 +26,7 @@ export default function Landing() {
   const [isProgramOverviewModalOpen, setIsProgramOverviewModalOpen] = useState(false);
 
   return (
-    <PublicMobileNav>
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-cream-50" style={{ background: 'linear-gradient(to bottom, #f0fdf4, #fffaeb)' }}>
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-cream-50" style={{ background: 'linear-gradient(to bottom, #f0fdf4, #fffaeb)' }}>
       {/* Header */}
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
@@ -560,7 +559,6 @@ export default function Landing() {
         isOpen={isProgramOverviewModalOpen}
         onClose={() => setIsProgramOverviewModalOpen(false)}
       />
-      </div>
-    </PublicMobileNav>
+    </div>
   );
 }

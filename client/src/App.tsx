@@ -7,6 +7,7 @@ import { Toaster as HotToaster } from "react-hot-toast";
 import { AIChatbotWidget } from "@/components/ai-chatbot-widget";
 import { HelpDesk } from "@/components/help-desk";
 import { UnifiedFloatingMenu } from "@/components/unified-floating-menu";
+import { UniversalSidebar } from "@/components/universal-sidebar";
 import { useState } from "react";
 import { RouteGuard } from "@/components/route-guard";
 import Dashboard from "@/pages/dashboard";
@@ -69,17 +70,19 @@ function ProtectedRoutes() {
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Landing} />
-      <Route path="/apply" component={Apply} />
-      <Route path="/refer" component={Refer} />
-      <Route path="/donate" component={Donate} />
-      <Route path="/guest-resources" component={GuestResources} />
-      <Route path="/resources" component={Resources} />
-      <Route path="/app/resources" component={Resources} />
-      <Route path="/app/:rest*" component={ProtectedRoutes} />
-      <Route component={NotFound} />
-    </Switch>
+    <UniversalSidebar>
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route path="/apply" component={Apply} />
+        <Route path="/refer" component={Refer} />
+        <Route path="/donate" component={Donate} />
+        <Route path="/guest-resources" component={GuestResources} />
+        <Route path="/resources" component={Resources} />
+        <Route path="/app/resources" component={Resources} />
+        <Route path="/app/:rest*" component={ProtectedRoutes} />
+        <Route component={NotFound} />
+      </Switch>
+    </UniversalSidebar>
   );
 }
 
