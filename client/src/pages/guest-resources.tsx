@@ -676,38 +676,7 @@ export default function GuestResourcesPage() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-4 mt-8 pt-6 border-t">
-                  {selectedResource.phone && (
-                    <Button 
-                      className={`flex-1 bg-gradient-to-r ${getCategoryColor(selectedResource.category)} text-white hover:opacity-90`}
-                      onClick={() => window.open(`tel:${selectedResource.phone}`, '_self')}
-                    >
-                      <Phone className="w-4 h-4 mr-2" />
-                      Call Now
-                    </Button>
-                  )}
-                  {selectedResource.website && (
-                    <Button 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => window.open(selectedResource.website, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Visit Website
-                    </Button>
-                  )}
-                  {selectedResource.email && (
-                    <Button 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => window.open(`mailto:${selectedResource.email}`, '_blank')}
-                    >
-                      <Globe className="w-4 h-4 mr-2" />
-                      Email Contact
-                    </Button>
-                  )}
-                </div>
+                
               </div>
             </div>
           )}
