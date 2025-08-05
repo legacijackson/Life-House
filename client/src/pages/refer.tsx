@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AnimatedButton } from "@/components/ui/animated-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnimatedInput } from "@/components/ui/animated-input";
 import { AnimatedTextarea } from "@/components/ui/animated-textarea";
 import { AnimatedSelect } from "@/components/ui/animated-select";
-import { SelectItem } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnimatedCheckbox } from "@/components/ui/animated-checkbox";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Home, Users, Phone, Mail, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { Logo } from "@/components/logo";
