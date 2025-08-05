@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Home, Target, Building2, DollarSign, Users, Shield, BookOpen, UserCheck, HelpCircle } from 'lucide-react';
+import { Home, Target, Building2, DollarSign, Users, Shield, BookOpen, UserCheck, HelpCircle, X } from 'lucide-react';
+import React from 'react';
 
 interface Program {
   id: string;
@@ -346,54 +347,129 @@ export function LifeHousePrograms() {
       {/* Program Detail Modal */}
       {selectedProgram && (
         <Dialog open={!!selectedProgram} onOpenChange={() => setSelectedProgram(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="program-detail-description">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3 text-2xl">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  selectedProgram.id === 'housing' ? 'bg-green-500' :
-                  selectedProgram.id === 'credit' ? 'bg-blue-500' :
-                  selectedProgram.id === 'financial-literacy' ? 'bg-purple-500' :
-                  selectedProgram.id === 'business-coaching' ? 'bg-orange-500' :
-                  selectedProgram.id === 'brokerage' ? 'bg-green-500' :
-                  'bg-purple-500'
-                }`}>
-                  {selectedProgram.icon}
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0" aria-describedby="program-detail-description">
+            {/* Colorful Header */}
+            <div className={`relative p-8 ${
+              selectedProgram.id === 'housing' ? 'bg-gradient-to-br from-green-500 to-green-600' :
+              selectedProgram.id === 'credit' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
+              selectedProgram.id === 'financial-literacy' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
+              selectedProgram.id === 'business-coaching' ? 'bg-gradient-to-br from-orange-500 to-orange-600' :
+              selectedProgram.id === 'brokerage' ? 'bg-gradient-to-br from-green-500 to-green-600' :
+              'bg-gradient-to-br from-purple-500 to-purple-600'
+            }`}>
+              <button 
+                onClick={() => setSelectedProgram(null)}
+                className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                  {React.cloneElement(selectedProgram.icon as React.ReactElement, { className: "w-10 h-10 text-white" })}
                 </div>
-                {selectedProgram.title}
-              </DialogTitle>
-              <DialogDescription id="program-detail-description" className="text-base mt-3">
+                <div>
+                  <DialogTitle className="text-3xl font-bold text-white mb-2">
+                    {selectedProgram.title}
+                  </DialogTitle>
+                  <p className="text-white/90 text-lg">
+                    {selectedProgram.subtitle}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Content Area */}
+            <div className="p-8">
+              <DialogDescription id="program-detail-description" className="text-base text-gray-700 mb-8 leading-relaxed">
                 {selectedProgram.modalContent.overview}
               </DialogDescription>
-            </DialogHeader>
 
-            <div className="mt-6 space-y-6">
-              {selectedProgram.modalContent.sections.map((section, index) => (
-                <div key={index} className="space-y-3">
-                  <h3 className="text-lg font-semibold text-gray-900">{section.title}</h3>
-                  <div className="space-y-2">
-                    {section.items.map((item, itemIndex) => (
-                      <div key={itemIndex} className="text-sm text-gray-700">
-                        {item.title && (
-                          <span className="font-medium">{item.title}</span>
-                        )}
-                        {item.title && item.description && <span className="mx-1">-</span>}
-                        <span>{item.description}</span>
+              {/* Main Content Sections */}
+              <div className="space-y-8">
+                {selectedProgram.modalContent.sections.map((section, index) => (
+                  <div key={index} className={`rounded-xl p-6 shadow-sm border ${
+                    index % 2 === 0 ? 'bg-gradient-to-br from-gray-50 to-white' : 'bg-gradient-to-br from-blue-50 to-white'
+                  }`}>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      {section.title.includes('Overview') && <BookOpen className={`w-5 h-5 ${
+                        selectedProgram.id === 'housing' ? 'text-green-600' :
+                        selectedProgram.id === 'credit' ? 'text-blue-600' :
+                        selectedProgram.id === 'financial-literacy' ? 'text-purple-600' :
+                        selectedProgram.id === 'business-coaching' ? 'text-orange-600' :
+                        'text-green-600'
+                      }`} />}
+                      {section.title.includes('Stage') && <Target className={`w-5 h-5 ${
+                        selectedProgram.id === 'housing' ? 'text-green-600' :
+                        selectedProgram.id === 'credit' ? 'text-blue-600' :
+                        selectedProgram.id === 'financial-literacy' ? 'text-purple-600' :
+                        selectedProgram.id === 'business-coaching' ? 'text-orange-600' :
+                        'text-green-600'
+                      }`} />}
+                      {section.title.includes('Features') && <Shield className={`w-5 h-5 ${
+                        selectedProgram.id === 'housing' ? 'text-green-600' :
+                        selectedProgram.id === 'credit' ? 'text-blue-600' :
+                        selectedProgram.id === 'financial-literacy' ? 'text-purple-600' :
+                        selectedProgram.id === 'business-coaching' ? 'text-orange-600' :
+                        'text-green-600'
+                      }`} />}
+                      {section.title.includes('Partners') && <Users className={`w-5 h-5 ${
+                        selectedProgram.id === 'housing' ? 'text-green-600' :
+                        selectedProgram.id === 'credit' ? 'text-blue-600' :
+                        selectedProgram.id === 'financial-literacy' ? 'text-purple-600' :
+                        selectedProgram.id === 'business-coaching' ? 'text-orange-600' :
+                        'text-green-600'
+                      }`} />}
+                      {section.title}
+                    </h3>
+                    <div className="space-y-3">
+                      {section.items.map((item, itemIndex) => (
+                        <div key={itemIndex} className={`${item.title ? 'flex gap-3' : ''}`}>
+                          {item.title && (
+                            <div className="flex-shrink-0">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
+                                item.isNumbered !== false && /^\d/.test(item.title) ? (
+                                  selectedProgram.id === 'housing' ? 'bg-gradient-to-br from-green-500 to-green-600 text-white' :
+                                  selectedProgram.id === 'credit' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' :
+                                  selectedProgram.id === 'financial-literacy' ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white' :
+                                  selectedProgram.id === 'business-coaching' ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white' :
+                                  'bg-gradient-to-br from-green-500 to-green-600 text-white'
+                                ) : 'bg-gray-200 text-gray-700'
+                              }`}>
+                                {item.isNumbered !== false && /^\d/.test(item.title) ? item.title.match(/^\d+/)?.[0] : '•'}
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            {item.title && (
+                              <h4 className="font-semibold text-gray-900 mb-1">
+                                {item.title.replace(/^\d+\.\s*/, '')}
+                              </h4>
+                            )}
+                            <p className="text-gray-700 leading-relaxed">{item.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {selectedProgram.modalContent.additionalInfo && (
+                  <div className="space-y-4">
+                    {selectedProgram.modalContent.additionalInfo.map((info, index) => (
+                      <div key={index} className={`p-6 rounded-xl border-l-4 shadow-sm ${
+                        selectedProgram.id === 'housing' ? 'bg-gradient-to-r from-green-50 to-green-100/50 border-green-500' :
+                        selectedProgram.id === 'credit' ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 border-blue-500' :
+                        selectedProgram.id === 'financial-literacy' ? 'bg-gradient-to-r from-purple-50 to-purple-100/50 border-purple-500' :
+                        selectedProgram.id === 'business-coaching' ? 'bg-gradient-to-r from-orange-50 to-orange-100/50 border-orange-500' :
+                        'bg-gradient-to-r from-green-50 to-green-100/50 border-green-500'
+                      }`}>
+                        <h4 className="font-bold text-gray-900 mb-3 text-lg">{info.title}</h4>
+                        <p className="text-gray-700 italic leading-relaxed">{info.content}</p>
                       </div>
                     ))}
                   </div>
-                </div>
-              ))}
-
-              {selectedProgram.modalContent.additionalInfo && (
-                <div className="space-y-4 mt-6 pt-6 border-t">
-                  {selectedProgram.modalContent.additionalInfo.map((info, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-gray-900 mb-2">{info.title}</h4>
-                      <p className="text-sm text-gray-700 italic">{info.content}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
