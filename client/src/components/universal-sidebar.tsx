@@ -141,11 +141,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
           <Link href="/">
             <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
               <Logo className="w-10 h-10" />
-              <div>
-                <p className="text-sm text-gray-500">
-                  {isAuthenticatedPage ? "Portal" : "Resources"}
-                </p>
-              </div>
+              
             </div>
           </Link>
           {isMobile && (
@@ -248,60 +244,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
           })}
         </ul>
 
-        {/* Quick Actions for Public Pages */}
-        {!isAuthenticatedPage && (
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="px-3 py-2">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Quick Actions</p>
-            </div>
-            <ul className="mt-2 space-y-2">
-              <li>
-                <button
-                  onClick={() => {
-                    // Scroll to apply section or open modal
-                    const element = document.querySelector('#apply-section');
-                    if (element) {
-                      element.scrollIntoView({ behavior: 'smooth' });
-                    } else {
-                      window.location.href = '/apply';
-                    }
-                    if (isMobile) closeSidebar();
-                  }}
-                  className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors text-left"
-                >
-                  <FileText className="w-5 h-5 mr-3" />
-                  Apply for Housing
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    const element = document.querySelector('#contact');
-                    if (element) {
-                      element.scrollIntoView({ behavior: 'smooth' });
-                    }
-                    if (isMobile) closeSidebar();
-                  }}
-                  className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors text-left"
-                >
-                  <Phone className="w-5 h-5 mr-3" />
-                  Get Help
-                </button>
-              </li>
-              <li>
-                <Link href="/refer">
-                  <span 
-                    className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
-                    onClick={isMobile ? closeSidebar : undefined}
-                  >
-                    <Users className="w-5 h-5 mr-3" />
-                    Refer Someone
-                  </span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-        )}
+        
 
         {/* Portal Access for Authenticated Users */}
         {isAuthenticatedPage && user && (
