@@ -106,11 +106,13 @@ export function StaffDashboard() {
 
   // PDF generation mutation
   const generatePDFMutation = useMutation({
-    mutationFn: (data: { residentId: string; type: 'consent' | 'handbook' | 'monthly_report' }) => 
-      apiRequest(`/api/staff/generate-pdf`, {
+    mutationFn: async (data: { residentId: string; type: 'consent' | 'handbook' | 'monthly_report' }) => {
+      const response = await apiRequest(`/api/staff/generate-pdf`, {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      });
+      return response.json();
+    },
     onSuccess: (data: { downloadUrl: string; fileName: string }) => {
       // Create download link
       const link = document.createElement('a');
@@ -134,9 +136,12 @@ export function StaffDashboard() {
 
   // Monthly report generation
   const generateMonthlyReportMutation = useMutation({
-    mutationFn: () => apiRequest(`/api/staff/monthly-report`, {
-      method: 'POST',
-    }),
+    mutationFn: async () => {
+      const response = await apiRequest(`/api/staff/monthly-report`, {
+        method: 'POST',
+      });
+      return response.json();
+    },
     onSuccess: (data: { downloadUrl: string; fileName: string }) => {
       const link = document.createElement('a');
       link.href = data.downloadUrl;
