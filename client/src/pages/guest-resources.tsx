@@ -521,24 +521,7 @@ export default function GuestResourcesPage() {
                   {resource.description}
                 </p>
                 
-                <div className="space-y-2 mb-4 text-sm text-gray-500">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    <span>{resource.phone}</span>
-                  </div>
-                  {resource.email && (
-                    <div className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      <span>{resource.email}</span>
-                    </div>
-                  )}
-                  {resource.website && !resource.email && (
-                    <div className="flex items-center gap-2">
-                      <Globe className="w-4 h-4" />
-                      <span>Website Available</span>
-                    </div>
-                  )}
-                </div>
+                
 
                 <div className="flex flex-wrap gap-1 mb-4">
                   {resource.tags.slice(0, 3).map((tag, index) => (
