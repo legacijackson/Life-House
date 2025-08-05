@@ -524,7 +524,6 @@ export default function GuestResourcesPage() {
                 <div className="space-y-2 mb-4 text-sm text-gray-500">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
-                    <span>{resource.location}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4" />
