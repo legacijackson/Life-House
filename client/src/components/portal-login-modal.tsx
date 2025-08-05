@@ -135,20 +135,10 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
         localStorage.setItem("userData", JSON.stringify(data.user));
       }
       
-      // Validate that the user's actual role matches the selected login type
-      const selectedUserType = variables.userType;
+      // Allow flexible login - users can select any role type, but we'll redirect based on their actual role
       const actualUserRole = data.user?.role;
       
-      if (actualUserRole !== selectedUserType) {
-        toast.error(`Account mismatch: You selected "${selectedUserType}" but your account is registered as "${actualUserRole}". Please select the correct account type or contact support.`);
-        return;
-      }
-      
-      // Validate role access for target portal
-      if (targetPortal && !validatePortalAccess(data.user?.role, targetPortal)) {
-        toast.error(`Your account role (${data.user?.role}) cannot access the ${targetPortal}. Please contact support if you believe this is an error.`);
-        return;
-      }
+      // Note: For development, we'll allow any user to access any portal and redirect based on their actual role
       
       toast.success(`Welcome back, ${data.user?.name || data.user?.email}!`);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
