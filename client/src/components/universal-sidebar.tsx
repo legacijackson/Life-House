@@ -142,7 +142,6 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
             <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
               <Logo className="w-10 h-10" />
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Life House</h1>
                 <p className="text-sm text-gray-500">
                   {isAuthenticatedPage ? "Portal" : "Resources"}
                 </p>
