@@ -202,16 +202,15 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
         formData.append(`other_${index}`, file);
       });
 
-      const response = await apiRequest('/api/admin/onboard-resident', {
+      return await apiRequest('/api/admin/onboard-resident', {
         method: 'POST',
         body: formData
       });
-      return response.json();
     },
     onSuccess: (result) => {
       toast({
         title: "Resident Onboarded Successfully",
-        description: `${result.resident.firstName} ${result.resident.lastName} has been successfully onboarded.`
+        description: `New resident has been successfully onboarded.`
       });
       queryClient.invalidateQueries({ queryKey: ['/api/staff/residents'] });
       queryClient.invalidateQueries({ queryKey: ['/api/staff/dashboard'] });

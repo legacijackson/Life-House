@@ -2599,14 +2599,17 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   }));
 
   // Complete resident onboarding
-  app.post('/api/admin/onboard-resident', roleRoute(['Admin', 'CaseManager'], upload.fields([
-    { name: 'id', maxCount: 1 },
-    { name: 'dd214', maxCount: 1 },
-    { name: 'benefitsLetters', maxCount: 1 },
-    { name: 'medicalRecords', maxCount: 1 },
-    { name: 'courtDocuments', maxCount: 1 }
-  ]), async (req: AuthenticatedRequest, res: Response) => {
-    try {
+  app.post('/api/admin/onboard-resident', 
+    roleRoute(['Admin', 'CaseManager']), 
+    upload.fields([
+      { name: 'id', maxCount: 1 },
+      { name: 'dd214', maxCount: 1 },
+      { name: 'benefitsLetters', maxCount: 1 },
+      { name: 'medicalRecords', maxCount: 1 },
+      { name: 'courtDocuments', maxCount: 1 }
+    ]),
+    async (req: AuthenticatedRequest, res: Response) => {
+      try {
       const formData = JSON.parse(req.body.data);
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       
@@ -2620,7 +2623,6 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         email: formData.personalInfo.email,
         phone: formData.personalInfo.phone,
         dateOfBirth: formData.personalInfo.dateOfBirth,
-        ssn: formData.personalInfo.ssn,
         emergencyContact: formData.personalInfo.emergencyContact,
         emergencyPhone: formData.personalInfo.emergencyPhone,
         releaseDate: formData.justiceInfo.releaseDate,
@@ -2642,15 +2644,6 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         isVeteran: formData.isVeteran,
         hasDisability: formData.hasDisability,
         eligibilityNotes: formData.eligibilityNotes,
-        race: formData.demographics.race,
-        ethnicity: formData.demographics.ethnicity,
-        gender: formData.demographics.gender,
-        preferredPronouns: formData.demographics.preferredPronouns,
-        propertyId: formData.propertyAssignment.propertyId,
-        roomId: formData.propertyAssignment.roomId,
-        rentAmount: formData.propertyAssignment.rentAmount,
-        moveInDate: formData.propertyAssignment.moveInDate,
-        leaseTermMonths: formData.propertyAssignment.leaseTermMonths,
         caseManagerId: req.user.id,
         status: 'active',
         currentStage: 1,
@@ -2660,8 +2653,8 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       // Create an initial case note documenting the onboarding
       await storage.createCaseNote({
         residentId: newResident.id,
-        staffId: req.user.id,
-        noteType: 'intake',
+        authorId: req.user.id,
+        noteType: 'Other',
         title: 'Initial Onboarding Completed',
         content: `Resident successfully onboarded through comprehensive 10-step process:
         
@@ -2684,7 +2677,7 @@ All onboarding steps completed:
 ✓ Resident portal setup
 
 Resident is ready to begin programming and case management services.`,
-        priority: 'medium',
+        priority: 'normal',
         isPrivate: false,
         tags: ['onboarding', 'intake', 'initial_assessment']
       });
@@ -2698,17 +2691,13 @@ Resident is ready to begin programming and case management services.`,
             // In a real implementation, you would upload to cloud storage
             // For now, we'll just record the document metadata
             const document = await storage.createDocument({
-              residentId: newResident.id,
-              fileName: file.originalname,
-              fileType: file.mimetype,
-              fileSize: file.size,
-              uploadedBy: req.user.id,
-              documentType: fieldName === 'id' ? 'identification' : 
-                          fieldName === 'dd214' ? 'military_discharge' : 
-                          fieldName === 'benefitsLetters' ? 'benefits' : 
-                          fieldName === 'medicalRecords' ? 'medical' : 
-                          fieldName === 'courtDocuments' ? 'legal' : 'other',
-              category: 'intake'
+              title: file.originalname,
+              mime: file.mimetype,
+              size: file.size,
+              ownerType: 'resident',
+              ownerId: newResident.id,
+              storagePath: `/uploads/${newResident.id}/${file.originalname}`,
+              checksum: null
             });
             documentIds.push(document.id);
           }
@@ -2721,11 +2710,11 @@ Resident is ready to begin programming and case management services.`,
         documentsUploaded: documentIds.length,
         message: 'Resident successfully onboarded'
       });
-    } catch (error) {
-      console.error('Error onboarding resident:', error);
-      res.status(500).json({ message: 'Failed to onboard resident' });
-    }
-  }));
+      } catch (error) {
+        console.error('Error onboarding resident:', error);
+        res.status(500).json({ message: 'Failed to onboard resident' });
+      }
+    });
 
   // Profile completion endpoint
   app.post('/api/auth/complete-profile', async (req: Request, res: Response) => {

@@ -269,6 +269,50 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  // Create new resident (for onboarding wizard)
+  async createResident(residentData: any): Promise<any> {
+    const bcrypt = await import('bcryptjs');
+    
+    // First create the user account
+    const [newUser] = await db.insert(users).values({
+      name: `${residentData.firstName} ${residentData.lastName}`,
+      role: 'Resident' as any,
+      email: residentData.email || null,
+      phone: residentData.phone,
+      passwordHash: await bcrypt.hash(residentData.phone || 'temp1234', 10)
+    }).returning();
+
+    // Then create the resident profile with all details
+    const [newProfile] = await db.insert(residentProfiles).values({
+      userId: newUser.id,
+      dateOfBirth: residentData.dateOfBirth ? new Date(residentData.dateOfBirth) : null,
+      justiceStatus: residentData.justiceStatus,
+      agentName: residentData.paroleProbationOfficer,
+      agentEmail: null,
+      agentPhone: residentData.paroleProbationPhone,
+      releaseDate: residentData.releaseDate ? new Date(residentData.releaseDate) : null,
+      educationLevel: residentData.educationLevel,
+      emergencyContact: {
+        name: residentData.emergencyContact,
+        phone: residentData.emergencyPhone,
+        relation: 'Emergency Contact'
+      },
+      goalsSummary: `Employment: ${residentData.employmentGoals || 'Not specified'}
+Education: ${residentData.educationGoals || 'Not specified'}
+Medical: ${residentData.medicalNeeds || 'None'}
+Mental Health: ${residentData.mentalHealthNeeds || 'None'}
+Children: ${residentData.hasChildren ? residentData.childrenDetails || 'Has children' : 'No children'}
+Veteran: ${residentData.isVeteran ? 'Yes' : 'No'}
+Disability: ${residentData.hasDisability ? 'Yes' : 'No'}
+Notes: ${residentData.eligibilityNotes || 'None'}`
+    }).returning();
+
+    return {
+      ...newUser,
+      profile: newProfile
+    };
+  }
+
   async getReferrals(filters?: { status?: string }): Promise<Referral[]> {
     const conditions = [];
 
@@ -543,7 +587,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getHighlightResources(): Promise<Resource[]> {
-    const resources = await db
+    const highlightedResources = await db
       .select()
       .from(resources)
       .where(and(
@@ -551,7 +595,7 @@ export class DatabaseStorage implements IStorage {
         eq(resources.status, 'active')
       ))
       .orderBy(resources.name);
-    return resources;
+    return highlightedResources;
   }
 
   async updateResource(id: string, updates: Partial<Resource>): Promise<Resource> {

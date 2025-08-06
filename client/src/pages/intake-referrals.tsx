@@ -197,9 +197,7 @@ export default function IntakeReferrals() {
     }
   };
 
-  // Debug logging
-  console.log('IntakeReferrals - user:', user);
-  console.log('IntakeReferrals - userLoading:', userLoading);
+
 
   if (userLoading) {
     return (
