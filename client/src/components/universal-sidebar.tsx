@@ -80,8 +80,8 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
   const [isMobile, setIsMobile] = useState(false);
   const { data: user, isLoading } = useCurrentUser();
 
-  // Determine if we're on an authenticated page
-  const isAuthenticatedPage = location.startsWith('/app');
+  // Determine if we're on an authenticated page (excluding the login page)
+  const isAuthenticatedPage = location.startsWith('/app') && location !== '/app';
   
   useEffect(() => {
     const checkScreenSize = () => {
@@ -185,7 +185,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
           <Link href="/">
             <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
               <Logo className="w-10 h-10" />
-              
+              <span className="text-xl font-bold text-gray-900">Life House</span>
             </div>
           </Link>
           {isMobile && (
