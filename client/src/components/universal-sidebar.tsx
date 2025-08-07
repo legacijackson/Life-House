@@ -184,7 +184,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
         <div className="flex items-center justify-between">
           <Link href="/">
             <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors">
-              <Logo className="w-10 h-10" />
+              {<Logo className="w-10 h-10" />}
             </div>
           </Link>
           {isMobile && (
@@ -213,7 +213,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
                 />
               ) : (
                 <span className="text-sm font-medium text-gray-600">
-                  {(user as any)?.name?.charAt(0) || (user as any)?.email?.charAt(0) || 'U'}
+                  {((user as any)?.name?.charAt(0) || (user as any)?.email?.charAt(0) || 'U')}
                 </span>
               )}
             </div>

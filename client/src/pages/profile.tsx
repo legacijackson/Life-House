@@ -59,8 +59,8 @@ export default function ProfilePage() {
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
+      name: (user as any)?.name || '',
+      email: (user as any)?.email || '',
       phone: '',
       address: '',
       city: '',
@@ -74,7 +74,7 @@ export default function ProfilePage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const response = await fetch(`/api/users/${user?.id}`, {
+      const response = await fetch(`/api/users/${(user as any)?.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ export default function ProfilePage() {
       const formData = new FormData();
       formData.append('avatar', file);
       
-      const response = await fetch(`/api/users/${user?.id}/avatar`, {
+      const response = await fetch(`/api/users/${(user as any)?.id}/avatar`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken') || 'mock-token-1'}`,
@@ -190,9 +190,9 @@ export default function ProfilePage() {
     );
   }
 
-  const userInitials = user.name
+  const userInitials = ((user as any)?.name || 'User')
     .split(' ')
-    .map(n => n[0])
+    .map((n: string) => n[0])
     .join('')
     .toUpperCase();
 
@@ -222,7 +222,7 @@ export default function ProfilePage() {
                   <Avatar className="h-24 w-24">
                     <AvatarImage 
                       src={avatarPreview || ''} 
-                      alt={user.name} 
+                      alt={(user as any)?.name || 'User'} 
                     />
                     <AvatarFallback className="text-2xl">
                       {userInitials}
@@ -513,7 +513,7 @@ export default function ProfilePage() {
                         <p className="text-sm text-gray-500">Your system access level</p>
                       </div>
                     </div>
-                    <Badge variant="secondary">{user.role}</Badge>
+                    <Badge variant="secondary">{(user as any)?.role || 'User'}</Badge>
                   </div>
 
                   <Separator />

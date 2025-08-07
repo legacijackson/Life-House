@@ -47,10 +47,16 @@ function authRoute(handler: AuthenticatedHandler) {
 // Helper for role-based routes
 function roleRoute(roles: string[], handler: AuthenticatedHandler) {
   return (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!roles.includes(req.user?.role)) {
+    if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
-    return handler(req, res, next);
+    try {
+      const result = await handler(req, res, next);
+      return result;
+    } catch (error) {
+      console.error('Route handler error:', error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
   }) as any;
 }
 
@@ -399,8 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: email.split('@')[0],
           email: email,
           passwordHash: hashedPassword,
-          role: 'Admin',
-          isActive: true
+          role: 'Admin'
         });
       }
 
@@ -1126,26 +1131,15 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         }
 
         try {
-          // Import AWS SDK
-          const { S3Client, HeadBucketCommand } = await import('@aws-sdk/client-s3');
+          // Import AWS SDK (commented out since not installed)
+          // const { S3Client, HeadBucketCommand } = await import('@aws-sdk/client-s3');
           
-          const s3Client = new S3Client({
-            region: region || 'sfo3',
-            endpoint: endpointUrl || 'https://sfo3.digitaloceanspaces.com',
-            credentials: {
-              accessKeyId,
-              secretAccessKey,
-            },
-            forcePathStyle: false,
-          });
-
-          // Test bucket access
-          await s3Client.send(new HeadBucketCommand({ Bucket: bucketName }));
-          
+          // For now, return a mock response for testing
           res.json({
-            success: true,
-            message: `S3 connection successful. Connected to bucket: ${bucketName}`
+            success: false,
+            message: 'S3 testing is not available - AWS SDK not installed. Install @aws-sdk/client-s3 to enable this feature.'
           });
+          return;
         } catch (s3Error: any) {
           console.error('S3 connection test failed:', s3Error);
           res.json({
@@ -2600,7 +2594,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
 
   // Complete resident onboarding
   app.post('/api/admin/onboard-resident', 
-    roleRoute(['Admin', 'CaseManager']), 
+    requireAuth,
     upload.fields([
       { name: 'id', maxCount: 1 },
       { name: 'dd214', maxCount: 1 },
@@ -2608,7 +2602,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       { name: 'medicalRecords', maxCount: 1 },
       { name: 'courtDocuments', maxCount: 1 }
     ]),
-    async (req: AuthenticatedRequest, res: Response) => {
+    roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
       try {
       const formData = JSON.parse(req.body.data);
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -2652,11 +2646,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
 
       // Create an initial case note documenting the onboarding
       await storage.createCaseNote({
-        residentId: newResident.id,
-        authorId: req.user.id,
-        noteType: 'Other',
-        title: 'Initial Onboarding Completed',
-        content: `Resident successfully onboarded through comprehensive 10-step process:
+        text: `Initial Onboarding Completed - Resident successfully onboarded through comprehensive 10-step process:
         
 **Pre-Screen:** ${formData.isEligible ? 'Eligible' : 'Needs review'}
 **Veteran Status:** ${formData.isVeteran ? 'Yes' : 'No'}
@@ -2677,9 +2667,9 @@ All onboarding steps completed:
 ✓ Resident portal setup
 
 Resident is ready to begin programming and case management services.`,
-        priority: 'normal',
-        isPrivate: false,
-        tags: ['onboarding', 'intake', 'initial_assessment']
+        residentId: newResident.id,
+        createdBy: req.user.id,
+        noteType: 'Other'
       });
 
       // Handle file uploads and create document records
@@ -2714,7 +2704,7 @@ Resident is ready to begin programming and case management services.`,
         console.error('Error onboarding resident:', error);
         res.status(500).json({ message: 'Failed to onboard resident' });
       }
-    });
+    }));
 
   // Profile completion endpoint
   app.post('/api/auth/complete-profile', async (req: Request, res: Response) => {

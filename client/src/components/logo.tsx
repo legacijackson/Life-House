@@ -7,7 +7,7 @@ interface LogoProps {
   onClick?: () => void;
 }
 
-export function Logo({ className = '', onClick }: LogoProps) {
+export function Logo({ className = '', onClick }: LogoProps): JSX.Element {
   const handleClick = () => {
     if (onClick) {
       onClick();
