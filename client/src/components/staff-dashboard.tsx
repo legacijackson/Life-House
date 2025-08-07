@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { MessageChat } from "@/components/message-chat";
+import { ComposeMessage } from "@/components/compose-message";
 
 
 interface StaffDashboardData {
@@ -96,6 +97,7 @@ export function StaffDashboard() {
   const [showOverdueModal, setShowOverdueModal] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [showComposeMessage, setShowComposeMessage] = useState(false);
 
   // Staff dashboard stats
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery<StaffDashboardData>({
@@ -339,9 +341,18 @@ export function StaffDashboard() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                  {dashboardData?.messages?.length ? (
-                    dashboardData.messages.map(message => (
+                <div>
+                  <Button
+                    onClick={() => setShowComposeMessage(true)}
+                    className="w-full mb-3"
+                    variant="outline"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Compose New Message
+                  </Button>
+                  <div className="space-y-3 max-h-[250px] overflow-y-auto">
+                    {dashboardData?.messages?.length ? (
+                      dashboardData.messages.map(message => (
                       <div
                         key={message.id}
                         className={`p-3 rounded-lg border cursor-pointer hover:bg-gray-50 ${
@@ -365,6 +376,7 @@ export function StaffDashboard() {
                   ) : (
                     <p className="text-center text-gray-500 py-8">No messages</p>
                   )}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -602,6 +614,12 @@ export function StaffDashboard() {
           onClose={() => setSelectedMessage(null)}
         />
       )}
+
+      {/* Compose Message Modal */}
+      <ComposeMessage
+        isOpen={showComposeMessage}
+        onClose={() => setShowComposeMessage(false)}
+      />
     </div>
   );
 }

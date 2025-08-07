@@ -73,9 +73,12 @@ export function MessageChat({ message, onClose }: MessageChatProps) {
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setReplyContent('');
-      queryClient.invalidateQueries({ queryKey: ['/api/messages/thread', message.id] });
+      // Immediately refetch the thread to show the new message
+      await queryClient.refetchQueries({ queryKey: ['/api/messages/thread', message.id] });
+      // Also invalidate dashboard messages
+      queryClient.invalidateQueries({ queryKey: ['/api/staff/dashboard'] });
       toast({
         title: 'Reply sent',
         description: 'Your message has been sent successfully.',
@@ -135,19 +138,8 @@ export function MessageChat({ message, onClose }: MessageChatProps) {
       .slice(0, 2);
   };
 
-  // Mock thread data if not available
-  const messages: Message[] = thread?.messages || [
-    {
-      id: message.id,
-      from: message.from,
-      subject: message.subject,
-      content: message.preview,
-      timestamp: message.timestamp,
-      read: true,
-      threadId: message.id,
-      sender: 'other',
-    },
-  ];
+  // Use thread data or show initial message
+  const messages: Message[] = thread?.messages || [];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

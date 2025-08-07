@@ -3254,6 +3254,24 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     }
   }));
 
+  // Users API Routes
+  app.get('/api/users', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const users = await storage.getUsers();
+      // Return users but filter out sensitive information
+      const sanitizedUsers = users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      }));
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error('Users fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  }));
+
   // Message API Routes
   app.get('/api/messages/thread/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
