@@ -104,6 +104,35 @@ export const residentProfiles = pgTable("resident_profiles", {
   emergencyContact: jsonb("emergency_contact"), // {name, phone, relation}
   consents: jsonb("consents"), // array of {type, signedAt, ip, docId}
   goalsSummary: text("goals_summary"),
+  // Onboarding data fields
+  onboardingData: jsonb("onboarding_data"), // Complete onboarding form data
+  onboardingDocuments: jsonb("onboarding_documents"), // Array of document IDs
+  moveInDate: timestamp("move_in_date"),
+  propertyAssignment: varchar("property_assignment"),
+  roomAssignment: varchar("room_assignment"),
+  isVeteran: boolean("is_veteran").default(false),
+  hasDisability: boolean("has_disability").default(false),
+  specialAccommodations: text("special_accommodations"),
+  housingHistory: text("housing_history"),
+  employmentStatus: varchar("employment_status"),
+  medicalNeeds: text("medical_needs"),
+  mentalHealthNeeds: text("mental_health_needs"),
+  substanceUseHistory: text("substance_use_history"),
+  employmentGoals: text("employment_goals"),
+  educationGoals: text("education_goals"),
+  literacyLevel: varchar("literacy_level"),
+  race: varchar("race"),
+  ethnicity: varchar("ethnicity"),
+  gender: varchar("gender"),
+  preferredPronouns: varchar("preferred_pronouns"),
+  ssn: varchar("ssn"), // encrypted
+  hasChildren: boolean("has_children").default(false),
+  childrenDetails: text("children_details"),
+  paroleProbationOfficer: varchar("parole_probation_officer"),
+  paroleProbationPhone: varchar("parole_probation_phone"),
+  courtDate: timestamp("court_date"),
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  onboardingCompletedBy: uuid("onboarding_completed_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

@@ -1416,20 +1416,40 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     }
   }));
 
-  app.get('/api/residents/:id', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/residents/:id', roleRoute(['CaseManager', 'Admin', 'Intake', 'Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const resident = await storage.getUser(req.params.id);
       if (!resident) {
         return res.status(404).json({ message: 'Resident not found' });
       }
 
+      // For residents, only allow viewing their own profile
+      if (req.user.role === 'Resident' && req.user.id !== resident.id) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+
       const profile = await storage.getResidentProfile(resident.id);
       const caseNotes = await storage.getCaseNotes(resident.id);
       const resources = await storage.getResidentResources(resident.id);
+      
+      // Get onboarding documents if they exist
+      let onboardingDocuments = [];
+      if (profile && profile.onboardingDocuments && Array.isArray(profile.onboardingDocuments)) {
+        // Retrieve document details for each document ID
+        for (const docId of profile.onboardingDocuments) {
+          const doc = await storage.getDocument(docId);
+          if (doc) {
+            onboardingDocuments.push(doc);
+          }
+        }
+      }
 
       res.json({
         ...resident,
-        profile,
+        profile: {
+          ...profile,
+          onboardingDocuments
+        },
         caseNotes,
         resources,
       });
@@ -2595,12 +2615,17 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   // Complete resident onboarding
   app.post('/api/admin/onboard-resident', 
     requireAuth,
-    upload.fields([
+    uploadDocument.fields([
       { name: 'id', maxCount: 1 },
       { name: 'dd214', maxCount: 1 },
       { name: 'benefitsLetters', maxCount: 1 },
       { name: 'medicalRecords', maxCount: 1 },
-      { name: 'courtDocuments', maxCount: 1 }
+      { name: 'courtDocuments', maxCount: 1 },
+      { name: 'other_0', maxCount: 1 },
+      { name: 'other_1', maxCount: 1 },
+      { name: 'other_2', maxCount: 1 },
+      { name: 'other_3', maxCount: 1 },
+      { name: 'other_4', maxCount: 1 }
     ]),
     roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
       try {
@@ -2610,20 +2635,31 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       console.log('Onboarding data received:', formData);
       console.log('Files received:', Object.keys(files || {}));
 
-      // Create the resident in the database
+      // Prepare document IDs array
+      const documentIds: string[] = [];
+
+      // Create the resident in the database with full onboarding data
       const newResident = await storage.createResident({
         firstName: formData.personalInfo.firstName,
         lastName: formData.personalInfo.lastName,
         email: formData.personalInfo.email,
         phone: formData.personalInfo.phone,
         dateOfBirth: formData.personalInfo.dateOfBirth,
+        ssn: formData.personalInfo.ssn, // Store encrypted in production
         emergencyContact: formData.personalInfo.emergencyContact,
         emergencyPhone: formData.personalInfo.emergencyPhone,
+        // Demographics
+        race: formData.demographics?.race,
+        ethnicity: formData.demographics?.ethnicity,
+        gender: formData.demographics?.gender,
+        preferredPronouns: formData.demographics?.preferredPronouns,
+        // Justice info
         releaseDate: formData.justiceInfo.releaseDate,
         justiceStatus: formData.justiceInfo.justiceStatus,
         paroleProbationOfficer: formData.justiceInfo.paroleProbationOfficer,
         paroleProbationPhone: formData.justiceInfo.paroleProbationPhone,
         courtDate: formData.justiceInfo.courtDate,
+        // Needs assessment
         housingHistory: formData.needsAssessment.housingHistory,
         employmentStatus: formData.needsAssessment.employmentStatus,
         educationLevel: formData.needsAssessment.educationLevel,
@@ -2635,9 +2671,20 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         employmentGoals: formData.needsAssessment.employmentGoals,
         educationGoals: formData.needsAssessment.educationGoals,
         literacyLevel: formData.needsAssessment.literacyLevel,
+        // Pre-screen data
         isVeteran: formData.isVeteran,
         hasDisability: formData.hasDisability,
         eligibilityNotes: formData.eligibilityNotes,
+        specialAccommodations: formData.hasDisability ? formData.eligibilityNotes : null,
+        // Property assignment
+        moveInDate: formData.propertyAssignment?.moveInDate,
+        propertyAssignment: formData.propertyAssignment?.propertyId,
+        roomAssignment: formData.propertyAssignment?.roomNumber,
+        // Meta data
+        onboardingData: formData, // Store complete form data for reference
+        onboardingDocuments: documentIds, // Will be populated below
+        onboardingCompletedAt: new Date(),
+        onboardingCompletedBy: req.user.id,
         caseManagerId: req.user.id,
         status: 'active',
         currentStage: 1,
@@ -2673,7 +2720,6 @@ Resident is ready to begin programming and case management services.`,
       });
 
       // Handle file uploads and create document records
-      const documentIds = [];
       if (files) {
         for (const [fieldName, fileArray] of Object.entries(files)) {
           if (fileArray && fileArray.length > 0) {
@@ -2681,16 +2727,23 @@ Resident is ready to begin programming and case management services.`,
             // In a real implementation, you would upload to cloud storage
             // For now, we'll just record the document metadata
             const document = await storage.createDocument({
-              title: file.originalname,
+              title: `${fieldName}: ${file.originalname}`,
               mime: file.mimetype,
               size: file.size,
               ownerType: 'resident',
               ownerId: newResident.id,
-              storagePath: `/uploads/${newResident.id}/${file.originalname}`,
+              storagePath: file.path || `/uploads/${newResident.id}/${file.originalname}`,
               checksum: null
             });
             documentIds.push(document.id);
           }
+        }
+        
+        // Update resident profile with document IDs
+        if (documentIds.length > 0 && newResident.profile) {
+          await storage.updateResidentProfile(newResident.profile.id, {
+            onboardingDocuments: documentIds
+          });
         }
       }
 

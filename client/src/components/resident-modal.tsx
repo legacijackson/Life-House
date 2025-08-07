@@ -12,6 +12,7 @@ interface Resident {
   stage: number;
   lastContact: string;
   status: string;
+  profile?: any; // Will contain onboarding data
 }
 
 interface ResidentModalProps {
@@ -20,7 +21,7 @@ interface ResidentModalProps {
 }
 
 export function ResidentModal({ resident, onClose }: ResidentModalProps) {
-  const { data: residentDetails } = useQuery({
+  const { data: residentDetails } = useQuery<any>({
     queryKey: ['/api/residents', resident.id],
     enabled: !!resident.id,
   });
@@ -93,12 +94,40 @@ export function ResidentModal({ resident, onClose }: ResidentModalProps) {
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Phone:</span>
-                    <span className="text-gray-600 ml-2">(555) 123-4567</span>
+                    <span className="text-gray-600 ml-2">{residentDetails?.phone || '(555) 123-4567'}</span>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Move-in Date:</span>
-                    <span className="text-gray-600 ml-2">March 15, 2024</span>
-                  </div>
+                  {residentDetails?.profile?.moveInDate && (
+                    <div>
+                      <span className="font-medium text-gray-700">Move-in Date:</span>
+                      <span className="text-gray-600 ml-2">
+                        {new Date(residentDetails.profile.moveInDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                  {residentDetails?.profile?.propertyAssignment && (
+                    <div>
+                      <span className="font-medium text-gray-700">Property:</span>
+                      <span className="text-gray-600 ml-2">{residentDetails.profile.propertyAssignment}</span>
+                    </div>
+                  )}
+                  {residentDetails?.profile?.roomAssignment && (
+                    <div>
+                      <span className="font-medium text-gray-700">Room:</span>
+                      <span className="text-gray-600 ml-2">{residentDetails.profile.roomAssignment}</span>
+                    </div>
+                  )}
+                  {residentDetails?.profile?.isVeteran !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-700">Veteran Status:</span>
+                      <span className="text-gray-600 ml-2">{residentDetails.profile.isVeteran ? 'Yes' : 'No'}</span>
+                    </div>
+                  )}
+                  {residentDetails?.profile?.specialAccommodations && (
+                    <div>
+                      <span className="font-medium text-gray-700">Special Accommodations:</span>
+                      <span className="text-gray-600 ml-2">{residentDetails.profile.specialAccommodations}</span>
+                    </div>
+                  )}
                   <div>
                     <span className="font-medium text-gray-700">Case Manager:</span>
                     <span className="text-gray-600 ml-2">Sarah Martinez</span>
@@ -152,10 +181,31 @@ export function ResidentModal({ resident, onClose }: ResidentModalProps) {
               </TabsContent>
 
               <TabsContent value="documents" className="mt-4">
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No documents uploaded yet.</p>
-                  <Button className="mt-2">Upload Document</Button>
-                </div>
+                {residentDetails?.profile?.onboardingDocuments && residentDetails.profile.onboardingDocuments.length > 0 ? (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-gray-900 mb-3">Onboarding Documents</h4>
+                    {residentDetails.profile.onboardingDocuments.map((doc: any) => (
+                      <Card key={doc.id}>
+                        <CardContent className="p-3 flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{doc.title}</p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(doc.createdAt).toLocaleDateString()} • {(doc.size / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
+                          <Button size="sm" variant="outline">
+                            View
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No documents uploaded yet.</p>
+                    <Button className="mt-2">Upload Document</Button>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>

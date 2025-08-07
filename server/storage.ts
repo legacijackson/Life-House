@@ -297,6 +297,35 @@ export class DatabaseStorage implements IStorage {
         phone: residentData.emergencyPhone,
         relation: 'Emergency Contact'
       },
+      // Store complete onboarding data
+      onboardingData: residentData.onboardingData || null,
+      onboardingDocuments: residentData.onboardingDocuments || [],
+      moveInDate: residentData.moveInDate ? new Date(residentData.moveInDate) : null,
+      propertyAssignment: residentData.propertyAssignment || null,
+      roomAssignment: residentData.roomAssignment || null,
+      isVeteran: residentData.isVeteran || false,
+      hasDisability: residentData.hasDisability || false,
+      specialAccommodations: residentData.specialAccommodations || null,
+      housingHistory: residentData.housingHistory || null,
+      employmentStatus: residentData.employmentStatus || null,
+      medicalNeeds: residentData.medicalNeeds || null,
+      mentalHealthNeeds: residentData.mentalHealthNeeds || null,
+      substanceUseHistory: residentData.substanceUseHistory || null,
+      employmentGoals: residentData.employmentGoals || null,
+      educationGoals: residentData.educationGoals || null,
+      literacyLevel: residentData.literacyLevel || null,
+      race: residentData.race || null,
+      ethnicity: residentData.ethnicity || null,
+      gender: residentData.gender || null,
+      preferredPronouns: residentData.preferredPronouns || null,
+      ssn: residentData.ssn || null, // Should be encrypted in production
+      hasChildren: residentData.hasChildren || false,
+      childrenDetails: residentData.childrenDetails || null,
+      paroleProbationOfficer: residentData.paroleProbationOfficer || null,
+      paroleProbationPhone: residentData.paroleProbationPhone || null,
+      courtDate: residentData.courtDate ? new Date(residentData.courtDate) : null,
+      onboardingCompletedAt: residentData.onboardingCompletedAt || new Date(),
+      onboardingCompletedBy: residentData.onboardingCompletedBy || null,
       goalsSummary: `Employment: ${residentData.employmentGoals || 'Not specified'}
 Education: ${residentData.educationGoals || 'Not specified'}
 Medical: ${residentData.medicalNeeds || 'None'}
