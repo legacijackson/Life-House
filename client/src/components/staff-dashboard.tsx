@@ -26,6 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { MessageChat } from "@/components/message-chat";
 
 
 interface StaffDashboardData {
@@ -94,6 +95,7 @@ export function StaffDashboard() {
   const [activeTab, setActiveTab] = useState<'notifications' | 'messages'>('notifications');
   const [showOverdueModal, setShowOverdueModal] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<any>(null);
 
   // Staff dashboard stats
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery<StaffDashboardData>({
@@ -345,6 +347,7 @@ export function StaffDashboard() {
                         className={`p-3 rounded-lg border cursor-pointer hover:bg-gray-50 ${
                           message.read ? 'bg-white' : 'bg-blue-50 border-blue-200'
                         }`}
+                        onClick={() => setSelectedMessage(message)}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -591,6 +594,14 @@ export function StaffDashboard() {
           });
         }}
       />
+
+      {/* Message Chat Modal */}
+      {selectedMessage && (
+        <MessageChat
+          message={selectedMessage}
+          onClose={() => setSelectedMessage(null)}
+        />
+      )}
     </div>
   );
 }

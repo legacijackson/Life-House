@@ -3224,6 +3224,73 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     }
   }));
 
+  // Message API Routes
+  app.get('/api/messages/thread/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+
+      // Mock thread data - in production, fetch from database
+      const thread = {
+        messages: [
+          {
+            id: id,
+            from: 'Admin Team',
+            subject: 'Updated onboarding procedures',
+            content: 'Please review the new onboarding checklist and ensure all new residents complete the updated process. The changes include additional documentation requirements and a new health screening form.',
+            timestamp: '1 hour ago',
+            read: true,
+            threadId: id,
+            sender: 'other' as const,
+          },
+        ],
+      };
+
+      res.json(thread);
+    } catch (error) {
+      console.error('Thread fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch message thread' });
+    }
+  }));
+
+  app.patch('/api/messages/:id/read', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+
+      // Mock marking as read - in production, update database
+      res.json({ success: true, messageId: id });
+    } catch (error) {
+      console.error('Mark as read error:', error);
+      res.status(500).json({ message: 'Failed to mark message as read' });
+    }
+  }));
+
+  app.post('/api/messages/reply', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { threadId, content, to } = req.body;
+      const userId = req.user!.id;
+      const userName = req.user!.name || 'User';
+
+      // Mock sending reply - in production, save to database
+      const reply = {
+        id: `reply-${Date.now()}`,
+        from: userName,
+        to: to,
+        content: content,
+        timestamp: 'Just now',
+        threadId: threadId,
+        sender: 'user' as const,
+        read: false,
+      };
+
+      res.json({ success: true, message: reply });
+    } catch (error) {
+      console.error('Send reply error:', error);
+      res.status(500).json({ message: 'Failed to send reply' });
+    }
+  }));
+
   app.get('/api/kit/forms', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { kitService } = await import('./kit-integration');
