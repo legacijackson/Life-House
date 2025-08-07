@@ -28,6 +28,7 @@ import {
   donorSubscriptions,
   prospectiveResidents,
   crmActivities,
+  messages,
   type User,
   type InsertUser,
   type ResidentProfile,
@@ -66,6 +67,8 @@ import {
   type InsertProspectiveResident,
   type CrmActivity,
   type InsertCrmActivity,
+  type Message,
+  type InsertMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, gte, lte } from "drizzle-orm";
@@ -200,6 +203,14 @@ export interface IStorage {
   updateDocument(id: string, updates: Partial<DBDocument>): Promise<DBDocument>;
   deleteDocument(id: string): Promise<void>;
   getDocumentsByOwner(ownerType: string, ownerId: string): Promise<DBDocument[]>;
+
+  // Message operations
+  getMessages(userId: string, type: 'inbox' | 'sent'): Promise<Message[]>;
+  getMessage(id: string): Promise<Message | undefined>;
+  getMessageThread(id: string): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  markMessageAsRead(id: string): Promise<void>;
+  deleteMessage(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1351,6 +1362,54 @@ Notes: ${residentData.eligibilityNotes || 'None'}`
         eq(documents.ownerId, ownerId)
       ))
       .orderBy(desc(documents.uploadedAt));
+  }
+
+  // Message operations
+  async getMessages(userId: string, type: 'inbox' | 'sent'): Promise<Message[]> {
+    const condition = type === 'inbox' 
+      ? eq(messages.toUserId, userId)
+      : eq(messages.fromUserId, userId);
+    
+    return await db
+      .select()
+      .from(messages)
+      .where(condition)
+      .orderBy(desc(messages.createdAt));
+  }
+
+  async getMessage(id: string): Promise<Message | undefined> {
+    const [message] = await db.select().from(messages).where(eq(messages.id, id));
+    return message;
+  }
+
+  async getMessageThread(id: string): Promise<Message[]> {
+    // Get the original message and all its replies
+    const originalMessage = await this.getMessage(id);
+    if (!originalMessage) return [];
+
+    const thread = await db
+      .select()
+      .from(messages)
+      .where(sql`${messages.id} = ${id} OR ${messages.parentId} = ${id}`)
+      .orderBy(messages.createdAt);
+    
+    return thread;
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const [newMessage] = await db.insert(messages).values(message).returning();
+    return newMessage;
+  }
+
+  async markMessageAsRead(id: string): Promise<void> {
+    await db
+      .update(messages)
+      .set({ isRead: true, readAt: new Date() })
+      .where(eq(messages.id, id));
+  }
+
+  async deleteMessage(id: string): Promise<void> {
+    await db.delete(messages).where(eq(messages.id, id));
   }
 }
 

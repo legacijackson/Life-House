@@ -879,24 +879,54 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
             read: true
           }
         ],
-        messages: [
-          {
-            id: '1',
-            from: 'Admin Team',
-            subject: 'Updated onboarding procedures',
-            preview: 'Please review the new onboarding checklist...',
-            timestamp: '1 hour ago',
-            read: false
-          },
-          {
-            id: '2',
-            from: 'Sarah Williams',
-            subject: 'Request for meeting',
-            preview: 'I would like to discuss my housing situation...',
-            timestamp: '3 hours ago',
-            read: true
+        messages: await (async () => {
+          // Fetch real messages from database
+          const inboxMessages = await storage.getMessages(caseManagerId, 'inbox');
+          
+          // Format messages for dashboard display
+          const formattedMessages = await Promise.all(inboxMessages.slice(0, 5).map(async (msg) => {
+            const fromUser = await storage.getUser(msg.fromUserId);
+            const timeDiff = msg.createdAt ? Date.now() - new Date(msg.createdAt).getTime() : 0;
+            const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+            const timestamp = hours < 1 ? 'Just now' : hours < 24 ? `${hours} hour${hours > 1 ? 's' : ''} ago` : new Date(msg.createdAt!).toLocaleDateString();
+            
+            return {
+              id: msg.id,
+              from: fromUser?.name || 'Unknown User',
+              subject: msg.subject,
+              preview: msg.body.length > 50 ? msg.body.substring(0, 50) + '...' : msg.body,
+              timestamp,
+              read: msg.isRead || false
+            };
+          }));
+          
+          // If no messages, create a welcome message
+          if (formattedMessages.length === 0) {
+            // Create a welcome message for new users
+            const adminUser = await storage.getUserByEmail('admin@lifehouse.org');
+            if (adminUser) {
+              await storage.createMessage({
+                fromUserId: adminUser.id,
+                toUserId: caseManagerId,
+                subject: 'Welcome to Life House',
+                body: 'Welcome to the Life House management system! Click this message to view the full conversation and reply.',
+              });
+              
+              // Refetch messages
+              const newMessages = await storage.getMessages(caseManagerId, 'inbox');
+              return newMessages.slice(0, 5).map(msg => ({
+                id: msg.id,
+                from: 'Admin Team',
+                subject: msg.subject,
+                preview: msg.body.length > 50 ? msg.body.substring(0, 50) + '...' : msg.body,
+                timestamp: 'Just now',
+                read: false
+              }));
+            }
           }
-        ],
+          
+          return formattedMessages;
+        })(),
         upcomingEvents: [
           {
             id: '1',
@@ -3230,23 +3260,25 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       const { id } = req.params;
       const userId = req.user!.id;
 
-      // Mock thread data - in production, fetch from database
-      const thread = {
-        messages: [
-          {
-            id: id,
-            from: 'Admin Team',
-            subject: 'Updated onboarding procedures',
-            content: 'Please review the new onboarding checklist and ensure all new residents complete the updated process. The changes include additional documentation requirements and a new health screening form.',
-            timestamp: '1 hour ago',
-            read: true,
-            threadId: id,
-            sender: 'other' as const,
-          },
-        ],
-      };
+      // Get message thread from database
+      const threadMessages = await storage.getMessageThread(id);
+      
+      // Format messages for frontend
+      const formattedMessages = await Promise.all(threadMessages.map(async (msg) => {
+        const fromUser = await storage.getUser(msg.fromUserId);
+        return {
+          id: msg.id,
+          from: fromUser?.name || 'Unknown User',
+          subject: msg.subject,
+          content: msg.body,
+          timestamp: msg.createdAt ? new Date(msg.createdAt).toLocaleString() : 'Unknown',
+          read: msg.isRead || false,
+          threadId: msg.parentId || msg.id,
+          sender: msg.fromUserId === userId ? 'user' : 'other' as const,
+        };
+      }));
 
-      res.json(thread);
+      res.json({ messages: formattedMessages });
     } catch (error) {
       console.error('Thread fetch error:', error);
       res.status(500).json({ message: 'Failed to fetch message thread' });
@@ -3258,11 +3290,43 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       const { id } = req.params;
       const userId = req.user!.id;
 
-      // Mock marking as read - in production, update database
+      // Mark message as read in database
+      await storage.markMessageAsRead(id);
       res.json({ success: true, messageId: id });
     } catch (error) {
       console.error('Mark as read error:', error);
       res.status(500).json({ message: 'Failed to mark message as read' });
+    }
+  }));
+
+  app.post('/api/messages/send', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { toUserId, toUserName, subject, body } = req.body;
+      const fromUserId = req.user!.id;
+
+      // Find recipient user
+      let recipientId = toUserId;
+      if (!recipientId && toUserName) {
+        const users = await storage.getUsers();
+        const toUser = users.find(u => u.name === toUserName);
+        if (!toUser) {
+          return res.status(400).json({ message: 'Recipient not found' });
+        }
+        recipientId = toUser.id;
+      }
+
+      // Create the message in database
+      const newMessage = await storage.createMessage({
+        fromUserId,
+        toUserId: recipientId,
+        subject: subject || 'New Message',
+        body,
+      });
+
+      res.json({ success: true, message: newMessage });
+    } catch (error) {
+      console.error('Send message error:', error);
+      res.status(500).json({ message: 'Failed to send message' });
     }
   }));
 
@@ -3272,9 +3336,26 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       const userId = req.user!.id;
       const userName = req.user!.name || 'User';
 
-      // Mock sending reply - in production, save to database
+      // Find the recipient user by name
+      const users = await storage.getUsers();
+      const toUser = users.find(u => u.name === to);
+      
+      if (!toUser) {
+        return res.status(400).json({ message: 'Recipient not found' });
+      }
+
+      // Create the message in database
+      const newMessage = await storage.createMessage({
+        fromUserId: userId,
+        toUserId: toUser.id,
+        subject: 'Re: Message',
+        body: content,
+        parentId: threadId,
+      });
+
+      // Format the reply for frontend
       const reply = {
-        id: `reply-${Date.now()}`,
+        id: newMessage.id,
         from: userName,
         to: to,
         content: content,

@@ -66,11 +66,11 @@ export function MessageChat({ message, onClose }: MessageChatProps) {
     mutationFn: async (content: string) => {
       return apiRequest('/api/messages/reply', {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           threadId: message.id,
           content,
           to: message.from,
-        }),
+        },
       });
     },
     onSuccess: () => {
