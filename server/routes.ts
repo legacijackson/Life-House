@@ -2586,7 +2586,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         // Create employee profile for all non-resident roles
         await db.insert(employeeProfiles).values({
           userId: newUser.id,
-          role,
+          role: role,
           createdAt: new Date(),
           updatedAt: new Date()
         });
