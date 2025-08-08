@@ -958,6 +958,77 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     }
   }));
 
+  // Get staff users by role
+  app.get('/api/staff/users', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { role } = req.query;
+      
+      // If requesting case managers, return the 3 Life House case managers
+      if (role === 'CaseManager') {
+        // Check if case managers exist in database, if not create them
+        const caseManagers = [];
+        
+        // Check/create Julius Jackson
+        let julius = await storage.getUserByEmail('julius.jackson@lifehouse.org');
+        if (!julius) {
+          const bcrypt = await import('bcryptjs');
+          julius = await storage.createUser({
+            name: 'Julius Jackson',
+            email: 'julius.jackson@lifehouse.org',
+            passwordHash: await bcrypt.hash('LifeHouse2024!', 10),
+            role: 'CaseManager'
+          });
+        }
+        caseManagers.push(julius);
+        
+        // Check/create Kairia Shariff
+        let kairia = await storage.getUserByEmail('kairia.shariff@lifehouse.org');
+        if (!kairia) {
+          const bcrypt = await import('bcryptjs');
+          kairia = await storage.createUser({
+            name: 'Kairia Shariff',
+            email: 'kairia.shariff@lifehouse.org',
+            passwordHash: await bcrypt.hash('LifeHouse2024!', 10),
+            role: 'CaseManager'
+          });
+        }
+        caseManagers.push(kairia);
+        
+        // Check/create Brittney Jackson
+        let brittney = await storage.getUserByEmail('brittney.jackson@lifehouse.org');
+        if (!brittney) {
+          const bcrypt = await import('bcryptjs');
+          brittney = await storage.createUser({
+            name: 'Brittney Jackson',
+            email: 'brittney.jackson@lifehouse.org',
+            passwordHash: await bcrypt.hash('LifeHouse2024!', 10),
+            role: 'CaseManager'
+          });
+        }
+        caseManagers.push(brittney);
+        
+        return res.json(caseManagers.map(cm => ({
+          id: cm.id,
+          name: cm.name,
+          email: cm.email,
+          role: cm.role
+        })));
+      }
+      
+      // For other roles, fetch from database
+      const users = await storage.getUsers({ role: role as string });
+      res.json(users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      })));
+    } catch (error) {
+      console.error('Get staff users error:', error);
+      res.status(500).json({ message: 'Failed to fetch staff users' });
+    }
+  }));
+
   app.get('/api/staff/residents', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const residents = [
