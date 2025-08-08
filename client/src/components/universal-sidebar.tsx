@@ -310,8 +310,8 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
               variant="ghost" 
               size="sm"
               onClick={() => {
-                localStorage.removeItem("authToken");
-                localStorage.removeItem("userRole");
+                localStorage.removeItem("token");
+                localStorage.removeItem("userData");
                 window.location.href = "/";
               }}
               className="text-gray-600 hover:text-red-600"

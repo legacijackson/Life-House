@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sidebar } from "@/components/sidebar";
+
 import { 
   Building, 
   Users, 
@@ -156,8 +156,7 @@ export default function Referrals() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+    <div className="flex-1 overflow-hidden">
       
       <main className="flex-1 overflow-y-auto">
         <header className="bg-white shadow-sm border-b border-gray-200">

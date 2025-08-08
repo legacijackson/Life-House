@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Sidebar } from "@/components/sidebar";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,8 +158,7 @@ export default function ProfilePage() {
 
   if (userLoading) {
     return (
-      <div className="flex h-screen">
-        <Sidebar />
+      <div className="flex-1">
         <main className="flex-1 bg-gray-50">
           <div className="p-8">
             <Card>
@@ -175,8 +174,7 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="flex h-screen">
-        <Sidebar />
+      <div className="flex-1">
         <main className="flex-1 bg-gray-50">
           <div className="p-8">
             <Alert>
@@ -198,8 +196,7 @@ export default function ProfilePage() {
     .toUpperCase();
 
   return (
-    <div className="flex h-screen">
-      <Sidebar />
+    <div className="flex-1">
       <main className="flex-1 bg-gray-50 overflow-y-auto">
         <div className="p-8 max-w-4xl mx-auto">
           <div className="mb-8">

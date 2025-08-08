@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useLocation } from 'wouter';
-import { Sidebar } from "@/components/sidebar";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -159,11 +159,7 @@ export default function ResidentCaseNotes() {
         }
       `}</style>
 
-      <div className="flex h-screen overflow-hidden">
-        <div className="no-print">
-          <Sidebar />
-        </div>
-
+      <div className="flex-1 overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           <header className="bg-white shadow-sm border-b border-gray-200 no-print">
             <div className="px-6 py-4">
