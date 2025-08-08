@@ -20,7 +20,8 @@ import {
   Calendar,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  Download
 } from 'lucide-react';
 import {
   Dialog,
@@ -117,6 +118,109 @@ export default function Referrals() {
   const onSubmit = (data: UpdateReferralData) => {
     if (selectedReferral) {
       updateReferralMutation.mutate({ id: selectedReferral.id, data });
+    }
+  };
+
+  // Generate PDF for referral
+  const generateReferralPDF = (referral: Referral) => {
+    // Create a printable HTML content with Life House branding
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Referral Form - ${referral.basicResidentInfo.name}</title>
+        <style>
+          @page { size: letter; margin: 1in; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+          .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #6B46C1; }
+          .logo { font-size: 28px; font-weight: bold; color: #6B46C1; }
+          .title { font-size: 20px; color: #666; }
+          .section { margin-bottom: 25px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+          .section-title { font-size: 16px; font-weight: 600; color: #6B46C1; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+          .field { margin-bottom: 12px; display: flex; }
+          .label { font-weight: 600; min-width: 140px; color: #555; }
+          .value { flex: 1; color: #333; }
+          .status { display: inline-block; padding: 5px 12px; border-radius: 20px; font-weight: 600; text-transform: uppercase; font-size: 12px; }
+          .status-new { background: #dbeafe; color: #1e40af; }
+          .status-in_review { background: #fef3c7; color: #92400e; }
+          .status-accepted { background: #d1fae5; color: #065f46; }
+          .status-waitlist { background: #e9d5ff; color: #6b21a8; }
+          .status-declined { background: #fee2e2; color: #991b1b; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #666; font-size: 12px; }
+          .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; color: rgba(107, 70, 193, 0.05); font-weight: bold; z-index: -1; }
+        </style>
+      </head>
+      <body>
+        <div class="watermark">LIFE HOUSE</div>
+        <div class="header">
+          <div>
+            <div class="logo">LIFE HOUSE</div>
+            <div class="title">Transitional Housing Referral Form</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: #666;">Generated: ${new Date().toLocaleDateString()}</div>
+            <div style="font-size: 12px; color: #666;">Referral ID: ${referral.id.slice(0, 8)}</div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <div class="section-title">Status</div>
+          <div class="field">
+            <span class="status status-${referral.status}">${referral.status.replace('_', ' ')}</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Resident Information</div>
+          <div class="field"><span class="label">Name:</span><span class="value">${referral.basicResidentInfo.name}</span></div>
+          <div class="field"><span class="label">Email:</span><span class="value">${referral.basicResidentInfo.email}</span></div>
+          <div class="field"><span class="label">Phone:</span><span class="value">${referral.basicResidentInfo.phone}</span></div>
+          <div class="field"><span class="label">ZIP Code:</span><span class="value">${referral.basicResidentInfo.zip}</span></div>
+          <div class="field"><span class="label">Ready Date:</span><span class="value">${new Date(referral.basicResidentInfo.earliestReadyDate).toLocaleDateString()}</span></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Referrer Information</div>
+          <div class="field"><span class="label">Organization:</span><span class="value">${referral.referrerOrg}</span></div>
+          <div class="field"><span class="label">Contact Name:</span><span class="value">${referral.referrerName}</span></div>
+          <div class="field"><span class="label">Email:</span><span class="value">${referral.referrerEmail}</span></div>
+          <div class="field"><span class="label">Phone:</span><span class="value">${referral.referrerPhone}</span></div>
+          <div class="field"><span class="label">Referral Source:</span><span class="value">${referral.source}</span></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Additional Notes</div>
+          <div style="padding: 10px; background: white; border-radius: 4px; min-height: 100px;">
+            ${referral.notes || 'No additional notes provided.'}
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Administrative Information</div>
+          <div class="field"><span class="label">Submitted Date:</span><span class="value">${new Date(referral.createdAt).toLocaleString()}</span></div>
+          <div class="field"><span class="label">Last Updated:</span><span class="value">${new Date(referral.updatedAt).toLocaleString()}</span></div>
+        </div>
+
+        <div class="footer">
+          <p><strong>Life House Reentry Inc.</strong></p>
+          <p>Transforming Lives Through Transitional Housing</p>
+          <p>This is a confidential document. Please handle with care.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Create a new window and print
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Wait for content to load then trigger print
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
     }
   };
 
@@ -347,13 +451,23 @@ export default function Referrals() {
                             {new Date(referral.createdAt).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewReferral(referral)}
-                            >
-                              Review
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewReferral(referral)}
+                              >
+                                Review
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateReferralPDF(referral)}
+                                title="Download PDF"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}

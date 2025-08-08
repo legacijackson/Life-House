@@ -46,6 +46,7 @@ const residentNavigation = [
 // Staff navigation (for case workers)
 const staffNavigation = [
   { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
+  { name: "Residents", href: "/app/residents", icon: Users },
   { name: "Intake and Referrals", href: "/app/intake", icon: UserPlus },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
@@ -57,6 +58,7 @@ const staffNavigation = [
 // Admin navigation (includes all staff items plus admin panel)
 const adminNavigation = [
   { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
+  { name: "Residents", href: "/app/residents", icon: Users },
   { name: "Intake and Referrals", href: "/app/intake", icon: UserPlus },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },

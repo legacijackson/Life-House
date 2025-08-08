@@ -40,6 +40,13 @@ interface PropertyLocation {
 // Property locations are fetched from the database via API
 // Each property has latitude, longitude, and default 100m radius for geofence validation
 
+// Mock property locations - in production, this would come from the database
+const propertyLocations: Record<string, PropertyLocation> = {
+  'oak-avenue': { latitude: 37.7749, longitude: -122.4194, radius: 100 }, // San Francisco
+  'pine-street': { latitude: 37.7849, longitude: -122.4094, radius: 100 },
+  'maple-grove': { latitude: 37.7649, longitude: -122.4294, radius: 100 },
+};
+
 export function GeofenceCheckinModal({
   isOpen,
   onClose,

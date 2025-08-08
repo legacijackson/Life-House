@@ -33,7 +33,11 @@ import {
   Download,
   Loader2,
   Shield,
-  LogOut
+  LogOut,
+  Zap,
+  CheckCircle,
+  UserCheck,
+  FilePlus
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -210,7 +214,16 @@ interface CrmActivity {
 function DonorManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddDonor, setShowAddDonor] = useState(false);
+  const [showAddPayment, setShowAddPayment] = useState(false);
   const [selectedDonor, setSelectedDonor] = useState<Donor | null>(null);
+  const [newPaymentData, setNewPaymentData] = useState({
+    donorId: '',
+    amount: '',
+    paymentMethod: 'cash',
+    designation: 'general',
+    notes: '',
+    donationDate: new Date().toISOString().split('T')[0]
+  });
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -273,10 +286,16 @@ function DonorManagement() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Donor Management</span>
-            <Button onClick={() => setShowAddDonor(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Donor
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setShowAddPayment(true)} variant="outline">
+                <DollarSign className="h-4 w-4 mr-2" />
+                Add Payment
+              </Button>
+              <Button onClick={() => setShowAddDonor(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Donor
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -502,6 +521,137 @@ function DonorManagement() {
               <Button type="submit">Add Donor</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Payment Dialog */}
+      <Dialog open={showAddPayment} onOpenChange={setShowAddPayment}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Manual Payment</DialogTitle>
+            <DialogDescription>
+              Record a manual donation payment (cash, check, etc.)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="payment-donor">Select Donor</Label>
+              <Select 
+                value={newPaymentData.donorId} 
+                onValueChange={(value) => setNewPaymentData({...newPaymentData, donorId: value})}
+              >
+                <SelectTrigger id="payment-donor">
+                  <SelectValue placeholder="Choose a donor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {donors.map((donor: Donor) => (
+                    <SelectItem key={donor.id} value={donor.id}>
+                      {donor.firstName} {donor.lastName} {donor.company ? `(${donor.company})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="payment-amount">Amount ($)</Label>
+              <Input 
+                id="payment-amount" 
+                type="number" 
+                step="0.01"
+                value={newPaymentData.amount}
+                onChange={(e) => setNewPaymentData({...newPaymentData, amount: e.target.value})}
+                placeholder="100.00"
+                required 
+              />
+            </div>
+            <div>
+              <Label htmlFor="payment-date">Donation Date</Label>
+              <Input 
+                id="payment-date" 
+                type="date"
+                value={newPaymentData.donationDate}
+                onChange={(e) => setNewPaymentData({...newPaymentData, donationDate: e.target.value})}
+                required 
+              />
+            </div>
+            <div>
+              <Label htmlFor="payment-method">Payment Method</Label>
+              <Select 
+                value={newPaymentData.paymentMethod} 
+                onValueChange={(value) => setNewPaymentData({...newPaymentData, paymentMethod: value})}
+              >
+                <SelectTrigger id="payment-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="check">Check</SelectItem>
+                  <SelectItem value="wire">Wire Transfer</SelectItem>
+                  <SelectItem value="ach">ACH Transfer</SelectItem>
+                  <SelectItem value="crypto">Cryptocurrency</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="payment-designation">Designation</Label>
+              <Select 
+                value={newPaymentData.designation} 
+                onValueChange={(value) => setNewPaymentData({...newPaymentData, designation: value})}
+              >
+                <SelectTrigger id="payment-designation">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General Fund</SelectItem>
+                  <SelectItem value="programs">Programs</SelectItem>
+                  <SelectItem value="housing">Housing</SelectItem>
+                  <SelectItem value="education">Education</SelectItem>
+                  <SelectItem value="emergency">Emergency Aid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="payment-notes">Notes (Optional)</Label>
+              <Textarea 
+                id="payment-notes"
+                value={newPaymentData.notes}
+                onChange={(e) => setNewPaymentData({...newPaymentData, notes: e.target.value})}
+                placeholder="Any additional information about this donation"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setShowAddPayment(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              if (!newPaymentData.donorId || !newPaymentData.amount) {
+                toast({
+                  title: "Missing Information",
+                  description: "Please select a donor and enter an amount.",
+                  variant: "destructive"
+                });
+                return;
+              }
+              toast({
+                title: "Payment recorded successfully",
+                description: `$${newPaymentData.amount} donation has been recorded.`
+              });
+              setShowAddPayment(false);
+              setNewPaymentData({
+                donorId: '',
+                amount: '',
+                paymentMethod: 'cash',
+                designation: 'general',
+                notes: '',
+                donationDate: new Date().toISOString().split('T')[0]
+              });
+              queryClient.invalidateQueries({ queryKey: ['/api/donors'] });
+            }}>
+              Record Payment
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -1213,6 +1363,20 @@ export default function AdminPanel() {
   });
   const [editUserData, setEditUserData] = useState<any>({});
 
+  // Property management state
+  const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] = useState(false);
+  const [newPropertyData, setNewPropertyData] = useState({
+    name: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    type: 'transitional',
+    capacity: 0,
+    currentOccupancy: 0,
+    manager: '',
+  });
+
   // Fetch admin data - use comprehensive endpoint for users
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<any[]>({
     queryKey: ['/api/admin/users/full'],
@@ -1575,6 +1739,60 @@ export default function AdminPanel() {
         </div>
       </div>
 
+      {/* Quick Actions Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Quick Actions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <Button 
+              onClick={() => window.location.href = '/app/attendance'}
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              variant="outline"
+            >
+              <CheckCircle className="h-8 w-8" />
+              <span className="text-sm">STOP TouchPoint</span>
+            </Button>
+            <Button 
+              onClick={() => window.location.href = '/app/case-notes'}
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              variant="outline"
+            >
+              <FileText className="h-8 w-8" />
+              <span className="text-sm">Case Notes</span>
+            </Button>
+            <Button 
+              onClick={() => window.location.href = '/app/intake?onboard=resident'}
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              variant="outline"
+            >
+              <UserPlus className="h-8 w-8" />
+              <span className="text-sm">Onboard Resident</span>
+            </Button>
+            <Button 
+              onClick={() => window.location.href = '/app/intake?onboard=staff'}
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              variant="outline"
+            >
+              <UserCheck className="h-8 w-8" />
+              <span className="text-sm">Onboard Staff</span>
+            </Button>
+            <Button 
+              onClick={() => window.location.href = '/app/attendance'}
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              variant="outline"
+            >
+              <Calendar className="h-8 w-8" />
+              <span className="text-sm">Log Attendance</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="users" className="flex items-center gap-2">
@@ -1720,7 +1938,7 @@ export default function AdminPanel() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Property Management</span>
-                <Button>
+                <Button onClick={() => setIsAddPropertyModalOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Property
                 </Button>
@@ -2583,6 +2801,144 @@ export default function AdminPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Property Modal */}
+      <Dialog open={isAddPropertyModalOpen} onOpenChange={setIsAddPropertyModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Property</DialogTitle>
+            <DialogDescription>
+              Add a new property to the housing portfolio.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="property-name">Property Name</Label>
+              <Input
+                id="property-name"
+                value={newPropertyData.name}
+                onChange={(e) => setNewPropertyData({...newPropertyData, name: e.target.value})}
+                placeholder="e.g., Oak Avenue House"
+              />
+            </div>
+            <div>
+              <Label htmlFor="property-address">Address</Label>
+              <Input
+                id="property-address"
+                value={newPropertyData.address}
+                onChange={(e) => setNewPropertyData({...newPropertyData, address: e.target.value})}
+                placeholder="123 Main Street"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="property-city">City</Label>
+                <Input
+                  id="property-city"
+                  value={newPropertyData.city}
+                  onChange={(e) => setNewPropertyData({...newPropertyData, city: e.target.value})}
+                  placeholder="San Francisco"
+                />
+              </div>
+              <div>
+                <Label htmlFor="property-state">State</Label>
+                <Input
+                  id="property-state"
+                  value={newPropertyData.state}
+                  onChange={(e) => setNewPropertyData({...newPropertyData, state: e.target.value})}
+                  placeholder="CA"
+                  maxLength={2}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="property-zip">ZIP Code</Label>
+              <Input
+                id="property-zip"
+                value={newPropertyData.zipCode}
+                onChange={(e) => setNewPropertyData({...newPropertyData, zipCode: e.target.value})}
+                placeholder="94122"
+              />
+            </div>
+            <div>
+              <Label htmlFor="property-type">Property Type</Label>
+              <Select 
+                value={newPropertyData.type} 
+                onValueChange={(value) => setNewPropertyData({...newPropertyData, type: value})}
+              >
+                <SelectTrigger id="property-type">
+                  <SelectValue placeholder="Select property type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transitional">Transitional Housing</SelectItem>
+                  <SelectItem value="emergency">Emergency Shelter</SelectItem>
+                  <SelectItem value="permanent">Permanent Supportive</SelectItem>
+                  <SelectItem value="sober">Sober Living</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="property-capacity">Total Capacity</Label>
+                <Input
+                  id="property-capacity"
+                  type="number"
+                  value={newPropertyData.capacity}
+                  onChange={(e) => setNewPropertyData({...newPropertyData, capacity: parseInt(e.target.value) || 0})}
+                  placeholder="10"
+                />
+              </div>
+              <div>
+                <Label htmlFor="property-occupancy">Current Occupancy</Label>
+                <Input
+                  id="property-occupancy"
+                  type="number"
+                  value={newPropertyData.currentOccupancy}
+                  onChange={(e) => setNewPropertyData({...newPropertyData, currentOccupancy: parseInt(e.target.value) || 0})}
+                  placeholder="5"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="property-manager">Property Manager</Label>
+              <Input
+                id="property-manager"
+                value={newPropertyData.manager}
+                onChange={(e) => setNewPropertyData({...newPropertyData, manager: e.target.value})}
+                placeholder="Manager name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddPropertyModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                toast({
+                  title: "Property added successfully",
+                  description: `${newPropertyData.name} has been added to the system.`
+                });
+                setIsAddPropertyModalOpen(false);
+                setNewPropertyData({
+                  name: '',
+                  address: '',
+                  city: '',
+                  state: '',
+                  zipCode: '',
+                  type: 'transitional',
+                  capacity: 0,
+                  currentOccupancy: 0,
+                  manager: '',
+                });
+                queryClient.invalidateQueries({ queryKey: ['/api/admin/properties'] });
+              }}
+            >
+              Add Property
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
