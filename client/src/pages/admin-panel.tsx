@@ -1178,6 +1178,12 @@ function CrmManagement() {
 export default function AdminPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Simple logout function
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.href = '/app';
+  };
   const [activeTab, setActiveTab] = useState("users");
   const [selectedPhoto, setSelectedPhoto] = useState<HomepagePhoto | null>(null);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -1498,10 +1504,27 @@ export default function AdminPanel() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Panel</h1>
-        <p className="text-gray-600 dark:text-gray-300 mt-2">
-          Centralized administration for Life House management system
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Panel</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
+              Centralized administration for Life House management system
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <Button 
+              onClick={handleLogout} 
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Shield className="h-4 w-4" />
+              Logout & Refresh Token
+            </Button>
+            <div className="text-xs text-gray-500">
+              Click to get a fresh authentication token
+            </div>
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
