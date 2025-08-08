@@ -30,7 +30,8 @@ import {
   Camera,
   Save,
   AlertCircle,
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
 import { useCurrentUser } from "@/lib/rbac";
 import { toast } from "@/hooks/use-toast";
@@ -529,6 +530,29 @@ export default function ProfilePage() {
                     <p className="text-sm text-gray-600">
                       {new Date(Date.now()).toLocaleDateString()}
                     </p>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <LogOut className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="font-medium">Sign Out</p>
+                        <p className="text-sm text-gray-500">Log out of your account</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        localStorage.removeItem('authToken');
+                        window.location.href = '/';
+                      }}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </Button>
                   </div>
 
                   {/* Stage information would go here if available */}

@@ -32,10 +32,12 @@ import {
   TrendingUp,
   Download,
   Loader2,
-  Shield
+  Shield,
+  LogOut
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrentUser } from "@/lib/rbac";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -1178,11 +1180,12 @@ function CrmManagement() {
 export default function AdminPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: user, isLoading: userLoading } = useCurrentUser();
   
   // Simple logout function
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/app';
+    localStorage.removeItem('authToken');
+    window.location.href = '/';
   };
   const [activeTab, setActiveTab] = useState("users");
   const [selectedPhoto, setSelectedPhoto] = useState<HomepagePhoto | null>(null);
@@ -1500,6 +1503,51 @@ export default function AdminPanel() {
       data: editingContent
     });
   };
+
+  // Check for admin access
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Check if user has admin privileges
+  if (!user || !(user as any)?.isAdmin) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="max-w-md mx-auto mt-20">
+          <CardHeader>
+            <CardTitle className="text-red-600">Access Denied</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">You do not have permission to access the Admin Panel.</p>
+            <p className="text-sm text-gray-500 mt-2">
+              If you believe you should have access, please log out and log back in to refresh your permissions.
+            </p>
+            <div className="mt-4 space-y-2">
+              <Button 
+                onClick={handleLogout} 
+                variant="default"
+                className="w-full"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout & Re-authenticate
+              </Button>
+              <Button 
+                onClick={() => window.location.href = '/app'} 
+                variant="outline"
+                className="w-full"
+              >
+                Return to Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6">

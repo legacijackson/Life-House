@@ -45,13 +45,14 @@ const residentNavigation = [
 
 // Case Worker (Staff) navigation
 const caseWorkerNavigation = [
-  { name: "Dashboard", href: "/app/staff-dashboard", icon: Home },
+  { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
   { name: "Residents", href: "/app/residents", icon: Users },
   { name: "Intake", href: "/app/intake", icon: UserPlus },
   { name: "Referrals", href: "/app/referrals", icon: ExternalLink },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Properties", href: "/app/properties", icon: Building },
   { name: "Maintenance", href: "/app/maintenance", icon: Building },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
 ];
@@ -158,19 +159,28 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
   
   if (isAuthenticatedPage && user) {
     const userRole = (user as any)?.role;
-    switch (userRole) {
-      case 'Admin':
-        navigation = adminNavigation;
-        break;
-      case 'CaseManager':
-      case 'Intake':
-        navigation = caseWorkerNavigation;
-        break;
-      case 'Resident':
-        navigation = residentNavigation;
-        break;
-      default:
-        navigation = publicNavigation;
+    const isAdmin = (user as any)?.isAdmin;
+    
+    // If user has admin access, show admin navigation
+    if (isAdmin) {
+      navigation = [...caseWorkerNavigation];
+      // Add Admin Panel link at the beginning for admin users
+      navigation.unshift({ name: "Admin Panel", href: "/app/admin-panel", icon: Settings });
+    } else {
+      switch (userRole) {
+        case 'Admin':
+          navigation = adminNavigation;
+          break;
+        case 'CaseManager':
+        case 'Intake':
+          navigation = caseWorkerNavigation;
+          break;
+        case 'Resident':
+          navigation = residentNavigation;
+          break;
+        default:
+          navigation = publicNavigation;
+      }
     }
   }
 
@@ -336,7 +346,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
               variant="ghost" 
               size="sm"
               onClick={() => {
-                localStorage.removeItem("token");
+                localStorage.removeItem("authToken");
                 localStorage.removeItem("userRole");
                 window.location.href = "/";
               }}
