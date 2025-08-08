@@ -139,6 +139,41 @@ export const residentProfiles = pgTable("resident_profiles", {
   index("resident_profiles_user_id_idx").on(table.userId),
 ]);
 
+// Employee profiles for staff onboarding data
+export const employeeProfiles = pgTable("employee_profiles", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  role: varchar("role"), // Current role/title
+  title: varchar("title"), // Job title
+  startDate: timestamp("start_date"),
+  licenseNumber: varchar("license_number"),
+  trainingLevel: varchar("training_level"),
+  backgroundCheck: varchar("background_check"),
+  tbTest: varchar("tb_test"),
+  references: varchar("references"),
+  signedPolicies: varchar("signed_policies"),
+  emergencyContact: jsonb("emergency_contact"), // {name, phone, relationship}
+  driversLicense: varchar("drivers_license"),
+  driversLicenseExpiry: timestamp("drivers_license_expiry"),
+  autoInsurance: varchar("auto_insurance"),
+  autoInsuranceExpiry: timestamp("auto_insurance_expiry"),
+  onboardingData: jsonb("onboarding_data"), // Complete case manager onboarding form data
+  onboardingDocuments: jsonb("onboarding_documents"), // Array of document IDs
+  certifications: jsonb("certifications"), // Array of {name, issuer, date, expiry}
+  specializations: jsonb("specializations"), // Array of specialization areas
+  supervisorId: uuid("supervisor_id").references(() => users.id),
+  department: varchar("department"),
+  officeLocation: varchar("office_location"),
+  workPhone: varchar("work_phone"),
+  workEmail: varchar("work_email"),
+  onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  onboardingCompletedBy: uuid("onboarding_completed_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("employee_profiles_user_id_idx").on(table.userId),
+]);
+
 export const referrals = pgTable("referrals", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   confirmationNumber: varchar("confirmation_number").unique(),
@@ -1009,6 +1044,12 @@ export const insertResidentProfileSchema = createInsertSchema(residentProfiles).
   updatedAt: true,
 });
 
+export const insertEmployeeProfileSchema = createInsertSchema(employeeProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertReferralSchema = createInsertSchema(referrals).omit({
   id: true,
   createdAt: true,
@@ -1161,6 +1202,8 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type ResidentProfile = typeof residentProfiles.$inferSelect;
 export type InsertResidentProfile = z.infer<typeof insertResidentProfileSchema>;
+export type EmployeeProfile = typeof employeeProfiles.$inferSelect;
+export type InsertEmployeeProfile = z.infer<typeof insertEmployeeProfileSchema>;
 export type Referral = typeof referrals.$inferSelect;
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
 export type ProgramEnrollment = typeof programEnrollments.$inferSelect;

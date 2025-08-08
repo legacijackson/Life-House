@@ -25,16 +25,20 @@ import {
   MapPin,
   Heart,
   UserPlus,
+  UserX,
+  RefreshCw,
   DollarSign,
   Target,
   TrendingUp,
   Download,
-  Loader2
+  Loader2,
+  Shield
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface HomepagePhoto {
   id: string;
@@ -1182,10 +1186,26 @@ export default function AdminPanel() {
   const [isContentModalOpen, setIsContentModalOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<HomepageContent | null>(null);
   const [editingContent, setEditingContent] = useState<Record<string, any>>({});
+  
+  // User management state
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [isViewUserModalOpen, setIsViewUserModalOpen] = useState(false);
+  const [isDeleteUserAlertOpen, setIsDeleteUserAlertOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'Resident',
+    phone: ''
+  });
+  const [editUserData, setEditUserData] = useState<any>({});
 
-  // Fetch admin data
-  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
-    queryKey: ['/api/admin/users'],
+  // Fetch admin data - use comprehensive endpoint for users
+  const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<any[]>({
+    queryKey: ['/api/admin/users/full'],
     enabled: activeTab === 'users'
   });
 
@@ -1212,6 +1232,136 @@ export default function AdminPanel() {
   const { data: homepageContent = [], isLoading: contentLoading } = useQuery<HomepageContent[]>({
     queryKey: ['/api/admin/homepage-content'],
     enabled: activeTab === 'content'
+  });
+
+  // User management mutations
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: any) => {
+      const response = await apiRequest('/api/admin/users', {
+        method: 'POST',
+        body: userData
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'User created',
+        description: 'The user has been created successfully.'
+      });
+      refetchUsers();
+      setIsAddUserModalOpen(false);
+      setNewUserData({
+        name: '',
+        email: '',
+        password: '',
+        role: 'Resident',
+        phone: ''
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create user',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: any }) => {
+      const response = await apiRequest(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        body: updates
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'User updated',
+        description: 'The user has been updated successfully.'
+      });
+      refetchUsers();
+      setIsEditUserModalOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await apiRequest(`/api/admin/users/${userId}`, {
+        method: 'DELETE'
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'User deleted',
+        description: 'The user has been deleted successfully.'
+      });
+      refetchUsers();
+      setIsDeleteUserAlertOpen(false);
+      setSelectedUser(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete user',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const fetchUserProfileMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(`/api/admin/users/${userId}/profile`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch user profile');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setSelectedUserProfile(data);
+      setIsViewUserModalOpen(true);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch user profile',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const updateUserProfileMutation = useMutation({
+    mutationFn: async ({ userId, profileData }: { userId: string; profileData: any }) => {
+      const response = await apiRequest(`/api/admin/users/${userId}/profile`, {
+        method: 'PUT',
+        body: profileData
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Profile updated',
+        description: 'The user profile has been updated successfully.'
+      });
+      refetchUsers();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user profile',
+        variant: 'destructive'
+      });
+    }
   });
 
   // Photo management mutations
@@ -1394,8 +1544,8 @@ export default function AdminPanel() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>User Management</span>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={() => setIsAddUserModalOpen(true)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
                   Add User
                 </Button>
               </CardTitle>
@@ -1410,25 +1560,76 @@ export default function AdminPanel() {
               ) : (
                 <div className="space-y-4">
                   {users.map((user: any) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                          {user.name?.charAt(0)}
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                          user.role === 'Admin' ? 'bg-purple-500' :
+                          user.role === 'CaseManager' ? 'bg-blue-500' :
+                          'bg-gray-500'
+                        }`}>
+                          {user.name?.charAt(0)?.toUpperCase()}
                         </div>
-                        <div>
-                          <h3 className="font-semibold">{user.name}</h3>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{user.name}</h3>
+                            {user.hasOnboarding && (
+                              <Badge variant="outline" className="text-xs">
+                                <Shield className="h-3 w-3 mr-1" />
+                                Onboarded
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600 dark:text-gray-300">{user.email}</p>
+                          {user.phone && <p className="text-xs text-gray-500">{user.phone}</p>}
                         </div>
-                        <Badge variant={user.role === 'Admin' ? 'default' : 'secondary'}>
+                        <Badge 
+                          variant={
+                            user.role === 'Admin' ? 'default' : 
+                            user.role === 'CaseManager' ? 'secondary' :
+                            'outline'
+                          }
+                          className="ml-2"
+                        >
                           {user.role}
                         </Badge>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setEditUserData({
+                              name: user.name,
+                              email: user.email,
+                              phone: user.phone || '',
+                              role: user.role
+                            });
+                            setIsEditUserModalOpen(true);
+                          }}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            fetchUserProfileMutation.mutate(user.id);
+                          }}
+                        >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsDeleteUserAlertOpen(true);
+                          }}
+                        >
+                          <UserX className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -1971,6 +2172,321 @@ export default function AdminPanel() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Add User Modal */}
+      <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account. They will receive login credentials.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="new-user-name">Full Name</Label>
+              <Input
+                id="new-user-name"
+                value={newUserData.name}
+                onChange={(e) => setNewUserData({...newUserData, name: e.target.value})}
+                placeholder="Enter full name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-user-email">Email</Label>
+              <Input
+                id="new-user-email"
+                type="email"
+                value={newUserData.email}
+                onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+                placeholder="Enter email address"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-user-phone">Phone (Optional)</Label>
+              <Input
+                id="new-user-phone"
+                value={newUserData.phone}
+                onChange={(e) => setNewUserData({...newUserData, phone: e.target.value})}
+                placeholder="Enter phone number"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-user-password">Password</Label>
+              <Input
+                id="new-user-password"
+                type="password"
+                value={newUserData.password}
+                onChange={(e) => setNewUserData({...newUserData, password: e.target.value})}
+                placeholder="Enter password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-user-role">Role</Label>
+              <Select 
+                value={newUserData.role} 
+                onValueChange={(value) => setNewUserData({...newUserData, role: value})}
+              >
+                <SelectTrigger id="new-user-role">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Resident">Resident</SelectItem>
+                  <SelectItem value="CaseManager">Case Manager</SelectItem>
+                  <SelectItem value="Intake">Intake</SelectItem>
+                  <SelectItem value="Admin">Administrator</SelectItem>
+                  <SelectItem value="Referrer">Referrer</SelectItem>
+                  <SelectItem value="Auditor">Auditor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddUserModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => createUserMutation.mutate(newUserData)}
+              disabled={createUserMutation.isPending || !newUserData.name || !newUserData.email || !newUserData.password}
+            >
+              {createUserMutation.isPending ? 'Creating...' : 'Create User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Modal */}
+      <Dialog open={isEditUserModalOpen} onOpenChange={setIsEditUserModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information and role.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-user-name">Full Name</Label>
+              <Input
+                id="edit-user-name"
+                value={editUserData.name || ''}
+                onChange={(e) => setEditUserData({...editUserData, name: e.target.value})}
+                placeholder="Enter full name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-user-email">Email</Label>
+              <Input
+                id="edit-user-email"
+                type="email"
+                value={editUserData.email || ''}
+                onChange={(e) => setEditUserData({...editUserData, email: e.target.value})}
+                placeholder="Enter email address"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-user-phone">Phone</Label>
+              <Input
+                id="edit-user-phone"
+                value={editUserData.phone || ''}
+                onChange={(e) => setEditUserData({...editUserData, phone: e.target.value})}
+                placeholder="Enter phone number"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-user-role">Role</Label>
+              <Select 
+                value={editUserData.role || 'Resident'} 
+                onValueChange={(value) => setEditUserData({...editUserData, role: value})}
+              >
+                <SelectTrigger id="edit-user-role">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Resident">Resident</SelectItem>
+                  <SelectItem value="CaseManager">Case Manager</SelectItem>
+                  <SelectItem value="Intake">Intake</SelectItem>
+                  <SelectItem value="Admin">Administrator</SelectItem>
+                  <SelectItem value="Referrer">Referrer</SelectItem>
+                  <SelectItem value="Auditor">Auditor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditUserModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => selectedUser && updateUserMutation.mutate({
+                userId: selectedUser.id,
+                updates: editUserData
+              })}
+              disabled={updateUserMutation.isPending}
+            >
+              {updateUserMutation.isPending ? 'Updating...' : 'Update User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View User Profile Modal */}
+      <Dialog open={isViewUserModalOpen} onOpenChange={setIsViewUserModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>User Profile & Onboarding Data</DialogTitle>
+            <DialogDescription>
+              View and manage user's onboarding information.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUserProfile ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-gray-600">Name</Label>
+                  <p className="font-medium">{selectedUserProfile.user?.name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">Email</Label>
+                  <p className="font-medium">{selectedUserProfile.user?.email}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">Role</Label>
+                  <Badge>{selectedUserProfile.user?.role}</Badge>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-600">Phone</Label>
+                  <p className="font-medium">{selectedUserProfile.user?.phone || 'Not provided'}</p>
+                </div>
+              </div>
+
+              {selectedUserProfile.profile && (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-3">Onboarding Information</h3>
+                  {selectedUserProfile.user?.role === 'Resident' ? (
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm text-gray-600">Date of Birth</Label>
+                        <p className="font-medium">{selectedUserProfile.profile.dateOfBirth || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">SSN (Last 4)</Label>
+                        <p className="font-medium">****{selectedUserProfile.profile.ssn?.slice(-4) || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">Case Manager</Label>
+                        <p className="font-medium">{selectedUserProfile.profile.caseManagerId || 'Not assigned'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">Emergency Contact</Label>
+                        <p className="font-medium">
+                          {selectedUserProfile.profile.emergencyContactName || 'Not provided'}
+                          {selectedUserProfile.profile.emergencyContactPhone && ` - ${selectedUserProfile.profile.emergencyContactPhone}`}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">Documents</Label>
+                        <div className="space-y-1">
+                          {selectedUserProfile.profile.photoIdUrl && (
+                            <p className="text-sm">✓ Photo ID uploaded</p>
+                          )}
+                          {selectedUserProfile.profile.socialSecurityCardUrl && (
+                            <p className="text-sm">✓ Social Security Card uploaded</p>
+                          )}
+                          {selectedUserProfile.profile.birthCertificateUrl && (
+                            <p className="text-sm">✓ Birth Certificate uploaded</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm text-gray-600">Title/Position</Label>
+                        <p className="font-medium">{selectedUserProfile.profile.title || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">Department</Label>
+                        <p className="font-medium">{selectedUserProfile.profile.department || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">Start Date</Label>
+                        <p className="font-medium">{selectedUserProfile.profile.startDate || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">License Number</Label>
+                        <p className="font-medium">{selectedUserProfile.profile.licenseNumber || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">Background Check</Label>
+                        <p className="font-medium">
+                          {selectedUserProfile.profile.backgroundCheckCompleted ? '✓ Completed' : '⚠ Pending'}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-600">Documents</Label>
+                        <div className="space-y-1">
+                          {selectedUserProfile.profile.resumeUrl && (
+                            <p className="text-sm">✓ Resume uploaded</p>
+                          )}
+                          {selectedUserProfile.profile.certificationsUrl && (
+                            <p className="text-sm">✓ Certifications uploaded</p>
+                          )}
+                          {selectedUserProfile.profile.backgroundCheckUrl && (
+                            <p className="text-sm">✓ Background Check uploaded</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!selectedUserProfile.profile && (
+                <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                  <p className="text-center text-gray-600 dark:text-gray-300">
+                    This user has not completed onboarding yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsViewUserModalOpen(false);
+              setSelectedUserProfile(null);
+            }}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation */}
+      <AlertDialog open={isDeleteUserAlertOpen} onOpenChange={setIsDeleteUserAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the user "{selectedUser?.name}" and all their associated data.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => selectedUser && deleteUserMutation.mutate(selectedUser.id)}
+            >
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

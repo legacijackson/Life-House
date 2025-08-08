@@ -16,13 +16,15 @@ import {
   insertInquirySchema,
   insertPartnerSchema,
   users,
+  residentProfiles,
+  employeeProfiles,
   faqs,
   faqRoles,
   faqPages,
   faqFeedback
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, desc, sql } from "drizzle-orm";
+import { eq, and, like, desc, sql, inArray } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
@@ -2488,6 +2490,250 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     } catch (error) {
       console.error('Error fetching users:', error);
       res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  }));
+
+  // Get all users with their profiles (comprehensive user management)
+  app.get('/api/admin/users/full', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+      
+      // Get resident profiles if there are residents
+      const residentUserIds = allUsers.filter(u => u.role === 'Resident').map(u => u.id);
+      const residentProfileData = residentUserIds.length > 0 
+        ? await db.select().from(residentProfiles).where(inArray(residentProfiles.userId, residentUserIds))
+        : [];
+      
+      // Get employee profiles if there are staff
+      const staffUserIds = allUsers.filter(u => u.role === 'CaseManager' || u.role === 'Admin').map(u => u.id);
+      const employeeProfileData = staffUserIds.length > 0
+        ? await db.select().from(employeeProfiles).where(inArray(employeeProfiles.userId, staffUserIds))
+        : [];
+
+      const usersWithProfiles = allUsers.map(user => {
+        let profile = null;
+        if (user.role === 'Resident') {
+          profile = residentProfileData.find(p => p.userId === user.id);
+        } else if (user.role === 'CaseManager' || user.role === 'Admin') {
+          profile = employeeProfileData.find(p => p.userId === user.id);
+        }
+        return {
+          ...user,
+          profile,
+          hasOnboarding: !!profile?.onboardingData
+        };
+      });
+
+      res.json(usersWithProfiles);
+    } catch (error) {
+      console.error('Error fetching users with profiles:', error);
+      res.status(500).json({ message: 'Failed to fetch users with profiles' });
+    }
+  }));
+
+  // Create new user (admin only)
+  app.post('/api/admin/users', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { name, email, password, role, phone } = req.body;
+      
+      // Check if user already exists
+      const existing = await db.select().from(users).where(eq(users.email, email));
+      if (existing.length > 0) {
+        return res.status(400).json({ message: 'User with this email already exists' });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Create user
+      const [newUser] = await db.insert(users).values({
+        name,
+        email,
+        phone,
+        role: role as any,
+        passwordHash,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      // Create profile based on role
+      if (role === 'Resident') {
+        await db.insert(residentProfiles).values({
+          userId: newUser.id,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      } else if (role === 'CaseManager' || role === 'Admin') {
+        await db.insert(employeeProfiles).values({
+          userId: newUser.id,
+          role,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+
+      res.json({ success: true, user: newUser });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ message: 'Failed to create user' });
+    }
+  }));
+
+  // Update user including role changes (admin only)
+  app.put('/api/admin/users/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.params.id;
+      const updates = req.body;
+      
+      // Get current user
+      const [currentUser] = await db.select().from(users).where(eq(users.id, userId));
+      if (!currentUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Handle role change
+      if (updates.role && updates.role !== currentUser.role) {
+        // Delete old profile
+        if (currentUser.role === 'Resident') {
+          await db.delete(residentProfiles).where(eq(residentProfiles.userId, userId));
+        } else if (currentUser.role === 'CaseManager' || currentUser.role === 'Admin') {
+          await db.delete(employeeProfiles).where(eq(employeeProfiles.userId, userId));
+        }
+
+        // Create new profile
+        if (updates.role === 'Resident') {
+          await db.insert(residentProfiles).values({
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        } else if (updates.role === 'CaseManager' || updates.role === 'Admin') {
+          await db.insert(employeeProfiles).values({
+            userId: userId,
+            role: updates.role,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+      }
+
+      // Handle password update if provided
+      if (updates.password) {
+        updates.passwordHash = await bcrypt.hash(updates.password, 10);
+        delete updates.password;
+      }
+
+      // Update user
+      const [updatedUser] = await db.update(users)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: 'Failed to update user' });
+    }
+  }));
+
+  // Delete user (admin only)
+  app.delete('/api/admin/users/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.params.id;
+      
+      // Don't allow deleting yourself
+      if (userId === req.user.id) {
+        return res.status(400).json({ message: 'Cannot delete your own account' });
+      }
+
+      // Get user to check role
+      const [userToDelete] = await db.select().from(users).where(eq(users.id, userId));
+      if (!userToDelete) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Delete profile first
+      if (userToDelete.role === 'Resident') {
+        await db.delete(residentProfiles).where(eq(residentProfiles.userId, userId));
+      } else if (userToDelete.role === 'CaseManager' || userToDelete.role === 'Admin') {
+        await db.delete(employeeProfiles).where(eq(employeeProfiles.userId, userId));
+      }
+
+      // Delete user
+      await db.delete(users).where(eq(users.id, userId));
+
+      res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: 'Failed to delete user' });
+    }
+  }));
+
+  // Get user's onboarding profile (admin only)
+  app.get('/api/admin/users/:id/profile', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.params.id;
+      
+      // Get user
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get profile based on role
+      let profile = null;
+      if (user.role === 'Resident') {
+        [profile] = await db.select().from(residentProfiles).where(eq(residentProfiles.userId, userId));
+      } else if (user.role === 'CaseManager' || user.role === 'Admin') {
+        [profile] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.userId, userId));
+      }
+
+      res.json({ user, profile });
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ message: 'Failed to fetch user profile' });
+    }
+  }));
+
+  // Update user's onboarding profile (admin only)
+  app.put('/api/admin/users/:id/profile', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.params.id;
+      const profileData = req.body;
+      
+      // Get user
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Update profile based on role
+      let updatedProfile = null;
+      if (user.role === 'Resident') {
+        [updatedProfile] = await db.update(residentProfiles)
+          .set({
+            ...profileData,
+            updatedAt: new Date()
+          })
+          .where(eq(residentProfiles.userId, userId))
+          .returning();
+      } else if (user.role === 'CaseManager' || user.role === 'Admin') {
+        [updatedProfile] = await db.update(employeeProfiles)
+          .set({
+            ...profileData,
+            updatedAt: new Date()
+          })
+          .where(eq(employeeProfiles.userId, userId))
+          .returning();
+      }
+
+      res.json({ success: true, profile: updatedProfile });
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: 'Failed to update user profile' });
     }
   }));
 
