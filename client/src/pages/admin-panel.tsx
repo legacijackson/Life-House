@@ -46,6 +46,7 @@ import { useCurrentUser } from "@/lib/rbac";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { CaseManagerOnboarding } from "@/components/case-manager-onboarding";
 
 interface HomepagePhoto {
   id: string;
@@ -1353,6 +1354,7 @@ export default function AdminPanel() {
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [isViewUserModalOpen, setIsViewUserModalOpen] = useState(false);
   const [isDeleteUserAlertOpen, setIsDeleteUserAlertOpen] = useState(false);
+  const [isStaffOnboardingOpen, setIsStaffOnboardingOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
   const [newUserData, setNewUserData] = useState({
@@ -1776,7 +1778,7 @@ export default function AdminPanel() {
               <span className="text-sm">Onboard Resident</span>
             </Button>
             <Button 
-              onClick={() => setIsAddUserModalOpen(true)}
+              onClick={() => setIsStaffOnboardingOpen(true)}
               className="flex flex-col items-center gap-2 h-auto py-4"
               variant="outline"
             >
@@ -2941,6 +2943,20 @@ export default function AdminPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Staff Onboarding Modal */}
+      <CaseManagerOnboarding
+        isOpen={isStaffOnboardingOpen}
+        onClose={() => setIsStaffOnboardingOpen(false)}
+        onComplete={(data) => {
+          toast({
+            title: "Staff onboarding completed",
+            description: `${data.personalInfo.firstName} ${data.personalInfo.lastName} has been successfully onboarded.`
+          });
+          setIsStaffOnboardingOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+        }}
+      />
     </div>
   );
 }
