@@ -19,8 +19,10 @@ import { z } from "zod";
 // Enums
 export const roleEnum = pgEnum("role", [
   "Resident",
-  "CaseManager", 
-  "Admin",
+  "CaseManager",
+  "Intake",
+  "Referrer",
+  "Auditor",
   "Partner",
   "Guest"
 ]);
@@ -71,6 +73,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: varchar("email").unique(),
   phone: varchar("phone"),
+  isAdmin: boolean("is_admin").default(false), // Admin access can be granted to any role
   language: languageEnum("language").default("en"),
   readingLevel: readingLevelEnum("reading_level").default("professional"),
   passwordHash: varchar("password_hash"),

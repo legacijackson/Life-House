@@ -1199,7 +1199,8 @@ export default function AdminPanel() {
     email: '',
     password: '',
     role: 'Resident',
-    phone: ''
+    phone: '',
+    isAdmin: false
   });
   const [editUserData, setEditUserData] = useState<any>({});
 
@@ -1255,7 +1256,8 @@ export default function AdminPanel() {
         email: '',
         password: '',
         role: 'Resident',
-        phone: ''
+        phone: '',
+        isAdmin: false
       });
     },
     onError: (error: any) => {
@@ -1603,7 +1605,8 @@ export default function AdminPanel() {
                               name: user.name,
                               email: user.email,
                               phone: user.phone || '',
-                              role: user.role
+                              role: user.role,
+                              isAdmin: user.isAdmin || false
                             });
                             setIsEditUserModalOpen(true);
                           }}
@@ -2234,11 +2237,22 @@ export default function AdminPanel() {
                   <SelectItem value="Resident">Resident</SelectItem>
                   <SelectItem value="CaseManager">Case Manager</SelectItem>
                   <SelectItem value="Intake">Intake</SelectItem>
-                  <SelectItem value="Admin">Administrator</SelectItem>
                   <SelectItem value="Referrer">Referrer</SelectItem>
                   <SelectItem value="Auditor">Auditor</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="new-user-admin"
+                checked={newUserData.isAdmin}
+                onChange={(e) => setNewUserData({...newUserData, isAdmin: e.target.checked})}
+                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <Label htmlFor="new-user-admin" className="text-sm font-medium">
+                Grant admin access (can access admin panel)
+              </Label>
             </div>
           </div>
           <DialogFooter>
@@ -2306,11 +2320,22 @@ export default function AdminPanel() {
                   <SelectItem value="Resident">Resident</SelectItem>
                   <SelectItem value="CaseManager">Case Manager</SelectItem>
                   <SelectItem value="Intake">Intake</SelectItem>
-                  <SelectItem value="Admin">Administrator</SelectItem>
                   <SelectItem value="Referrer">Referrer</SelectItem>
                   <SelectItem value="Auditor">Auditor</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="edit-user-admin"
+                checked={editUserData.isAdmin || false}
+                onChange={(e) => setEditUserData({...editUserData, isAdmin: e.target.checked})}
+                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <Label htmlFor="edit-user-admin" className="text-sm font-medium">
+                Grant admin access (can access admin panel)
+              </Label>
             </div>
           </div>
           <DialogFooter>

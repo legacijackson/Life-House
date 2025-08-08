@@ -35,6 +35,7 @@ interface AuthenticatedRequest extends Request {
     role: string;
     name: string;
     email: string;
+    isAdmin?: boolean;
   };
 }
 
@@ -49,9 +50,18 @@ function authRoute(handler: AuthenticatedHandler) {
 // Helper for role-based routes
 function roleRoute(roles: string[], handler: AuthenticatedHandler) {
   return (async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
+    
+    // Check if user has required role OR if they have admin access when Admin role is required
+    const hasRequiredRole = roles.includes(req.user.role);
+    const hasAdminAccess = roles.includes('Admin') && req.user.isAdmin === true;
+    
+    if (!hasRequiredRole && !hasAdminAccess) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+    
     try {
       const result = await handler(req, res, next);
       return result;
@@ -85,7 +95,8 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
         id: user.id,
         role: user.role,
         name: user.name || 'Unknown User',
-        email: user.email || ''
+        email: user.email || '',
+        isAdmin: user.isAdmin || false
       };
       return next();
     } catch (error) {
@@ -114,7 +125,8 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
       id: user.id,
       role: user.role,
       name: user.name || 'Unknown User',
-      email: user.email || ''
+      email: user.email || '',
+      isAdmin: user.isAdmin || false
     };
     return next();
   } catch (error) {
@@ -348,7 +360,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { 
           userId: user.id, 
           role: user.role,
-          email: user.email 
+          email: user.email,
+          isAdmin: user.isAdmin || false
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -363,6 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: user.name,
           email: user.email,
           role: user.role,
+          isAdmin: user.isAdmin || false
         },
       });
     } catch (error) {
@@ -383,6 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: req.user.name,
         email: req.user.email,
         role: req.user.role,
+        isAdmin: req.user.isAdmin || false
       }
     });
   }));
@@ -407,7 +422,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: email.split('@')[0],
           email: email,
           passwordHash: hashedPassword,
-          role: 'Admin'
+          role: email === 'admin@lifehouse.org' ? 'CaseManager' : 'Resident',
+          isAdmin: email === 'admin@lifehouse.org' ? true : false
         });
       }
 
@@ -418,7 +434,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { 
           userId: user.id, 
           role: user.role,
-          email: user.email 
+          email: user.email,
+          isAdmin: user.isAdmin || false
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -433,6 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: user.name,
           email: user.email,
           role: user.role,
+          isAdmin: user.isAdmin || false
         },
       });
     } catch (error) {
@@ -2505,7 +2523,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         : [];
       
       // Get employee profiles if there are staff
-      const staffUserIds = allUsers.filter(u => u.role === 'CaseManager' || u.role === 'Admin').map(u => u.id);
+      const staffUserIds = allUsers.filter(u => u.role !== 'Resident').map(u => u.id);
       const employeeProfileData = staffUserIds.length > 0
         ? await db.select().from(employeeProfiles).where(inArray(employeeProfiles.userId, staffUserIds))
         : [];
@@ -2514,7 +2532,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         let profile = null;
         if (user.role === 'Resident') {
           profile = residentProfileData.find(p => p.userId === user.id);
-        } else if (user.role === 'CaseManager' || user.role === 'Admin') {
+        } else {
           profile = employeeProfileData.find(p => p.userId === user.id);
         }
         return {
@@ -2534,7 +2552,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   // Create new user (admin only)
   app.post('/api/admin/users', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { name, email, password, role, phone } = req.body;
+      const { name, email, password, role, phone, isAdmin } = req.body;
       
       // Check if user already exists
       const existing = await db.select().from(users).where(eq(users.email, email));
@@ -2551,6 +2569,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         email,
         phone,
         role: role as any,
+        isAdmin: isAdmin || false,
         passwordHash,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -2563,7 +2582,8 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
           createdAt: new Date(),
           updatedAt: new Date()
         });
-      } else if (role === 'CaseManager' || role === 'Admin') {
+      } else {
+        // Create employee profile for all non-resident roles
         await db.insert(employeeProfiles).values({
           userId: newUser.id,
           role,
@@ -2596,7 +2616,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         // Delete old profile
         if (currentUser.role === 'Resident') {
           await db.delete(residentProfiles).where(eq(residentProfiles.userId, userId));
-        } else if (currentUser.role === 'CaseManager' || currentUser.role === 'Admin') {
+        } else {
           await db.delete(employeeProfiles).where(eq(employeeProfiles.userId, userId));
         }
 
@@ -2607,7 +2627,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
             createdAt: new Date(),
             updatedAt: new Date()
           });
-        } else if (updates.role === 'CaseManager' || updates.role === 'Admin') {
+        } else {
           await db.insert(employeeProfiles).values({
             userId: userId,
             role: updates.role,
