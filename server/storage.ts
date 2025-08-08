@@ -82,6 +82,7 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User>;
 
   // Resident operations
+  getResidents(): Promise<User[]>;
   getResidentProfile(userId: string): Promise<ResidentProfile | undefined>;
   createResidentProfile(profile: InsertResidentProfile): Promise<ResidentProfile>;
   updateResidentProfile(id: string, updates: Partial<ResidentProfile>): Promise<ResidentProfile>;
@@ -253,6 +254,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async getResidents(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, 'Resident' as any));
   }
 
   async getResidentProfile(userId: string): Promise<ResidentProfile | undefined> {

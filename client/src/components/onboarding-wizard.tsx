@@ -45,6 +45,7 @@ interface OnboardingData {
     ssn: string;
     emergencyContact: string;
     emergencyPhone: string;
+    caseManagerId: string;
   };
   demographics: {
     race: string;
@@ -124,6 +125,16 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(1);
+  
+  // Fetch case managers
+  const { data: caseManagers = [] } = useQuery({
+    queryKey: ['/api/staff/users', { role: 'CaseManager' }],
+    queryFn: async () => {
+      const response = await fetch('/api/staff/users?role=CaseManager');
+      if (!response.ok) throw new Error('Failed to fetch case managers');
+      return response.json();
+    }
+  });
   const [data, setData] = useState<OnboardingData>({
     isEligible: false,
     isVeteran: false,
@@ -136,7 +147,8 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
       email: '',
       ssn: '',
       emergencyContact: '',
-      emergencyPhone: ''
+      emergencyPhone: '',
+      caseManagerId: ''
     },
     demographics: {
       race: '',
@@ -370,6 +382,25 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     value={data.personalInfo.email}
                     onChange={(e) => updateData('personalInfo', { email: e.target.value })}
                   />
+                </div>
+                
+                <div>
+                  <Label htmlFor="caseManager">Assigned Case Manager *</Label>
+                  <Select
+                    value={data.personalInfo.caseManagerId}
+                    onValueChange={(value) => updateData('personalInfo', { caseManagerId: value })}
+                  >
+                    <SelectTrigger id="caseManager">
+                      <SelectValue placeholder="Select a case manager" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {caseManagers.map((manager: any) => (
+                        <SelectItem key={manager.id} value={manager.id}>
+                          {manager.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">

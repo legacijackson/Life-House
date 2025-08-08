@@ -3258,14 +3258,25 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
   app.get('/api/users', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const users = await storage.getUsers();
-      // Return users but filter out sensitive information
-      const sanitizedUsers = users.map(user => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      }));
-      res.json(sanitizedUsers);
+      const residents = await storage.getResidents();
+      
+      // Combine users and residents
+      const allUsers = [
+        ...users.map(user => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        })),
+        ...residents.map((resident: User) => ({
+          id: resident.id,
+          name: resident.name,
+          email: resident.email,
+          role: 'Resident' as const,
+        }))
+      ];
+      
+      res.json(allUsers);
     } catch (error) {
       console.error('Users fetch error:', error);
       res.status(500).json({ message: 'Failed to fetch users' });

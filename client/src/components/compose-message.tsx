@@ -118,7 +118,7 @@ export function ComposeMessage({ isOpen, onClose, defaultRecipient }: ComposeMes
                 <SelectValue placeholder="Select recipient" />
               </SelectTrigger>
               <SelectContent>
-                {users?.filter(u => u.role === 'Admin' || u.role === 'CaseManager').map(user => (
+                {users?.map(user => (
                   <SelectItem key={user.id} value={user.name}>
                     {user.name} ({user.role})
                   </SelectItem>

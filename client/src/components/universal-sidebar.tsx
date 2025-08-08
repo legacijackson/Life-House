@@ -46,8 +46,9 @@ const residentNavigation = [
 // Case Worker (Staff) navigation
 const caseWorkerNavigation = [
   { name: "Dashboard", href: "/app/staff-dashboard", icon: Home },
-  { name: "Intake & Referrals", href: "/app/intake-referrals", icon: UserPlus },
-  { name: "My Residents", href: "/app/residents", icon: Users },
+  { name: "Residents", href: "/app/residents", icon: Users },
+  { name: "Intake", href: "/app/intake", icon: UserPlus },
+  { name: "Referrals", href: "/app/referrals", icon: ExternalLink },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Resources", href: "/app/resources", icon: Archive },
@@ -58,8 +59,9 @@ const caseWorkerNavigation = [
 // Admin navigation
 const adminNavigation = [
   { name: "Admin Dashboard", href: "/app/admin-panel", icon: Home },
-  { name: "Intake & Referrals", href: "/app/intake-referrals", icon: UserPlus },
-  { name: "My Residents", href: "/app/residents", icon: Users },
+  { name: "Residents", href: "/app/residents", icon: Users },
+  { name: "Intake", href: "/app/intake", icon: UserPlus },
+  { name: "Referrals", href: "/app/referrals", icon: ExternalLink },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Resources", href: "/app/resources", icon: Archive },
