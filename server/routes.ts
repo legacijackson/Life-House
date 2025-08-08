@@ -412,19 +412,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Email and password are required' });
       }
 
-      // For development - accept any email/password combo and create/find user
-      let user = await storage.getUserByEmail(email);
+      // Look up user in database - only allow existing users to login
+      const user = await storage.getUserByEmail(email);
       
-      // If user doesn't exist, create a basic admin user for development
+      // If user doesn't exist, reject login
       if (!user) {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        user = await storage.createUser({
-          name: email.split('@')[0],
-          email: email,
-          passwordHash: hashedPassword,
-          role: email === 'admin@lifehouse.org' ? 'CaseManager' : 'Resident',
-          isAdmin: email === 'admin@lifehouse.org' ? true : false
-        });
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      // Verify password (in development, accept any password for existing users)
+      const isValidPassword = process.env.NODE_ENV !== 'production' ? true : 
+        await bcrypt.compare(password, user.passwordHash || '');
+      
+      if (!isValidPassword) {
+        return res.status(401).json({ message: 'Invalid email or password' });
       }
 
       // Generate proper JWT token

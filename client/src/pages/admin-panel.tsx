@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -1328,6 +1329,7 @@ function CrmManagement() {
 }
 
 export default function AdminPanel() {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: user, isLoading: userLoading } = useCurrentUser();
@@ -1750,7 +1752,7 @@ export default function AdminPanel() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <Button 
-              onClick={() => window.location.href = '/app/attendance'}
+              onClick={() => navigate('/app/attendance')}
               className="flex flex-col items-center gap-2 h-auto py-4"
               variant="outline"
             >
@@ -1758,7 +1760,7 @@ export default function AdminPanel() {
               <span className="text-sm">STOP TouchPoint</span>
             </Button>
             <Button 
-              onClick={() => window.location.href = '/app/case-notes'}
+              onClick={() => navigate('/app/residents')}
               className="flex flex-col items-center gap-2 h-auto py-4"
               variant="outline"
             >
@@ -1766,7 +1768,7 @@ export default function AdminPanel() {
               <span className="text-sm">Case Notes</span>
             </Button>
             <Button 
-              onClick={() => window.location.href = '/app/intake?onboard=resident'}
+              onClick={() => navigate('/app/intake')}
               className="flex flex-col items-center gap-2 h-auto py-4"
               variant="outline"
             >
@@ -1774,7 +1776,7 @@ export default function AdminPanel() {
               <span className="text-sm">Onboard Resident</span>
             </Button>
             <Button 
-              onClick={() => window.location.href = '/app/intake?onboard=staff'}
+              onClick={() => setIsAddUserModalOpen(true)}
               className="flex flex-col items-center gap-2 h-auto py-4"
               variant="outline"
             >
@@ -1782,7 +1784,7 @@ export default function AdminPanel() {
               <span className="text-sm">Onboard Staff</span>
             </Button>
             <Button 
-              onClick={() => window.location.href = '/app/attendance'}
+              onClick={() => navigate('/app/attendance')}
               className="flex flex-col items-center gap-2 h-auto py-4"
               variant="outline"
             >
