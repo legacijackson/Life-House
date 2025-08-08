@@ -130,7 +130,13 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   const { data: caseManagers = [] } = useQuery({
     queryKey: ['/api/staff/users', { role: 'CaseManager' }],
     queryFn: async () => {
-      const response = await fetch('/api/staff/users?role=CaseManager');
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/staff/users?role=CaseManager', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch case managers');
       return response.json();
     }
