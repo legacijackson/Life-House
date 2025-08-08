@@ -27,7 +27,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
   }
 
   // Get accessible routes for the user's role
-  const accessibleRoutes = getAccessibleRoutes(user.role);
+  const accessibleRoutes = getAccessibleRoutes(user.role, (user as any).isAdmin);
 
   // Check if current route is accessible
   const isAccessible = accessibleRoutes.some(route => 
@@ -36,7 +36,7 @@ export function RouteGuard({ children }: RouteGuardProps) {
 
   if (!isAccessible) {
     // Redirect to appropriate dashboard based on role
-    const defaultRoute = user.role === 'Resident' ? '/app/resident-portal' : '/app';
+    const defaultRoute = user.role === 'Resident' ? '/app/resident-portal' : '/app/staff-dashboard';
     setLocation(defaultRoute);
     return null;
   }

@@ -5,7 +5,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Resident' | 'CaseManager' | 'Admin' | 'Partner' | 'Guest';
+  role: 'Resident' | 'CaseManager' | 'Admin' | 'Intake' | 'Partner' | 'Guest';
+  isAdmin?: boolean;
   profileImage?: string;
   createdAt: string;
   firstName?: string;
@@ -27,9 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: userData, isLoading, refetch } = useQuery<User | null>({
+  const { data: userData, isLoading, refetch } = useQuery<any>({
     queryKey: ['/api/auth/user'],
     retry: false,
+    select: (data) => data?.user || null,
   });
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [userData]);
 
   const login = async (email: string, password: string) => {
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),

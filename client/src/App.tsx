@@ -10,6 +10,7 @@ import { UnifiedFloatingMenu } from "@/components/unified-floating-menu";
 import { UniversalSidebar } from "@/components/universal-sidebar";
 import { useState } from "react";
 import { RouteGuard } from "@/components/route-guard";
+import { AuthProvider } from "@/lib/auth-context";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
 import Apply from "@/pages/apply";
@@ -94,23 +95,25 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <HotToaster position="top-right" />
-        <Router />
-        <UnifiedFloatingMenu 
-          onOpenChat={() => setIsChatOpen(true)}
-          onOpenHelp={() => setIsHelpOpen(true)}
-        />
-        <AIChatbotWidget 
-          isOpen={isChatOpen} 
-          onClose={() => setIsChatOpen(false)} 
-        />
-        <HelpDesk 
-          isOpen={isHelpOpen} 
-          onClose={() => setIsHelpOpen(false)} 
-        />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <HotToaster position="top-right" />
+          <Router />
+          <UnifiedFloatingMenu 
+            onOpenChat={() => setIsChatOpen(true)}
+            onOpenHelp={() => setIsHelpOpen(true)}
+          />
+          <AIChatbotWidget 
+            isOpen={isChatOpen} 
+            onClose={() => setIsChatOpen(false)} 
+          />
+          <HelpDesk 
+            isOpen={isHelpOpen} 
+            onClose={() => setIsHelpOpen(false)} 
+          />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

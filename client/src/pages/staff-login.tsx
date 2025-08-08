@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function StaffLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormData>({
@@ -33,56 +33,60 @@ export default function StaffLogin() {
     },
   });
 
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginFormData) => {
-      const response = await apiRequest("/api/login", {
-        method: "POST",
-        body: data,
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-      if (data.user) {
-        localStorage.setItem("userData", JSON.stringify(data.user));
-      }
-
-      // Check if user is staff or admin
-      const userRole = data.user?.role;
-      if (userRole === "Admin" || userRole === "CaseManager" || userRole === "Intake") {
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${data.user?.name || data.user?.email}!`,
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      await login(data.email, data.password);
+      
+      // After successful login, we need to check the user data
+      // The auth context will handle the token storage
+      const token = localStorage.getItem("token");
+      if (token) {
+        // Fetch user data to check role
+        const userResponse = await fetch("/api/auth/user", {
+          headers: { Authorization: `Bearer ${token}` },
         });
         
-        // Redirect to staff dashboard
-        setLocation("/app/staff-dashboard");
-      } else {
-        // If not staff/admin, show error
-        toast({
-          title: "Access denied",
-          description: "This portal is for staff and administrators only.",
-          variant: "destructive",
-        });
-        
-        // Clear the invalid login
-        localStorage.removeItem("token");
-        localStorage.removeItem("userData");
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          const user = userData.user;
+          
+          // Check if user is staff or admin
+          if (user?.isAdmin || user?.role === "CaseManager" || user?.role === "Intake") {
+            toast({
+              title: "Login successful",
+              description: `Welcome back, ${user?.name || user?.email}!`,
+            });
+            
+            // Redirect based on role
+            if (user?.isAdmin) {
+              setLocation("/app/admin-panel");
+            } else {
+              setLocation("/app/staff-dashboard");
+            }
+          } else {
+            // If not staff/admin, show error
+            toast({
+              title: "Access denied",
+              description: "This portal is for staff and administrators only.",
+              variant: "destructive",
+            });
+            
+            // Clear the invalid login
+            localStorage.removeItem("token");
+            window.location.href = '/';
+          }
+        }
       }
-    },
-    onError: (error: any) => {
+    } catch (error: any) {
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",
         variant: "destructive",
       });
-    },
-  });
-
-  const onSubmit = (data: LoginFormData) => {
-    loginMutation.mutate(data);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -128,7 +132,7 @@ export default function StaffLogin() {
                             type="email"
                             placeholder="your.email@lifehouse.org"
                             className="pl-10"
-                            disabled={loginMutation.isPending}
+                            disabled={isLoading}
                           />
                         </div>
                       </FormControl>
@@ -150,7 +154,7 @@ export default function StaffLogin() {
                             type="password"
                             placeholder="Enter your password"
                             className="pl-10"
-                            disabled={loginMutation.isPending}
+                            disabled={isLoading}
                           />
                         </div>
                       </FormControl>
@@ -161,9 +165,9 @@ export default function StaffLogin() {
                 <Button
                   type="submit"
                   className="w-full bg-green-600 hover:bg-green-700"
-                  disabled={loginMutation.isPending}
+                  disabled={isLoading}
                 >
-                  {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                  {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </Form>

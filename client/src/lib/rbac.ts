@@ -51,7 +51,8 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: ['/api/auth/user'],
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: false
+    retry: false,
+    select: (data: any) => data?.user || null
   });
 }
 
@@ -107,15 +108,18 @@ export function PermissionGate({
 }
 
 // Get all accessible routes for a user role
-export function getAccessibleRoutes(userRole: UserRole): string[] {
-  const routes: string[] = ['/app']; // Dashboard is accessible to all
+export function getAccessibleRoutes(userRole: UserRole, isAdmin?: boolean): string[] {
+  const routes: string[] = ['/app', '/app/profile']; // Dashboard and profile are accessible to all
   
   if (hasPermission(userRole, 'residents', 'view')) routes.push('/app/residents');
   if (hasPermission(userRole, 'case-notes', 'view')) routes.push('/app/case-notes');
   if (hasPermission(userRole, 'attendance', 'view')) routes.push('/app/attendance');
   if (hasPermission(userRole, 'resources', 'view')) routes.push('/app/resources');
   if (hasPermission(userRole, 'applications', 'view')) routes.push('/app/intake');
-  if (hasPermission(userRole, 'referrals', 'view')) routes.push('/app/referrals');
+  if (hasPermission(userRole, 'referrals', 'view')) {
+    routes.push('/app/referrals');
+    routes.push('/app/intake-referrals');
+  }
   if (hasPermission(userRole, 'reports', 'view')) routes.push('/app/reports');
   if (hasPermission(userRole, 'maintenance', 'view')) routes.push('/app/maintenance');
   if (hasPermission(userRole, 'properties', 'view')) routes.push('/app/properties');
@@ -126,14 +130,19 @@ export function getAccessibleRoutes(userRole: UserRole): string[] {
     routes.push('/app/check-in'); // CR-43: Check-in page for residents
   }
   if (['CaseManager', 'Intake', 'Admin'].includes(userRole)) routes.push('/app/staff-dashboard');
-  if (userRole === 'Admin') routes.push('/app/admin-panel');
+  
+  // Admin panel access - check both Admin role and isAdmin flag
+  if (userRole === 'Admin' || isAdmin) {
+    routes.push('/app/admin-panel');
+    routes.push('/app/admin');
+  }
   
   return routes;
 }
 
 // Filter sidebar items based on permissions
-export function filterSidebarItems(items: any[], userRole: UserRole): any[] {
-  const accessibleRoutes = getAccessibleRoutes(userRole);
+export function filterSidebarItems(items: any[], userRole: UserRole, isAdmin?: boolean): any[] {
+  const accessibleRoutes = getAccessibleRoutes(userRole, isAdmin);
   
   return items.filter(item => {
     if (item.href) {
