@@ -2668,6 +2668,14 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       // Prepare document IDs array
       const documentIds: string[] = [];
 
+      // Check if email already exists
+      if (formData.personalInfo.email) {
+        const existingUser = await storage.getUserByEmail(formData.personalInfo.email);
+        if (existingUser) {
+          return res.status(400).json({ message: 'A user with this email already exists' });
+        }
+      }
+
       // Create the resident in the database with full onboarding data
       const newResident = await storage.createResident({
         firstName: formData.personalInfo.firstName,
@@ -2715,7 +2723,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
         onboardingDocuments: documentIds, // Will be populated below
         onboardingCompletedAt: new Date(),
         onboardingCompletedBy: req.user.id,
-        caseManagerId: req.user.id,
+        caseManagerId: formData.personalInfo.caseManagerId || req.user.id,
         status: 'active',
         currentStage: 1,
         savings: 0
@@ -3280,6 +3288,111 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (error) {
       console.error('Users fetch error:', error);
       res.status(500).json({ message: 'Failed to fetch users' });
+    }
+  }));
+
+  // Case Manager Onboarding API
+  app.post('/api/case-managers/onboard', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const {
+        firstName,
+        lastName,
+        email,
+        phone,
+        department,
+        title,
+        startDate,
+        licenseNumber,
+        specializations,
+        caseloadCapacity,
+        supervisorId,
+        officeLocation,
+        emergencyContact,
+        certifications,
+        trainings,
+        availabilitySchedule,
+        languages,
+        backgroundCheckComplete,
+        fingerprintingComplete,
+        documentationComplete
+      } = req.body;
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already registered' });
+      }
+
+      // Generate temporary password
+      const tempPassword = `LifeHouse${Math.random().toString(36).slice(-8)}!`;
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+      // Create user with CaseManager role
+      const user = await storage.createUser({
+        name: `${firstName} ${lastName}`,
+        email,
+        passwordHash,
+        role: 'CaseManager'
+      });
+
+      // Create employee profile
+      const profile = {
+        userId: user.id,
+        role: 'CaseManager',
+        title: title || 'Case Manager',
+        startDate: startDate || new Date().toISOString(),
+        licenseNumber: licenseNumber || '',
+        department: department || 'Case Management',
+        supervisorId: supervisorId || null,
+        officeLocation: officeLocation || 'Main Office',
+        phone: phone || '',
+        emergencyContact: emergencyContact || {},
+        specializations: specializations || [],
+        caseloadCapacity: caseloadCapacity || 20,
+        currentCaseload: 0,
+        certifications: certifications || [],
+        trainings: trainings || [],
+        performanceReviews: [],
+        availabilitySchedule: availabilitySchedule || {},
+        languages: languages || ['English'],
+        notes: '',
+        backgroundCheckComplete: backgroundCheckComplete || false,
+        fingerprintingComplete: fingerprintingComplete || false,
+        documentationComplete: documentationComplete || false,
+        isActive: true
+      };
+
+      await storage.createEmployeeProfile(profile);
+
+      // Log audit entry
+      await storage.logAudit({
+        userId: req.user.id,
+        action: 'CREATE_CASE_MANAGER',
+        targetId: user.id,
+        targetType: 'user',
+        details: {
+          name: user.name,
+          email: user.email,
+          title: profile.title,
+          department: profile.department
+        }
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Case manager successfully onboarded',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          tempPassword // In production, this would be sent via secure email
+        },
+        profile
+      });
+    } catch (error) {
+      console.error('Case manager onboarding error:', error);
+      res.status(500).json({ message: 'Failed to onboard case manager' });
     }
   }));
 

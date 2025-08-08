@@ -1,0 +1,159 @@
+Goal: scaffold the *Case-Manager Onboarding Wizard* without breaking existing code.
+
+### Deliverables (one atomic commit)
+
+| # | Item | Path |
+|---|------|------|
+| 1 | **Prisma schema patch** | `/prisma/schema.prisma` |
+| 2 | **Migration SQL** (`YYYYMMDDHH_cm_onboard*`) | `/prisma/migrations/` |
+| 3 | **Seed script** (`seed_programs.ts`) for 9 Life House programs | `/prisma/seed/` |
+| 4 | **UI stubs** (`EsignCanvas.tsx`, `CaseloadAssign.tsx`, `WizardProgress.tsx`, `pages/onboard/cm/[token].tsx`) | `/client/src/...` |
+| 5 | **API route stubs** (`/pages/api/admin/onboard/*.ts`) | `/pages/api/...` |
+| 6 | **Empty Jest & Cypress shells** F-67, B-API-11, DB-11 | `/tests/` |
+| 7 | **Doc placeholders** (EmploymentAgreement.pdf, HIPAA_BAA.pdf, StaffRules.pdf, TechPolicy.pdf, MediaRelease.pdf, I-9.pdf, W-4.pdf) | `/docs/hr/` |
+
+### Data-model additions
+
+```prisma
+model EmployeeProfile {
+  id                Int      @id @default(autoincrement())
+  user              User     @relation(fields: [userId], references: [id])
+  userId            Int      @unique
+  roleTitle         String
+  startDate         DateTime
+  licenseNumber     String?
+  licenseExpiry     DateTime?
+  emergencyContact  String
+  bankRouting       String   @db.VarChar(9)
+  bankAccount       String   @db.VarChar(17)
+  w4Signed          Boolean  @default(false)
+  i9Signed          Boolean  @default(false)
+  bgCheckStatus     String   @default("pending")
+  createdAt         DateTime @default(now())
+}
+
+model CmResident { cmId Int; residentId Int; @@id([cmId, residentId]) }
+model CmProperty { cmId Int; propertyId Int; @@id([cmId, propertyId]) }
+Commit message
+scss
+Copy
+Edit
+feat(cm-onboard): add employee_profiles + wizard scaffolding
+
+BREAKING CHANGE: run `prisma migrate deploy`
+Output ONLY:
+
+less
+Copy
+Edit
+📦 Commit Ready
+Added: [...]
+Modified: [...]
+No tests, no npm i, no deployment.
+<<<PROMPT-1-END>>>
+
+yaml
+Copy
+Edit
+
+---
+
+## 2️⃣  PROMPT 2 – BUILD  → **Advanced Assistant**
+
+<<<PROMPT-2-START>>>
+
+Build Phase – Case-Manager Onboarding Wizard
+Brand Constants
+• Green #24B556 • Blue #4577F0 • Purple #9E45EF
+• Font: Montserrat / Inter
+
+Task Checklist (✓ when done)
+Run migrations → npx prisma migrate deploy.
+
+Seed programs with 9 codes (Life Design, One-on-One, Group, Financial Literacy, Credit, Business Coaching, Onboarding, Off Boarding, Other).
+
+API implementation
+
+POST /api/admin/onboard → creates inactive CM + token email (SendGrid test key).
+
+PATCH /api/admin/onboard/[token] → save step payload.
+
+POST /api/admin/onboard/finalize → checks required flags (w4Signed,i9Signed,bgCheckStatus==='clear'); sets user.active=true; Slack #help-tickets “🎉 CM Onboarding Complete”.
+
+Wizard UI (8 screens)
+
+Personal Info
+
+Credentials & License
+
+Tax & Banking (encrypt bank data)
+
+Background-Check consent + PDF upload
+
+E-Sign Packet (multi-tab EsignCanvas) – EmploymentAgreement, HIPAA_BAA, StaffRules, TechPolicy, MediaRelease, I-9, W-4, plus front/back ID images + selfie.
+
+Emergency Contact
+
+Assign Caseload (multiselect Residents & Properties; store in cm_residents/cm_properties)
+
+Review & Submit
+
+Access control – CM cannot login until active=true.
+
+Storage – Upload PDFs & images to DigitalOcean Spaces lifehouse.sfo3…; store URLs in employee_profiles.
+
+Reporting – expose /reports/employeeCsv & /employeePdf.
+
+Tests
+
+F-67 wizard happy-path => active=true, Slack mock called.
+
+B-API-11 finalize without I-9 ⇒ 400.
+
+DB-11 employee_profiles row exists.
+Update counts → 128/128 tests.
+
+Cost guardrail – OpenAI ≤ $0.50 (GPT-4 used only for Case-Note AI).
+
+Real-time messaging & notifications untouched (existing Socket.io).
+
+Run npm run lint && npm test && npm run cypress:ci.
+On success print:
+
+nginx
+Copy
+Edit
+BUILD COMPLETE – 0 errors
+Otherwise list failing step(s).
+<<<PROMPT-2-END>>>
+
+yaml
+Copy
+Edit
+
+---
+
+## 3️⃣  PROMPT 3 – QA / CLEAN  → **Advanced Assistant**
+
+<<<PROMPT-3-START>>>
+
+QA + Clean – Case-Manager Onboarding Wizard
+Purge mock data (truncate non-admin rows).
+
+Run full suite – expect 128/128 tests, 0 high vulns, cost ≤ $0.50.
+
+Live smoke
+• Admin creates CM token → finish wizard → login works.
+• Assign two residents & one property during step 7.
+• Slack & welcome email arrive (use mocks).
+• Export employee CSV & PDF – openable.
+
+Artifacts → /artifacts/cm_onboarding/ (schema dump, jest, cypress, zap, cost_report).
+
+Output exactly:
+
+scss
+Copy
+Edit
+QA PASS ✅ (128/128 tests)
+or failure table.

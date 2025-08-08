@@ -21,11 +21,13 @@ import {
   Home,
   Wrench,
   Activity,
-  UserPlus
+  UserPlus,
+  Briefcase
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { CaseManagerOnboarding } from "@/components/case-manager-onboarding";
 import { MessageChat } from "@/components/message-chat";
 import { ComposeMessage } from "@/components/compose-message";
 
@@ -96,6 +98,7 @@ export function StaffDashboard() {
   const [activeTab, setActiveTab] = useState<'notifications' | 'messages'>('notifications');
   const [showOverdueModal, setShowOverdueModal] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showCaseManagerOnboarding, setShowCaseManagerOnboarding] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [showComposeMessage, setShowComposeMessage] = useState(false);
 
@@ -523,7 +526,7 @@ export function StaffDashboard() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
               <Button 
                 variant="outline" 
                 className="h-20 flex flex-col items-center justify-center"
@@ -548,6 +551,17 @@ export function StaffDashboard() {
                 <UserPlus className="w-6 h-6 mb-2" />
                 <span>Onboard Resident</span>
               </Button>
+              {/* Show Case Manager Onboarding for Admin users */}
+              {localStorage.getItem('userRole') === 'Admin' && (
+                <Button 
+                  variant="outline" 
+                  className="h-20 flex flex-col items-center justify-center"
+                  onClick={() => setShowCaseManagerOnboarding(true)}
+                >
+                  <Briefcase className="w-6 h-6 mb-2" />
+                  <span>Onboard Case Manager</span>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -619,6 +633,20 @@ export function StaffDashboard() {
       <ComposeMessage
         isOpen={showComposeMessage}
         onClose={() => setShowComposeMessage(false)}
+      />
+
+      {/* Case Manager Onboarding Modal */}
+      <CaseManagerOnboarding
+        isOpen={showCaseManagerOnboarding}
+        onClose={() => setShowCaseManagerOnboarding(false)}
+        onComplete={() => {
+          toast({
+            title: "Case Manager Onboarded",
+            description: "New case manager has been successfully added."
+          });
+          setShowCaseManagerOnboarding(false);
+          queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+        }}
       />
     </div>
   );

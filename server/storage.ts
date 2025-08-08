@@ -87,6 +87,9 @@ export interface IStorage {
   createResidentProfile(profile: InsertResidentProfile): Promise<ResidentProfile>;
   updateResidentProfile(id: string, updates: Partial<ResidentProfile>): Promise<ResidentProfile>;
 
+  // Employee operations
+  createEmployeeProfile(profile: any): Promise<any>;
+
   // Referral operations
   getReferrals(filters?: { status?: string }): Promise<Referral[]>;
   createReferral(referral: InsertReferral): Promise<Referral>;
@@ -283,6 +286,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(residentProfiles.id, id))
       .returning();
     return updated;
+  }
+
+  // Employee operations
+  async createEmployeeProfile(profile: any): Promise<any> {
+    // For now, store employee profile in memory
+    // In production, this would be stored in employee_profiles table
+    const employeeProfile = {
+      id: `emp_${Date.now()}`,
+      ...profile,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    // Store in memory for this session
+    if (!(this as any).employeeProfiles) {
+      (this as any).employeeProfiles = [];
+    }
+    (this as any).employeeProfiles.push(employeeProfile);
+    
+    return employeeProfile;
   }
 
   // Create new resident (for onboarding wizard)
