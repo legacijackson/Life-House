@@ -43,34 +43,27 @@ const residentNavigation = [
   { name: "Messages", href: "/app/messages", icon: MessageSquare },
 ];
 
-// Case Worker (Staff) navigation
-const caseWorkerNavigation = [
+// Staff navigation (for case workers)
+const staffNavigation = [
   { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
-  { name: "Residents", href: "/app/residents", icon: Users },
-  { name: "Intake", href: "/app/intake", icon: UserPlus },
-  { name: "Referrals", href: "/app/referrals", icon: ExternalLink },
+  { name: "Intake and Referrals", href: "/app/intake", icon: UserPlus },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Resources", href: "/app/resources", icon: Archive },
-  { name: "Properties", href: "/app/properties", icon: Building },
   { name: "Maintenance", href: "/app/maintenance", icon: Building },
-  { name: "Reports", href: "/app/reports", icon: BarChart3 },
 ];
 
-// Admin navigation
+// Admin navigation (includes all staff items plus admin panel)
 const adminNavigation = [
-  { name: "Admin Dashboard", href: "/app/admin-panel", icon: Home },
-  { name: "Residents", href: "/app/residents", icon: Users },
-  { name: "Intake", href: "/app/intake", icon: UserPlus },
-  { name: "Referrals", href: "/app/referrals", icon: ExternalLink },
+  { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
+  { name: "Intake and Referrals", href: "/app/intake", icon: UserPlus },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Resources", href: "/app/resources", icon: Archive },
-  { name: "Properties", href: "/app/properties", icon: Building },
   { name: "Maintenance", href: "/app/maintenance", icon: Building },
-  { name: "Reports", href: "/app/reports", icon: BarChart3 },
-  { name: "CRM", href: "/app/crm", icon: Users },
-  { name: "DONOR", href: "/app/donor", icon: DollarSign },
+  { name: "Admin Panel", href: "/app/admin-panel", icon: Settings },
 ];
 
 interface UniversalSidebarProps {
@@ -161,26 +154,21 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
     const userRole = (user as any)?.role;
     const isAdmin = (user as any)?.isAdmin;
     
-    // If user has admin access, show admin navigation
-    if (isAdmin) {
-      navigation = [...caseWorkerNavigation];
-      // Add Admin Panel link at the beginning for admin users
-      navigation.unshift({ name: "Admin Panel", href: "/app/admin-panel", icon: Settings });
-    } else {
-      switch (userRole) {
-        case 'Admin':
-          navigation = adminNavigation;
-          break;
-        case 'CaseManager':
-        case 'Intake':
-          navigation = caseWorkerNavigation;
-          break;
-        case 'Resident':
-          navigation = residentNavigation;
-          break;
-        default:
-          navigation = publicNavigation;
-      }
+    // Check role and admin status
+    switch (userRole) {
+      case 'CaseManager':
+      case 'Intake':
+        // If case manager has admin privileges, show admin navigation
+        navigation = isAdmin ? adminNavigation : staffNavigation;
+        break;
+      case 'Resident':
+        navigation = residentNavigation;
+        break;
+      case 'Admin':
+        navigation = adminNavigation;
+        break;
+      default:
+        navigation = publicNavigation;
     }
   }
 
@@ -233,7 +221,12 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
               <p className="text-sm font-medium text-gray-900">
                 {(user as any)?.name || (user as any)?.email}
               </p>
-              <p className="text-xs text-gray-500">{(user as any)?.role || 'User'}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-500">{(user as any)?.role || 'User'}</p>
+                {(user as any)?.isAdmin && (
+                  <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Admin</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -298,39 +291,6 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
             );
           })}
         </ul>
-
-        {/* Portal Access for Authenticated Users */}
-        {isAuthenticatedPage && user && (
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="px-3 py-2">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Portal Features</p>
-            </div>
-            <ul className="mt-2 space-y-2">
-              <li>
-                <Link href="/app/resident-portal">
-                  <span 
-                    className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
-                    onClick={isMobile ? closeSidebar : undefined}
-                  >
-                    <Users className="w-5 h-5 mr-3" />
-                    Resident Portal
-                  </span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/app/staff-dashboard">
-                  <span 
-                    className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors cursor-pointer"
-                    onClick={isMobile ? closeSidebar : undefined}
-                  >
-                    <BarChart3 className="w-5 h-5 mr-3" />
-                    Staff Dashboard
-                  </span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-        )}
       </nav>
 
       {/* Bottom Actions */}
