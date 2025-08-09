@@ -536,7 +536,12 @@ class PerformanceAuditor {
 
   async checkCommand(command) {
     try {
-      await this.runCommand('which', [command.split(' ')[0]]);
+      // Extract command name and validate it contains only safe characters
+      const commandName = command.split(' ')[0];
+      if (!/^[a-zA-Z0-9._-]+$/.test(commandName)) {
+        throw new Error('Invalid command name');
+      }
+      await this.runCommand('which', [commandName]);
       return true;
     } catch {
       return false;
