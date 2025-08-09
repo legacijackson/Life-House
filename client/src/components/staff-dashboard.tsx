@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { STOPTouchPointCounter } from "@/components/stop-touchpoint-counter";
 import { 
   Users, 
@@ -101,6 +104,10 @@ export function StaffDashboard() {
   const [showCaseManagerOnboarding, setShowCaseManagerOnboarding] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [showComposeMessage, setShowComposeMessage] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [showResidentDetails, setShowResidentDetails] = useState(false);
+  const [selectedResidentDetails, setSelectedResidentDetails] = useState<any>(null);
+  const [pendingAttendanceRequests, setPendingAttendanceRequests] = useState<any[]>([]);
 
   // Staff dashboard stats
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery<StaffDashboardData>({
@@ -110,6 +117,11 @@ export function StaffDashboard() {
   // Residents assigned to this case manager
   const { data: residents } = useQuery<Resident[]>({
     queryKey: ['/api/staff/residents'],
+  });
+
+  // Get pending attendance requests
+  const { data: attendanceRequests } = useQuery<any[]>({
+    queryKey: ['/api/staff/attendance-requests'],
   });
 
   // PDF generation mutation
@@ -165,6 +177,78 @@ export function StaffDashboard() {
       toast({
         title: "Report Generation Failed", 
         description: "Unable to generate monthly report. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete notification mutation
+  const deleteNotificationMutation = useMutation({
+    mutationFn: async (notificationId: string) => {
+      return apiRequest(`/api/notifications/${notificationId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/staff/dashboard'] });
+      toast({
+        title: "Notification Deleted",
+        description: "The notification has been removed."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "Unable to delete notification. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Approve attendance request mutation
+  const approveAttendanceMutation = useMutation({
+    mutationFn: async ({ requestId, approved }: { requestId: string; approved: boolean }) => {
+      return apiRequest(`/api/staff/attendance-requests/${requestId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ approved }),
+      });
+    },
+    onSuccess: (_, { approved }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/staff/attendance-requests'] });
+      toast({
+        title: approved ? "Attendance Approved" : "Attendance Declined",
+        description: approved ? "The attendance request has been approved." : "The attendance request has been declined."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Unable to update attendance request. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update resident details mutation
+  const updateResidentDetailsMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest(`/api/residents/${data.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/staff/residents'] });
+      toast({
+        title: "Resident Updated",
+        description: "Resident details have been updated successfully."
+      });
+      setShowResidentDetails(false);
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Unable to update resident details. Please try again.",
         variant: "destructive"
       });
     }
@@ -333,9 +417,19 @@ export function StaffDashboard() {
                             <p className="text-sm font-medium">{notification.message}</p>
                             <p className="text-xs text-gray-500 mt-1">{notification.timestamp}</p>
                           </div>
-                          {!notification.read && (
-                            <Badge className="bg-blue-500 text-white ml-2">New</Badge>
-                          )}
+                          <div className="flex items-center space-x-2">
+                            {!notification.read && (
+                              <Badge className="bg-blue-500 text-white">New</Badge>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteNotificationMutation.mutate(notification.id)}
+                              disabled={deleteNotificationMutation.isPending}
+                            >
+                              <span className="text-red-500">×</span>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -397,7 +491,11 @@ export function StaffDashboard() {
               <div className="space-y-3 max-h-[300px] overflow-y-auto">
                 {dashboardData?.upcomingEvents?.length ? (
                   dashboardData.upcomingEvents.map(event => (
-                    <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                    <div 
+                      key={event.id} 
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setSelectedEvent(event)}
+                    >
                       <div className="flex-1">
                         <p className="text-sm font-medium">{event.title}</p>
                         <p className="text-xs text-gray-600">{event.residentName}</p>
@@ -428,50 +526,63 @@ export function StaffDashboard() {
             <CardContent>
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
                 {residents?.map(resident => (
-                  <div key={resident.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                    <div className="flex-1">
-                      <h4 className="font-medium">{resident.name}</h4>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <span>Stage {resident.currentStage}</span>
-                        <span>Last contact: {resident.lastContact}</span>
-                        {resident.savings && (
-                          <span className="text-green-600">${resident.savings} saved</span>
+                  <div key={resident.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                    <div 
+                      className="flex items-center justify-between cursor-pointer"
+                      onClick={() => {
+                        setSelectedResidentDetails(resident);
+                        setShowResidentDetails(true);
+                      }}
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium">{resident.name}</h4>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <span>Stage {resident.currentStage}</span>
+                          <span>Last contact: {resident.lastContact}</span>
+                          {resident.savings && (
+                            <span className="text-green-600">${resident.savings} saved</span>
+                          )}
+                        </div>
+                        {resident.upcomingEvents > 0 && (
+                          <Badge variant="outline" className="mt-1">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {resident.upcomingEvents} upcoming
+                          </Badge>
                         )}
                       </div>
-                      {resident.upcomingEvents > 0 && (
-                        <Badge variant="outline" className="mt-1">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {resident.upcomingEvents} upcoming
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-2">
                       <Badge 
                         variant={resident.status === 'Active' ? 'default' : 'secondary'}
                         className={resident.status === 'Active' ? 'bg-green-100 text-green-800' : ''}
                       >
                         {resident.status}
                       </Badge>
-                      <div className="flex flex-col space-y-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleGeneratePDF(resident.id, 'consent')}
-                          disabled={generatePDFMutation.isPending}
-                        >
-                          <FileText className="w-3 h-3 mr-1" />
-                          Consent PDF
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleGeneratePDF(resident.id, 'handbook')}
-                          disabled={generatePDFMutation.isPending}
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          Handbook PDF
-                        </Button>
-                      </div>
+                    </div>
+                    <div className="flex space-x-2 mt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGeneratePDF(resident.id, 'consent');
+                        }}
+                        disabled={generatePDFMutation.isPending}
+                      >
+                        <FileText className="w-3 h-3 mr-1" />
+                        Consent PDF
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowOnboardingModal(true);
+                        }}
+                      >
+                        <UserPlus className="w-3 h-3 mr-1" />
+                        Onboarding Form
+                      </Button>
                     </div>
                   </div>
                 )) || (
@@ -648,6 +759,266 @@ export function StaffDashboard() {
           queryClient.invalidateQueries({ queryKey: ['/api/users'] });
         }}
       />
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Event Details</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedEvent(null)}
+                >
+                  <span className="text-2xl">&times;</span>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[calc(90vh-100px)]">
+              <div className="space-y-4 mt-4">
+                <div>
+                  <Label className="font-semibold">Event Title</Label>
+                  <p className="mt-1">{selectedEvent.title}</p>
+                </div>
+                <div>
+                  <Label className="font-semibold">Event Type</Label>
+                  <Badge variant="outline" className="mt-1">{selectedEvent.type}</Badge>
+                </div>
+                <div>
+                  <Label className="font-semibold">Resident</Label>
+                  <p className="mt-1">{selectedEvent.residentName}</p>
+                </div>
+                <div>
+                  <Label className="font-semibold">Date & Time</Label>
+                  <p className="mt-1">{selectedEvent.datetime}</p>
+                </div>
+                {selectedEvent.location && (
+                  <div>
+                    <Label className="font-semibold">Location</Label>
+                    <p className="mt-1">{selectedEvent.location}</p>
+                  </div>
+                )}
+                {selectedEvent.description && (
+                  <div>
+                    <Label className="font-semibold">Description</Label>
+                    <p className="mt-1 whitespace-pre-wrap">{selectedEvent.description}</p>
+                  </div>
+                )}
+                {selectedEvent.notes && (
+                  <div>
+                    <Label className="font-semibold">Notes</Label>
+                    <p className="mt-1 whitespace-pre-wrap">{selectedEvent.notes}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Resident Details Modal */}
+      {showResidentDetails && selectedResidentDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden">
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Resident Information</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowResidentDetails(false)}
+                >
+                  <span className="text-2xl">&times;</span>
+                </Button>
+              </div>
+              <CardDescription>
+                {localStorage.getItem('userRole') === 'Admin' ? 'Edit resident details (Admin only)' : 'View resident details'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[calc(90vh-100px)]">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (localStorage.getItem('userRole') === 'Admin') {
+                  const formData = new FormData(e.currentTarget);
+                  updateResidentDetailsMutation.mutate({
+                    id: selectedResidentDetails.id,
+                    progressScore: formData.get('progressScore'),
+                    moneySaved: formData.get('moneySaved'),
+                    programComplianceRating: formData.get('programComplianceRating'),
+                    attendanceRate: formData.get('attendanceRate'),
+                    goalsCompleted: formData.get('goalsCompleted'),
+                  });
+                }
+              }} className="space-y-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Name</Label>
+                    <Input 
+                      id="name" 
+                      defaultValue={selectedResidentDetails.name} 
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input 
+                      id="email" 
+                      defaultValue={selectedResidentDetails.email} 
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="currentStage">Current Stage</Label>
+                    <Input 
+                      id="currentStage" 
+                      defaultValue={selectedResidentDetails.currentStage} 
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Input 
+                      id="status" 
+                      defaultValue={selectedResidentDetails.status} 
+                      disabled
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-3">Progress Metrics {localStorage.getItem('userRole') === 'Admin' && '(Editable)'}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="progressScore">Progress Score</Label>
+                      <Input 
+                        id="progressScore"
+                        name="progressScore"
+                        type="number"
+                        min="0"
+                        max="100"
+                        defaultValue={selectedResidentDetails.progressScore || 0}
+                        disabled={localStorage.getItem('userRole') !== 'Admin'}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="moneySaved">Money Saved ($)</Label>
+                      <Input 
+                        id="moneySaved"
+                        name="moneySaved"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={selectedResidentDetails.savings || 0}
+                        disabled={localStorage.getItem('userRole') !== 'Admin'}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="programComplianceRating">Program Compliance Rating (%)</Label>
+                      <Input 
+                        id="programComplianceRating"
+                        name="programComplianceRating"
+                        type="number"
+                        min="0"
+                        max="100"
+                        defaultValue={selectedResidentDetails.programComplianceRating || 0}
+                        disabled={localStorage.getItem('userRole') !== 'Admin'}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="attendanceRate">Attendance Rate (%)</Label>
+                      <Input 
+                        id="attendanceRate"
+                        name="attendanceRate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        defaultValue={selectedResidentDetails.attendanceRate || 0}
+                        disabled={localStorage.getItem('userRole') !== 'Admin'}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="goalsCompleted">Goals Completed</Label>
+                      <Input 
+                        id="goalsCompleted"
+                        name="goalsCompleted"
+                        type="number"
+                        min="0"
+                        defaultValue={selectedResidentDetails.goalsCompleted || 0}
+                        disabled={localStorage.getItem('userRole') !== 'Admin'}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {localStorage.getItem('userRole') === 'Admin' && (
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setShowResidentDetails(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={updateResidentDetailsMutation.isPending}>
+                      {updateResidentDetailsMutation.isPending ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </div>
+                )}
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Attendance Approval Section */}
+      {attendanceRequests && attendanceRequests.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-40">
+          <Card className="w-96">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span className="flex items-center">
+                  <Clock className="w-4 h-4 mr-2 text-orange-600" />
+                  Pending Attendance Requests
+                </span>
+                <Badge className="bg-orange-500 text-white">{attendanceRequests.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="max-h-60 overflow-y-auto">
+              <div className="space-y-2">
+                {attendanceRequests.slice(0, 3).map((request: any) => (
+                  <div key={request.id} className="p-2 border rounded-lg bg-orange-50">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{request.residentName}</p>
+                        <p className="text-xs text-gray-600">{request.eventType}</p>
+                        <p className="text-xs text-gray-500">{request.datetime}</p>
+                      </div>
+                      <div className="flex space-x-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-green-600"
+                          onClick={() => approveAttendanceMutation.mutate({ requestId: request.id, approved: true })}
+                          disabled={approveAttendanceMutation.isPending}
+                        >
+                          ✓
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600"
+                          onClick={() => approveAttendanceMutation.mutate({ requestId: request.id, approved: false })}
+                          disabled={approveAttendanceMutation.isPending}
+                        >
+                          ✗
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

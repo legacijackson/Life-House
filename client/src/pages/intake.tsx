@@ -18,7 +18,6 @@ import {
   Clock, 
   CheckCircle, 
   AlertCircle, 
-  Bed,
   FileText,
   UserPlus
 } from 'lucide-react';
@@ -76,7 +75,10 @@ export default function Intake() {
 
   const updateReferralMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Referral> }) => {
-      return apiRequest(`/api/referrals/${id}`, 'PATCH', data);
+      return apiRequest(`/api/referrals/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/referrals'] });
@@ -96,7 +98,10 @@ export default function Intake() {
 
   const createResidentMutation = useMutation({
     mutationFn: async (referralId: string) => {
-      return apiRequest('/api/intake/create-resident', 'POST', { referralId });
+      return apiRequest('/api/intake/create-resident', {
+        method: 'POST',
+        body: JSON.stringify({ referralId }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/referrals'] });
@@ -169,8 +174,8 @@ export default function Intake() {
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList>
           <TabsTrigger value="referrals">Referrals Queue</TabsTrigger>
-          <TabsTrigger value="beds">Bed Assignment</TabsTrigger>
-          <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+          <TabsTrigger value="in_progress">In Progress</TabsTrigger>
+          <TabsTrigger value="closed">Closed</TabsTrigger>
         </TabsList>
 
         <TabsContent value="referrals" className="space-y-6">
@@ -368,69 +373,181 @@ export default function Intake() {
           )}
         </TabsContent>
 
-        <TabsContent value="beds" className="space-y-6">
+        <TabsContent value="in_progress" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Bed className="w-5 h-5 mr-2" />
-                Bed Assignment
+                <Clock className="w-5 h-5 mr-2" />
+                In Progress
               </CardTitle>
               <CardDescription>
-                Manage property occupancy and assign beds to residents
+                Applications currently being processed (In Review, Waitlist, and In Progress)
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {properties?.map((property) => (
-                  <Card key={property.id}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">{property.address}</CardTitle>
-                      <CardDescription className="text-xs">
-                        {property.city}, {property.state}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Bedrooms:</span>
-                          <span>{property.bedrooms}</span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* In Review Column */}
+                <div>
+                  <h3 className="font-medium text-sm mb-3 flex items-center">
+                    <Clock className="w-4 h-4 mr-2 text-yellow-600" />
+                    In Review ({referralsByStatus.in_review.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {referralsByStatus.in_review.map((referral) => (
+                      <Card key={referral.id} className="p-3 cursor-pointer hover:bg-gray-50"
+                            onClick={() => setSelectedReferral(referral)}>
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{referral.basicResidentInfo.name}</div>
+                          <div className="text-xs text-gray-500">{referral.referrerOrg}</div>
+                          <Badge className={getStatusBadgeColor(referral.status)} variant="secondary">
+                            {referral.status.replace('_', ' ')}
+                          </Badge>
+                          <Button size="sm" className="w-full mt-2" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCreateResident(referral.id);
+                                  }}>
+                            <UserPlus className="w-3 h-3 mr-1" />
+                            Begin Onboarding
+                          </Button>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Total Beds:</span>
-                          <span>{property.bedsTotal}</span>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Waitlist Column */}
+                <div>
+                  <h3 className="font-medium text-sm mb-3 flex items-center">
+                    <Clock className="w-4 h-4 mr-2 text-orange-600" />
+                    Waitlist ({referralsByStatus.waitlist.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {referralsByStatus.waitlist.map((referral) => (
+                      <Card key={referral.id} className="p-3 cursor-pointer hover:bg-gray-50"
+                            onClick={() => setSelectedReferral(referral)}>
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{referral.basicResidentInfo.name}</div>
+                          <div className="text-xs text-gray-500">{referral.referrerOrg}</div>
+                          <Badge className={getStatusBadgeColor(referral.status)} variant="secondary">
+                            {referral.status.replace('_', ' ')}
+                          </Badge>
+                          <Button size="sm" className="w-full mt-2" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCreateResident(referral.id);
+                                  }}>
+                            <UserPlus className="w-3 h-3 mr-1" />
+                            Begin Onboarding
+                          </Button>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Available:</span>
-                          <span className={property.bedsAvailable > 0 ? 'text-green-600' : 'text-red-600'}>
-                            {property.bedsAvailable}
-                          </span>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                {/* New Applications */}
+                <div>
+                  <h3 className="font-medium text-sm mb-3 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-2 text-blue-600" />
+                    New ({referralsByStatus.new.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {referralsByStatus.new.map((referral) => (
+                      <Card key={referral.id} className="p-3 cursor-pointer hover:bg-gray-50"
+                            onClick={() => setSelectedReferral(referral)}>
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{referral.basicResidentInfo.name}</div>
+                          <div className="text-xs text-gray-500">{referral.referrerOrg}</div>
+                          <Badge className={getStatusBadgeColor(referral.status)} variant="secondary">
+                            {referral.status.replace('_', ' ')}
+                          </Badge>
+                          <Button size="sm" className="w-full mt-2" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCreateResident(referral.id);
+                                  }}>
+                            <UserPlus className="w-3 h-3 mr-1" />
+                            Begin Onboarding
+                          </Button>
                         </div>
-                        <Button size="sm" className="w-full mt-2" disabled={property.bedsAvailable === 0}>
-                          Assign Bed
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="onboarding" className="space-y-6">
+        <TabsContent value="closed" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <FileText className="w-5 h-5 mr-2" />
-                Onboarding Checklist
+                Closed Applications
               </CardTitle>
               <CardDescription>
-                Track onboarding progress for new residents
+                Accepted and declined intake forms
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                Select a resident to view their onboarding checklist
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Accepted Column */}
+                <div>
+                  <h3 className="font-medium text-sm mb-3 flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                    Accepted ({referralsByStatus.accepted.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {referralsByStatus.accepted.map((referral) => (
+                      <Card key={referral.id} className="p-3 cursor-pointer hover:bg-gray-50"
+                            onClick={() => setSelectedReferral(referral)}>
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{referral.basicResidentInfo.name}</div>
+                          <div className="text-xs text-gray-500">{referral.referrerOrg}</div>
+                          <Badge className={getStatusBadgeColor(referral.status)} variant="secondary">
+                            {referral.status.replace('_', ' ')}
+                          </Badge>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Accepted on: {new Date(referral.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                    {referralsByStatus.accepted.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">No accepted applications</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Declined Column */}
+                <div>
+                  <h3 className="font-medium text-sm mb-3 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-2 text-red-600" />
+                    Declined ({referralsByStatus.declined.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {referralsByStatus.declined.map((referral) => (
+                      <Card key={referral.id} className="p-3 cursor-pointer hover:bg-gray-50"
+                            onClick={() => setSelectedReferral(referral)}>
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{referral.basicResidentInfo.name}</div>
+                          <div className="text-xs text-gray-500">{referral.referrerOrg}</div>
+                          <Badge className={getStatusBadgeColor(referral.status)} variant="secondary">
+                            {referral.status.replace('_', ' ')}
+                          </Badge>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Declined on: {new Date(referral.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                    {referralsByStatus.declined.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">No declined applications</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
