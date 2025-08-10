@@ -31,7 +31,7 @@ const publicNavigation = [
   { name: "Apply", href: "/apply", icon: FileText },
   { name: "Refer", href: "/refer", icon: Users },
   { name: "Donate", href: "/donate", icon: Heart },
-  { name: "Contact", href: "#contact", icon: Phone },
+  { name: "Contact", href: "https://lifehousereentry.com/#contact", icon: Phone },
 ];
 
 // Resident navigation
@@ -273,6 +273,28 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
                     <item.icon className="w-5 h-5 mr-3" />
                     {item.name}
                   </button>
+                </li>
+              );
+            }
+
+            // Handle external URLs
+            if (item.href.startsWith('http')) {
+              return (
+                <li key={item.name}>
+                  <a 
+                    href={item.href} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer",
+                      "text-gray-700 hover:text-green-700 hover:bg-green-50"
+                    )}
+                    onClick={handleClick}
+                  >
+                    <item.icon className="w-5 h-5 mr-3" />
+                    {item.name}
+                    <ExternalLink className="w-3 h-3 ml-auto" />
+                  </a>
                 </li>
               );
             }
