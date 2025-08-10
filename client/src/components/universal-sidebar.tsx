@@ -31,7 +31,6 @@ const publicNavigation = [
   { name: "Apply", href: "/apply", icon: FileText },
   { name: "Refer", href: "/refer", icon: Users },
   { name: "Donate", href: "/donate", icon: Heart },
-  { name: "Contact", href: "https://lifehousereentry.com/#contact", icon: Phone },
 ];
 
 // Resident navigation
