@@ -249,8 +249,8 @@ class PerformanceAuditor {
             }
           });
           
-          // Add small delay between requests
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Add small delay between requests - removed await since this is not in async context
+          new Promise(resolve => setTimeout(resolve, 100));
         }
       }
       

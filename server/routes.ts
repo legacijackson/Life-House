@@ -2679,7 +2679,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       // Delete profile first
       if (userToDelete.role === 'Resident') {
         await db.delete(residentProfiles).where(eq(residentProfiles.userId, userId));
-      } else if (userToDelete.role === 'CaseManager' || userToDelete.role === 'Admin') {
+      } else if (userToDelete.role === 'CaseManager') {
         await db.delete(employeeProfiles).where(eq(employeeProfiles.userId, userId));
       }
 
@@ -2708,7 +2708,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
       let profile = null;
       if (user.role === 'Resident') {
         [profile] = await db.select().from(residentProfiles).where(eq(residentProfiles.userId, userId));
-      } else if (user.role === 'CaseManager' || user.role === 'Admin') {
+      } else if (user.role === 'CaseManager') {
         [profile] = await db.select().from(employeeProfiles).where(eq(employeeProfiles.userId, userId));
       }
 
@@ -3614,7 +3614,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
           email: user.email,
           role: user.role,
         })),
-        ...residents.map((resident: User) => ({
+        ...residents.map((resident: any) => ({
           id: resident.id,
           name: resident.name,
           email: resident.email,
