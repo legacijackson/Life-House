@@ -126,7 +126,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
       role: user.role,
       name: user.name || 'Unknown User',
       email: user.email || '',
-      isAdmin: user.is_admin || false
+      isAdmin: user.isAdmin || false
     };
     return next();
   } catch (error) {
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: user.id, 
           role: user.role,
           email: user.email,
-          isAdmin: user.is_admin || false
+          isAdmin: user.isAdmin || false
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -376,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: user.name,
           email: user.email,
           role: user.role,
-          isAdmin: user.is_admin || false
+          isAdmin: user.isAdmin || false
         },
       });
     } catch (error) {
@@ -436,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: user.id, 
           role: user.role,
           email: user.email,
-          isAdmin: user.is_admin || false
+          isAdmin: user.isAdmin || false
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -451,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: user.name,
           email: user.email,
           role: user.role,
-          isAdmin: user.is_admin || false
+          isAdmin: user.isAdmin || false
         },
       });
     } catch (error) {
@@ -2741,7 +2741,7 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
           })
           .where(eq(residentProfiles.userId, userId))
           .returning();
-      } else if (user.role === 'CaseManager' || user.is_admin) {
+      } else if (user.role === 'CaseManager' || user.isAdmin) {
         [updatedProfile] = await db.update(employeeProfiles)
           .set({
             ...profileData,
