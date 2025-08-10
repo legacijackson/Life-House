@@ -10,7 +10,7 @@ import { PartnerSignupModal } from "@/components/partner-signup-modal";
 import { ProgramOverviewModal } from "@/components/program-overview-modal";
 
 import { LifeHousePrograms } from "@/components/life-house-programs";
-import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock } from "lucide-react";
+import { Home, Users, Target, Heart, FileText, Phone, TrendingUp, Shield, DollarSign, Clock, Menu, X } from "lucide-react";
 
 import _3 from "@assets/3.png";
 import lifeHouseLogo from "@assets/image_1753975873459.png";
@@ -24,6 +24,7 @@ export default function Landing() {
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
   const [isProgramOverviewModalOpen, setIsProgramOverviewModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-cream-50" style={{ background: 'linear-gradient(to bottom, #f0fdf4, #fffaeb)' }}>
