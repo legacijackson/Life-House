@@ -323,21 +323,12 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <Button 
-              onClick={() => window.location.href = '/apply'}
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
-            >
-              Apply Now
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => window.location.href = '/app'}
-              className="w-full border-green-600 text-green-600 hover:bg-green-50"
-            >
-              Staff Login
-            </Button>
-          </div>
+          <Button 
+            onClick={() => window.location.href = '/apply'}
+            className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
+          >
+            Apply Now
+          </Button>
         )}
       </div>
     </aside>
