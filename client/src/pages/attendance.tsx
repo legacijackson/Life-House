@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -433,11 +433,17 @@ export default function Attendance() {
                             <h4 className="text-sm font-medium text-gray-700 mb-2">Attendance Info</h4>
                             <div className="space-y-2">
                               <Badge className={getStatusColor(selectedRecord.status)}>
-                                {React.createElement(getStatusIcon(selectedRecord.status), { className: "w-3 h-3 mr-1" })}
+                                {(() => {
+                                  const Icon = getStatusIcon(selectedRecord.status);
+                                  return <Icon className="w-3 h-3 mr-1" />;
+                                })()}
                                 {selectedRecord.status}
                               </Badge>
                               <Badge className={getSessionTypeColor(selectedRecord.sessionType)}>
-                                {React.createElement(getSessionTypeIcon(selectedRecord.sessionType), { className: "w-3 h-3 mr-1" })}
+                                {(() => {
+                                  const Icon = getSessionTypeIcon(selectedRecord.sessionType);
+                                  return <Icon className="w-3 h-3 mr-1" />;
+                                })()}
                                 {selectedRecord.sessionType.replace('_', ' ')}
                               </Badge>
                             </div>

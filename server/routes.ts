@@ -794,6 +794,73 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
     }
   }));
 
+  // Get report for viewing (same as download for now)
+  app.get('/api/reports/:id/view', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const reportId = req.params.id;
+      
+      // For demo purposes, return a mock PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="report.pdf"');
+      
+      // Return a simple PDF-like response for demo
+      const pdfContent = `%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+100 700 Td
+(Life House Report) Tj
+ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000207 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+296
+%%EOF`;
+      
+      res.send(Buffer.from(pdfContent));
+    } catch (error) {
+      console.error('Error viewing report:', error);
+      res.status(500).json({ message: 'Failed to view report' });
+    }
+  }));
+
   app.get('/api/reports/:id/download', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;

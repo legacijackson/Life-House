@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-
-
 import { ReferResidentModal } from "@/components/refer-resident-modal";
+import { CaseNoteModal } from "@/components/case-note-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -461,7 +460,7 @@ export default function Residents() {
                         onClick={() => setShowCaseNotesModal(true)}
                       >
                         <FileText className="w-4 h-4 mr-2" />
-                        View Case Notes
+                        Case Notes
                       </Button>
                       <Button 
                         size="sm" 
@@ -503,128 +502,17 @@ export default function Residents() {
 
         {/* Case Notes Modal */}
         {selectedResident && (
-          <Dialog open={showCaseNotesModal} onOpenChange={setShowCaseNotesModal}>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Case Notes - {selectedResident.name}</DialogTitle>
-                <DialogDescription>
-                  View and add case notes for this resident
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-6">
-                {/* Add New Case Note Section */}
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <h3 className="text-sm font-semibold mb-4">Add New Case Note</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="note-type">Note Type</Label>
-                        <select
-                          id="note-type"
-                          className="w-full rounded-md border border-gray-300 p-2"
-                          value={caseNoteType}
-                          onChange={(e) => setCaseNoteType(e.target.value)}
-                        >
-                          <option value="Progress Note">Progress Note</option>
-                          <option value="Check-In">Check-In</option>
-                          <option value="Milestone Achievement">Milestone Achievement</option>
-                          <option value="Concern">Concern</option>
-                          <option value="Incident Report">Incident Report</option>
-                          <option value="Service Referral">Service Referral</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="follow-up"
-                          checked={followUpRequired}
-                          onChange={(e) => setFollowUpRequired(e.target.checked)}
-                        />
-                        <Label htmlFor="follow-up">Follow-up Required</Label>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="note-content">Note Content</Label>
-                      <Textarea
-                        id="note-content"
-                        placeholder="Enter your case note here..."
-                        value={newCaseNote}
-                        onChange={(e) => setNewCaseNote(e.target.value)}
-                        className="min-h-[100px]"
-                      />
-                    </div>
-                    <Button 
-                      onClick={() => {
-                        if (newCaseNote.trim()) {
-                          toast({
-                            title: "Case note added",
-                            description: "The case note has been successfully added.",
-                          });
-                          setNewCaseNote('');
-                          setCaseNoteType('Progress Note');
-                          setFollowUpRequired(false);
-                        }
-                      }}
-                      className="w-full"
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Add Case Note
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Existing Case Notes */}
-                <div>
-                  <h3 className="text-sm font-semibold mb-4">Previous Case Notes</h3>
-                  <div className="space-y-4">
-                    {mockCaseNotes
-                      .filter(note => note.residentId === selectedResident.id)
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                      .map((note) => (
-                        <div key={note.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant={note.type === 'Concern' || note.type === 'Incident Report' ? 'destructive' : 'default'}>
-                                  {note.type}
-                                </Badge>
-                                {note.followUpRequired && (
-                                  <Badge variant="outline" className="border-orange-500 text-orange-700">
-                                    Follow-up Required
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {note.authorName} • {note.authorRole}
-                              </p>
-                            </div>
-                            <span className="text-sm text-gray-500">
-                              {new Date(note.date).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700 mb-3">{note.content}</p>
-                          {note.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {note.tags.map((tag, index) => (
-                                <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    {mockCaseNotes.filter(note => note.residentId === selectedResident.id).length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        No case notes found for this resident.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <CaseNoteModal 
+            isOpen={showCaseNotesModal} 
+            onClose={() => setShowCaseNotesModal(false)}
+            onSave={(note) => {
+              // Handle saving the case note
+              console.log('Case note saved:', note);
+              setShowCaseNotesModal(false);
+            }}
+            note={undefined}
+            residents={residentsData.map(r => ({ id: r.id, name: r.name }))}
+          />
         )}
       </div>
   );

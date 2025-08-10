@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await response.json();
     
     if (data.token) {
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('authToken', data.token);
     }
     
     setUser(data.user);
@@ -66,7 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('token'); // Remove legacy token key if it exists
     setUser(null);
     queryClient.clear();
     window.location.href = '/';

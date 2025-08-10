@@ -126,7 +126,7 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
     },
     onSuccess: (data, variables) => {
       if (data.token) {
-        localStorage.setItem("token", data.token);
+        localStorage.setItem("authToken", data.token);
       }
       if (data.user?.role) {
         localStorage.setItem("userRole", data.user.role);

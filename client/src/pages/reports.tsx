@@ -19,7 +19,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -42,7 +43,7 @@ const useReportTemplates = () => {
   return useQuery({
     queryKey: ['reportTemplates'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch('/api/reports/templates', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -59,7 +60,7 @@ const useReports = () => {
   return useQuery({
     queryKey: ['reports'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch('/api/reports', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -77,7 +78,7 @@ const useGenerateReport = () => {
   
   return useMutation({
     mutationFn: async ({ reportType, parameters, name }: { reportType: string; parameters: any; name: string }) => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch('/api/reports/generate', {
         method: 'POST',
         headers: {
@@ -147,9 +148,32 @@ export default function Reports() {
     });
   };
 
+  const [showReportFrame, setShowReportFrame] = useState(false);
+  const [currentReportUrl, setCurrentReportUrl] = useState('');
+
+  const handleViewReport = async (reportId: string, reportName: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`/api/reports/${reportId}/view`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error('Failed to load report');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      setCurrentReportUrl(url);
+      setShowReportFrame(true);
+    } catch (error) {
+      toast.error('Failed to load report');
+    }
+  };
+
   const handleDownloadReport = async (reportId: string, reportName: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/reports/${reportId}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -416,14 +440,24 @@ export default function Reports() {
                           </div>
                         </div>
                       </div>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        disabled={report.status !== 'completed'}
-                        onClick={() => handleDownloadReport(report.id, report.name)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          disabled={report.status !== 'completed'}
+                          onClick={() => handleViewReport(report.id, report.name)}
+                        >
+                          View
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          disabled={report.status !== 'completed'}
+                          onClick={() => handleDownloadReport(report.id, report.name)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -432,6 +466,35 @@ export default function Reports() {
           </Card>
         </div>
       </main>
+
+      {/* Report Viewer Modal */}
+      {showReportFrame && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Report Viewer</h3>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setShowReportFrame(false);
+                  window.URL.revokeObjectURL(currentReportUrl);
+                  setCurrentReportUrl('');
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 p-4">
+              <iframe 
+                src={currentReportUrl} 
+                className="w-full h-full border rounded"
+                title="Report Viewer"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
