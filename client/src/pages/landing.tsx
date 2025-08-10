@@ -34,7 +34,9 @@ export default function Landing() {
           <div className="flex items-center">
             <Logo className="h-12" />
           </div>
-          <div className="flex items-center space-x-6">
+          
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center space-x-6">
             <a href="#about" className="text-gray-600 hover:text-green-700">About</a>
             <a href="#programs" className="text-gray-600 hover:text-green-700">Programs</a>
             <a href="#contact" className="text-gray-600 hover:text-green-700">Contact</a>
@@ -62,7 +64,64 @@ export default function Landing() {
               Portal Login
             </Button>
           </div>
+
+          {/* Mobile Navigation */}
+          <div className="lg:hidden">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-600"
+            >
+              <Menu className="w-6 h-6" />
+            </Button>
+          </div>
         </nav>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden mt-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 space-y-4">
+            <div className="space-y-3">
+              <a href="#about" className="block text-gray-600 hover:text-green-700 py-2">About</a>
+              <a href="#programs" className="block text-gray-600 hover:text-green-700 py-2">Programs</a>
+              <a href="#contact" className="block text-gray-600 hover:text-green-700 py-2">Contact</a>
+            </div>
+            <div className="border-t border-gray-200 pt-4 space-y-3">
+              <Button 
+                onClick={() => {
+                  window.location.href = '/guest-resources';
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full border border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white transition"
+                variant="outline"
+                data-testid="mobile-resources-button"
+              >
+                Resources
+              </Button>
+              <Button 
+                onClick={() => {
+                  setIsIntakeModalOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md"
+              >
+                <img src={_3} alt="Life House" className="w-4 h-4 mr-2" />
+                Apply Now
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsLoginModalOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full border-green-600 text-green-600 hover:bg-green-50"
+                data-testid="mobile-portal-login-button"
+              >
+                Portal Login
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
       {/* Hero Section */}
       <section id="about" className="container mx-auto px-4 py-20">
