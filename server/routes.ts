@@ -3007,7 +3007,7 @@ startxref
     }
   }));
 
-  app.patch('/api/admin/applications/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/admin/applications/:id', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -3017,6 +3017,79 @@ startxref
     } catch (error) {
       console.error('Error updating application:', error);
       res.status(500).json({ message: 'Failed to update application' });
+    }
+  }));
+
+  // Onboard resident from application
+  app.post('/api/admin/onboard-resident', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { applicationId, propertyId, roomId, moveInDate, caseManagerId, programEnrollments, medicalInfo, notes } = req.body;
+
+      // Get the application
+      const application = await storage.getApplicationById(applicationId);
+      if (!application) {
+        return res.status(404).json({ message: 'Application not found' });
+      }
+
+      // First create a user account for the resident
+      const hashedPassword = await bcrypt.hash('temporary123', 10);
+      const userData = {
+        role: 'Resident' as const,
+        name: application.name,
+        email: application.email,
+        phone: application.phone,
+        passwordHash: hashedPassword,
+        isActive: true
+      };
+
+      const user = await storage.createUser(userData);
+
+      // Create resident profile
+      const residentData = {
+        userId: user.id,
+        name: application.name,
+        email: application.email,
+        phone: application.phone,
+        dateOfBirth: application.dateOfBirth,
+        emergencyContact: application.emergencyContact,
+        emergencyPhone: application.emergencyPhone,
+        caseManagerId,
+        propertyId,
+        roomId,
+        moveInDate: new Date(moveInDate),
+        status: 'active' as const,
+        medicalInfo,
+        notes
+      };
+
+      const resident = await storage.createResidentProfile(residentData);
+
+      // Update application status to onboard
+      await storage.updateApplication(applicationId, { status: 'onboard' });
+
+      // Create audit log entry
+      await storage.createAuditLogEntry({
+        userId: req.user.id,
+        action: 'onboard_resident',
+        resourceType: 'resident',
+        resourceId: resident.id,
+        changes: { 
+          applicationId, 
+          residentId: resident.id,
+          programEnrollments,
+          medicalInfo,
+          notes 
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        resident,
+        message: 'Resident onboarded successfully' 
+      });
+    } catch (error) {
+      console.error('Error onboarding resident:', error);
+      res.status(500).json({ message: 'Failed to onboard resident' });
     }
   }));
 

@@ -801,6 +801,14 @@ Notes: ${residentData.eligibilityNotes || 'None'}`
     return results;
   }
 
+  async getApplicationById(id: string): Promise<Application | undefined> {
+    const [application] = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, id));
+    return application;
+  }
+
   async updateApplication(id: string, updates: Partial<Application>): Promise<Application> {
     const [updated] = await db
       .update(applications)
@@ -899,6 +907,13 @@ Notes: ${residentData.eligibilityNotes || 'None'}`
 
   async logAudit(entry: any): Promise<void> {
     await db.insert(auditLog).values(entry);
+  }
+
+  async createAuditLogEntry(entry: any): Promise<void> {
+    await db.insert(auditLog).values({
+      ...entry,
+      timestamp: new Date()
+    });
   }
 
   async getHomepageContent(): Promise<HomepageContent[]> {

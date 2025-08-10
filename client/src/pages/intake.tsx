@@ -63,6 +63,18 @@ export default function Intake() {
   const [selectedApplication, setSelectedApplication] = useState<any | null>(null);
   const [selectedTab, setSelectedTab] = useState('referrals');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showOnboardingFlow, setShowOnboardingFlow] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [onboardingData, setOnboardingData] = useState({
+    propertyId: '',
+    roomId: '',
+    moveInDate: '',
+    caseManagerId: '',
+    programEnrollments: [] as string[],
+    emergencyContacts: [] as any[],
+    medicalInfo: '',
+    notes: ''
+  });
 
   const { data: referrals, isLoading: referralsLoading } = useQuery<Referral[]>({
     queryKey: ['/api/admin/referrals'],
@@ -74,6 +86,51 @@ export default function Intake() {
 
   const { data: properties } = useQuery<Property[]>({
     queryKey: ['/api/properties'],
+  });
+
+  const { data: staff } = useQuery<any[]>({
+    queryKey: ['/api/staff/users'],
+  });
+
+  const { data: programs } = useQuery<any[]>({
+    queryKey: ['/api/programs'],
+  });
+
+  const onboardResidentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest('/api/admin/onboard-resident', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/applications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/staff/residents'] });
+      toast({
+        title: "Success",
+        description: "Resident onboarded successfully",
+      });
+      setShowOnboardingFlow(false);
+      setSelectedApplication(null);
+      setOnboardingStep(1);
+      setOnboardingData({
+        propertyId: '',
+        roomId: '',
+        moveInDate: '',
+        caseManagerId: '',
+        programEnrollments: [],
+        emergencyContacts: [],
+        medicalInfo: '',
+        notes: ''
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to onboard resident",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateReferralMutation = useMutation({
@@ -148,10 +205,15 @@ export default function Intake() {
   };
 
   const handleApplicationStatusUpdate = (applicationId: string, newStatus: string) => {
-    updateApplicationMutation.mutate({
-      id: applicationId,
-      data: { status: newStatus }
-    });
+    if (newStatus === 'onboard') {
+      setShowOnboardingFlow(true);
+      setOnboardingStep(1);
+    } else {
+      updateApplicationMutation.mutate({
+        id: applicationId,
+        data: { status: newStatus }
+      });
+    }
   };
 
   const getStatusDisplayName = (status: string) => {
@@ -456,6 +518,273 @@ export default function Intake() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Onboarding Flow Modal */}
+      {showOnboardingFlow && selectedApplication && (
+        <Dialog open={true} onOpenChange={() => setShowOnboardingFlow(false)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Onboard Resident - {selectedApplication.name}</DialogTitle>
+              <DialogDescription>
+                Step {onboardingStep} of 4: Complete resident onboarding process
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Progress Indicator */}
+              <div className="flex items-center space-x-4 mb-6">
+                {[1, 2, 3, 4].map((step) => (
+                  <div key={step} className="flex items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      step <= onboardingStep ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {step}
+                    </div>
+                    {step < 4 && <div className={`w-8 h-0.5 ${step < onboardingStep ? 'bg-blue-600' : 'bg-gray-200'}`} />}
+                  </div>
+                ))}
+              </div>
+
+              {/* Step 1: Property & Room Assignment */}
+              {onboardingStep === 1 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Property & Room Assignment</CardTitle>
+                    <CardDescription>Assign the resident to a property and room</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="property">Property</Label>
+                      <Select value={onboardingData.propertyId} onValueChange={(value) => 
+                        setOnboardingData({...onboardingData, propertyId: value, roomId: ''})
+                      }>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a property" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {properties?.map((property) => (
+                            <SelectItem key={property.id} value={property.id}>
+                              {property.address}, {property.city}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="room">Room</Label>
+                      <Select value={onboardingData.roomId} onValueChange={(value) => 
+                        setOnboardingData({...onboardingData, roomId: value})
+                      }>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a room" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="room-1">Room 1 (Available)</SelectItem>
+                          <SelectItem value="room-2">Room 2 (Available)</SelectItem>
+                          <SelectItem value="room-3">Room 3 (Available)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="moveInDate">Move-in Date</Label>
+                      <Input
+                        type="date"
+                        value={onboardingData.moveInDate}
+                        onChange={(e) => setOnboardingData({...onboardingData, moveInDate: e.target.value})}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Step 2: Case Manager Assignment */}
+              {onboardingStep === 2 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Case Manager Assignment</CardTitle>
+                    <CardDescription>Assign a primary case manager</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="caseManager">Primary Case Manager</Label>
+                      <Select value={onboardingData.caseManagerId} onValueChange={(value) => 
+                        setOnboardingData({...onboardingData, caseManagerId: value})
+                      }>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a case manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {staff?.filter(s => s.role === 'CaseManager').map((manager) => (
+                            <SelectItem key={manager.id} value={manager.id}>
+                              {manager.name} - {manager.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Resident Information Summary</Label>
+                      <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+                        <p><strong>Name:</strong> {selectedApplication.name}</p>
+                        <p><strong>Email:</strong> {selectedApplication.email}</p>
+                        <p><strong>Phone:</strong> {selectedApplication.phone}</p>
+                        <p><strong>Release Date:</strong> {new Date(selectedApplication.releaseDate).toLocaleDateString()}</p>
+                        <p><strong>Justice Status:</strong> {selectedApplication.justiceStatus}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Step 3: Program Enrollment */}
+              {onboardingStep === 3 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Program Enrollment</CardTitle>
+                    <CardDescription>Select programs for the resident</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        'STOP TouchPoint',
+                        'STOP ARMS', 
+                        'Building Your Dream Legacy',
+                        'Fatherhood Focus',
+                        'Men\'s Circle',
+                        'Re-entry Navigation',
+                        'Financial Literacy'
+                      ].map((program) => (
+                        <div key={program} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={program}
+                            checked={onboardingData.programEnrollments.includes(program)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setOnboardingData({
+                                  ...onboardingData,
+                                  programEnrollments: [...onboardingData.programEnrollments, program]
+                                });
+                              } else {
+                                setOnboardingData({
+                                  ...onboardingData,
+                                  programEnrollments: onboardingData.programEnrollments.filter(p => p !== program)
+                                });
+                              }
+                            }}
+                          />
+                          <Label htmlFor={program}>{program}</Label>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="medicalInfo">Medical Information & Special Needs</Label>
+                      <Textarea
+                        value={onboardingData.medicalInfo}
+                        onChange={(e) => setOnboardingData({...onboardingData, medicalInfo: e.target.value})}
+                        placeholder="Enter any medical conditions, medications, or special accommodations needed..."
+                        rows={4}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Step 4: Final Review */}
+              {onboardingStep === 4 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Final Review</CardTitle>
+                    <CardDescription>Review all information before completing onboarding</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-medium mb-2">Property Assignment</h4>
+                        <p className="text-sm text-gray-600">
+                          Property: {properties?.find(p => p.id === onboardingData.propertyId)?.address}<br/>
+                          Room: {onboardingData.roomId}<br/>
+                          Move-in Date: {onboardingData.moveInDate}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Case Manager</h4>
+                        <p className="text-sm text-gray-600">
+                          {staff?.find(s => s.id === onboardingData.caseManagerId)?.name}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Programs Enrolled</h4>
+                        <p className="text-sm text-gray-600">
+                          {onboardingData.programEnrollments.join(', ') || 'None selected'}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Medical Information</h4>
+                        <p className="text-sm text-gray-600">
+                          {onboardingData.medicalInfo || 'None provided'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="notes">Onboarding Notes</Label>
+                      <Textarea
+                        value={onboardingData.notes}
+                        onChange={(e) => setOnboardingData({...onboardingData, notes: e.target.value})}
+                        placeholder="Add any additional notes about the onboarding process..."
+                        rows={3}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex justify-between pt-4 border-t">
+                <div>
+                  {onboardingStep > 1 && (
+                    <Button variant="outline" onClick={() => setOnboardingStep(onboardingStep - 1)}>
+                      Previous
+                    </Button>
+                  )}
+                </div>
+                <div className="space-x-3">
+                  <Button variant="outline" onClick={() => setShowOnboardingFlow(false)}>
+                    Cancel
+                  </Button>
+                  {onboardingStep < 4 ? (
+                    <Button 
+                      onClick={() => setOnboardingStep(onboardingStep + 1)}
+                      disabled={
+                        (onboardingStep === 1 && (!onboardingData.propertyId || !onboardingData.roomId || !onboardingData.moveInDate)) ||
+                        (onboardingStep === 2 && !onboardingData.caseManagerId)
+                      }
+                    >
+                      Next
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => {
+                        onboardResidentMutation.mutate({
+                          applicationId: selectedApplication.id,
+                          ...onboardingData
+                        });
+                      }}
+                      disabled={onboardResidentMutation.isPending}
+                    >
+                      {onboardResidentMutation.isPending ? 'Onboarding...' : 'Complete Onboarding'}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </DialogContent>
