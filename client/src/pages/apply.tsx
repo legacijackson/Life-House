@@ -232,18 +232,22 @@ export default function Apply() {
                       onValidation={validators.releaseDate}
                       {...getFieldProps('releaseDate')}
                     />
-                    <AnimatedSelect
-                      label="Current Status"
-                      value={formData.justiceStatus}
-                      onValueChange={(value) => setFormData({...formData, justiceStatus: value})}
-                      placeholder="Select your current status"
-                      {...getFieldProps('justiceStatus')}
-                    >
-                      <SelectItem value="parole">Parole</SelectItem>
-                      <SelectItem value="probation">Probation</SelectItem>
-                      <SelectItem value="formerly_incarcerated">Formerly Incarcerated</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </AnimatedSelect>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Current Status
+                      </label>
+                      <select
+                        value={formData.justiceStatus}
+                        onChange={(e) => setFormData({...formData, justiceStatus: e.target.value})}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      >
+                        <option value="">Select your current status</option>
+                        <option value="parole">Parole</option>
+                        <option value="probation">Probation</option>
+                        <option value="formerly_incarcerated">Formerly Incarcerated</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
                   </motion.div>
                 </div>
 
