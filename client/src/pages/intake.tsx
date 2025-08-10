@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -22,7 +23,8 @@ import {
   UserPlus,
   Search,
   Eye,
-  X
+  X,
+  ChevronDown
 } from 'lucide-react';
 
 interface Referral {
@@ -97,13 +99,43 @@ export default function Intake() {
     },
   });
 
+  const updateApplicationMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest(`/api/admin/applications/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/applications'] });
+      toast({
+        title: "Success",
+        description: "Application status updated successfully",
+      });
+      setSelectedApplication(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update application status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'new': return 'bg-blue-100 text-blue-800';
-      case 'in_review': return 'bg-yellow-100 text-yellow-800';
+      case 'under_review': return 'bg-yellow-100 text-yellow-800';
+      case 'in_progress': return 'bg-purple-100 text-purple-800';
+      case 'approved': return 'bg-green-100 text-green-800';
       case 'accepted': return 'bg-green-100 text-green-800';
+      case 'waitlisted': return 'bg-orange-100 text-orange-800';
       case 'waitlist': return 'bg-orange-100 text-orange-800';
+      case 'denied': return 'bg-red-100 text-red-800';
       case 'declined': return 'bg-red-100 text-red-800';
+      case 'onboard': return 'bg-emerald-100 text-emerald-800';
+      case 'closed': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -113,6 +145,25 @@ export default function Intake() {
       id: referralId,
       data: { status: newStatus as any }
     });
+  };
+
+  const handleApplicationStatusUpdate = (applicationId: string, newStatus: string) => {
+    updateApplicationMutation.mutate({
+      id: applicationId,
+      data: { status: newStatus }
+    });
+  };
+
+  const getStatusDisplayName = (status: string) => {
+    switch (status) {
+      case 'in_progress': return 'In Progress';
+      case 'accepted': return 'Accept';
+      case 'denied': return 'Deny';
+      case 'waitlist': return 'Waitlist';
+      case 'onboard': return 'Onboard';
+      case 'closed': return 'Close';
+      default: return status;
+    }
   };
 
   const referralsByStatus = {
@@ -371,9 +422,40 @@ export default function Intake() {
                 <Button variant="outline" onClick={() => setSelectedApplication(null)}>
                   Close
                 </Button>
-                <Button>
-                  Process Application
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button disabled={updateApplicationMutation.isPending}>
+                      {updateApplicationMutation.isPending ? 'Updating...' : 'Process Application'}
+                      <ChevronDown className="w-4 h-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleApplicationStatusUpdate(selectedApplication.id, 'in_progress')}>
+                      <Clock className="w-4 h-4 mr-2" />
+                      Mark In Progress
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleApplicationStatusUpdate(selectedApplication.id, 'approved')}>
+                      <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                      Approve Application
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleApplicationStatusUpdate(selectedApplication.id, 'denied')}>
+                      <X className="w-4 h-4 mr-2 text-red-600" />
+                      Deny Application
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleApplicationStatusUpdate(selectedApplication.id, 'waitlisted')}>
+                      <Users className="w-4 h-4 mr-2 text-orange-600" />
+                      Add to Waitlist
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleApplicationStatusUpdate(selectedApplication.id, 'onboard')}>
+                      <UserPlus className="w-4 h-4 mr-2 text-blue-600" />
+                      Onboard Resident
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleApplicationStatusUpdate(selectedApplication.id, 'closed')}>
+                      <AlertCircle className="w-4 h-4 mr-2 text-gray-600" />
+                      Close Application
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </DialogContent>
