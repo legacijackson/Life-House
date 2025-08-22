@@ -9,13 +9,13 @@ import { HelpDesk } from "@/components/help-desk";
 import { UnifiedFloatingMenu } from "@/components/unified-floating-menu";
 import { UniversalSidebar } from "@/components/universal-sidebar";
 import { useState } from "react";
-import { RouteGuard } from "@/components/route-guard";
-import { AuthProvider } from "@/lib/auth-context";
+import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Landing from "@/pages/landing";
 import Apply from "@/pages/apply";
 import Refer from "@/pages/refer";
 import Donate from "@/pages/donate";
+import Home from "./pages/home";
 
 import Intake from "@/pages/intake";
 import Referrals from "@/pages/referrals";
@@ -40,50 +40,51 @@ import IntakeReferrals from "@/pages/intake-referrals";
 import NotFound from "@/pages/not-found";
 import DocumentsPage from "@/pages/documents";
 
-// Protected routes wrapper
-function ProtectedRoutes() {
-  return (
-    <RouteGuard>
-      <Switch>
-        <Route path="/app/intake" component={Intake} />
-        <Route path="/app/referrals" component={Referrals} />
-        <Route path="/app/residents" component={Residents} />
-        <Route path="/app/residents/:id/case-notes" component={ResidentCaseNotes} />
-        <Route path="/app/case-notes" component={CaseNotes} />
-        <Route path="/app/attendance" component={Attendance} />
-        <Route path="/app/properties" component={Properties} />
-        <Route path="/app/maintenance" component={Maintenance} />
-        <Route path="/app/reports" component={Reports} />
-        <Route path="/app/check-in" component={CheckIn} />
-        <Route path="/app/resident-portal" component={ResidentPortal} />
-        <Route path="/app/staff-dashboard" component={StaffDashboard} />
-        <Route path="/app/admin-panel" component={AdminPanelPage} />
-        <Route path="/app/admin" component={AdminPanelPage} />
-        <Route path="/app/intake-referrals" component={IntakeReferrals} />
-        <Route path="/app/first-login" component={FirstLoginWizard} />
-        <Route path="/app/partner-portal" component={PartnerPortal} />
-        <Route path="/app/profile" component={ProfilePage} />
-        <Route path="/app/documents" component={DocumentsPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </RouteGuard>
-  );
-}
+// Remove ProtectedRoutes component as we're handling auth in Router now
 
 function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+
   return (
     <UniversalSidebar>
       <Switch>
-        <Route path="/" component={Landing} />
-        <Route path="/apply" component={Apply} />
-        <Route path="/refer" component={Refer} />
-        <Route path="/donate" component={Donate} />
-        <Route path="/guest-resources" component={GuestResources} />
-        <Route path="/resources" component={Resources} />
-        <Route path="/app" component={StaffLogin} />
-        <Route path="/app/resources" component={Resources} />
-        <Route path="/app/:rest*" component={ProtectedRoutes} />
-        <Route component={NotFound} />
+        {isLoading || !isAuthenticated ? (
+          <>
+            <Route path="/" component={Landing} />
+            <Route path="/apply" component={Apply} />
+            <Route path="/refer" component={Refer} />
+            <Route path="/donate" component={Donate} />
+            <Route path="/guest-resources" component={GuestResources} />
+            <Route path="/resources" component={Resources} />
+            <Route path="/app" component={StaffLogin} />
+            <Route component={NotFound} />
+          </>
+        ) : (
+          <>
+            <Route path="/" component={Home} />
+            <Route path="/app/intake" component={Intake} />
+            <Route path="/app/referrals" component={Referrals} />
+            <Route path="/app/residents" component={Residents} />
+            <Route path="/app/residents/:id/case-notes" component={ResidentCaseNotes} />
+            <Route path="/app/case-notes" component={CaseNotes} />
+            <Route path="/app/attendance" component={Attendance} />
+            <Route path="/app/properties" component={Properties} />
+            <Route path="/app/maintenance" component={Maintenance} />
+            <Route path="/app/reports" component={Reports} />
+            <Route path="/app/check-in" component={CheckIn} />
+            <Route path="/app/resident-portal" component={ResidentPortal} />
+            <Route path="/app/staff-dashboard" component={StaffDashboard} />
+            <Route path="/app/admin-panel" component={AdminPanelPage} />
+            <Route path="/app/admin" component={AdminPanelPage} />
+            <Route path="/app/intake-referrals" component={IntakeReferrals} />
+            <Route path="/app/first-login" component={FirstLoginWizard} />
+            <Route path="/app/partner-portal" component={PartnerPortal} />
+            <Route path="/app/profile" component={ProfilePage} />
+            <Route path="/app/documents" component={DocumentsPage} />
+            <Route path="/app/resources" component={Resources} />
+            <Route component={NotFound} />
+          </>
+        )}
       </Switch>
     </UniversalSidebar>
   );
@@ -95,25 +96,23 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <HotToaster position="top-right" />
-          <Router />
-          <UnifiedFloatingMenu 
-            onOpenChat={() => setIsChatOpen(true)}
-            onOpenHelp={() => setIsHelpOpen(true)}
-          />
-          <AIChatbotWidget 
-            isOpen={isChatOpen} 
-            onClose={() => setIsChatOpen(false)} 
-          />
-          <HelpDesk 
-            isOpen={isHelpOpen} 
-            onClose={() => setIsHelpOpen(false)} 
-          />
-        </TooltipProvider>
-      </AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <HotToaster position="top-right" />
+        <Router />
+        <UnifiedFloatingMenu 
+          onOpenChat={() => setIsChatOpen(true)}
+          onOpenHelp={() => setIsHelpOpen(true)}
+        />
+        <AIChatbotWidget 
+          isOpen={isChatOpen} 
+          onClose={() => setIsChatOpen(false)} 
+        />
+        <HelpDesk 
+          isOpen={isHelpOpen} 
+          onClose={() => setIsHelpOpen(false)} 
+        />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

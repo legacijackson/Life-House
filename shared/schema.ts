@@ -68,19 +68,21 @@ export const sessions = pgTable(
 
 // Users table (required for auth) 
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  role: roleEnum("role").notNull(),
-  name: text("name").notNull(),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`), // Keep default for migration compatibility
+  role: roleEnum("role").notNull().default("Resident"),
+  name: text("name"),
   email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
   phone: varchar("phone"),
   isAdmin: boolean("is_admin").default(false), // Admin access can be granted to any role
   language: languageEnum("language").default("en"),
   readingLevel: readingLevelEnum("reading_level").default("professional"),
-  passwordHash: varchar("password_hash"),
+  passwordHash: varchar("password_hash"), // Keep for backward compatibility
   totpSecret: varchar("totp_secret"), // encrypted
   twoFAEnabled: boolean("two_fa_enabled").default(false),
   ssoProviders: jsonb("sso_providers"), // array of {provider, subjectId}
-  profileImage: varchar("profile_image"), // Profile image URL
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -1203,6 +1205,7 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = typeof users.$inferInsert;
 export type ResidentProfile = typeof residentProfiles.$inferSelect;
 export type InsertResidentProfile = z.infer<typeof insertResidentProfileSchema>;
 export type EmployeeProfile = typeof employeeProfiles.$inferSelect;

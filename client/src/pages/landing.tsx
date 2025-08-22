@@ -57,11 +57,11 @@ export default function Landing() {
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => setIsLoginModalOpen(true)} 
+              onClick={() => window.location.href = '/api/login'} 
               className="border-green-600 text-green-600 hover:bg-green-50"
               data-testid="portal-login-button"
             >
-              Portal Login
+              Sign In with Replit
             </Button>
           </div>
 
