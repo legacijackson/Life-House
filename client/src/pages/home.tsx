@@ -14,7 +14,7 @@ export default function Home() {
             Welcome to Life House, {user?.firstName || user?.name || 'User'}!
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            You are successfully authenticated with Replit Auth.
+            You are successfully logged in.
           </p>
         </div>
 
