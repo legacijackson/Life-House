@@ -2444,12 +2444,11 @@ startxref
     }
   }));
 
-  // Soft delete notes
-  app.delete('/api/notes/:id', async (req: Request, res: Response) => {
+  // Soft delete case notes (archive them)
+  app.delete('/api/notes/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      // Mock delete for now since deleteCaseNote method doesn't exist
-      console.log('Delete note:', id);
+      await db.update(staffCaseNotes).set({ status: 'archived' }).where(eq(staffCaseNotes.id, id));
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting note:', error);
@@ -2983,32 +2982,19 @@ startxref
     }
   }));
 
-  // Homepage Photos Management
+  // Homepage Photos Management (uses documents table with ownerType='homepage')
   app.get('/api/admin/homepage-photos', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Mock homepage photos data for now
-      const photos = [
-        {
-          id: '1',
-          url: '/assets/3.png',
-          alt: 'Life House Community',
-          caption: 'Building stronger communities',
-          section: 'hero',
-          order: 1,
-          isActive: true,
-          uploadedAt: new Date().toISOString()
-        },
-        {
-          id: '2', 
-          url: '/assets/5.png',
-          alt: 'Success Stories',
-          caption: 'Celebrating resident achievements',
-          section: 'testimonials',
-          order: 1,
-          isActive: true,
-          uploadedAt: new Date().toISOString()
-        }
-      ];
+      const docs = await storage.getDocuments({ ownerType: 'homepage' });
+      const photos = docs.map((d) => ({
+        id: d.id,
+        url: `/api/documents/${d.id}/download`,
+        alt: d.title,
+        caption: d.title,
+        section: d.ownerId ?? 'gallery',
+        isActive: true,
+        uploadedAt: d.uploadedAt,
+      }));
       res.json(photos);
     } catch (error) {
       console.error('Error fetching homepage photos:', error);
@@ -3016,21 +3002,28 @@ startxref
     }
   }));
 
-  app.post('/api/admin/homepage-photos', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/admin/homepage-photos', roleRoute(['Admin'], uploadDocument.single('file'), async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // In production, handle file upload to S3/cloud storage
-      const newPhoto = {
-        id: Date.now().toString(),
-        url: '/assets/uploaded-photo.jpg',
-        alt: req.body.alt || 'Uploaded photo',
-        section: req.body.section || 'gallery',
-        order: 1,
+      const section = req.body.section || 'gallery';
+      const alt = req.body.alt || (req.file?.originalname ?? 'Homepage photo');
+      const doc = await storage.createDocument({
+        ownerType: 'homepage',
+        ownerId: section,
+        title: alt,
+        mime: req.file?.mimetype ?? 'image/jpeg',
+        size: req.file?.size ?? null,
+        storagePath: req.file?.path ?? '',
+        checksum: null,
+      });
+      res.json({
+        id: doc.id,
+        url: `/api/documents/${doc.id}/download`,
+        alt: doc.title,
+        caption: doc.title,
+        section,
         isActive: true,
-        uploadedAt: new Date().toISOString()
-      };
-
-      // TODO: Save to database
-      res.json(newPhoto);
+        uploadedAt: doc.uploadedAt,
+      });
     } catch (error) {
       console.error('Error uploading photo:', error);
       res.status(500).json({ message: 'Failed to upload photo' });
@@ -3040,10 +3033,12 @@ startxref
   app.patch('/api/admin/homepage-photos/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
-
-      // TODO: Update photo in database
-      res.json({ id, ...updates });
+      const { alt, section } = req.body;
+      const updates: any = {};
+      if (alt) updates.title = alt;
+      if (section) updates.ownerId = section;
+      const doc = await storage.updateDocument(id, updates);
+      res.json({ id, ...req.body, updatedAt: new Date().toISOString() });
     } catch (error) {
       console.error('Error updating photo:', error);
       res.status(500).json({ message: 'Failed to update photo' });
@@ -3053,8 +3048,7 @@ startxref
   app.delete('/api/admin/homepage-photos/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-
-      // TODO: Delete photo from database and storage
+      await storage.deleteDocument(id);
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting photo:', error);
