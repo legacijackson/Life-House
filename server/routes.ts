@@ -43,7 +43,10 @@ import {
   authorizationRequests,
   onboardingPhases,
   fieldSaves,
+  lcpInvites,
+  youtubeWatchEvents,
 } from "@shared/schema";
+import { nanoid } from "nanoid";
 import { db } from "./db";
 import { eq, and, like, desc, sql, inArray, isNull, lt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -51,7 +54,7 @@ import jwt from "jsonwebtoken";
 import Stripe from "stripe";
 import { setupAuth } from "./replitAuth";
 import { notifyNewLead, notifyCallbackAssigned, notifyAdmins, createNotification } from "./services/notifications";
-import { callCallLogScript } from "./services/apps-script";
+import { callCallLogScript, callLCPReferralScript, callIntakeScript } from "./services/apps-script";
 import { pushMaintenanceExpense } from "./services/finance";
 
 interface AuthenticatedRequest extends Request {
@@ -4899,6 +4902,183 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       res.status(500).json({ message: err.message });
     }
   });
+
+  // ── LCP INVITE WORKFLOW ──────────────────────────────────────────────────────
+
+  // Send LCP referral invite
+  app.post('/api/onboarding/lcp-invite', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId, lcpEmail, lcpName, mcpPlan } = req.body;
+      if (!clientId || !lcpEmail) {
+        return res.status(400).json({ message: 'clientId and lcpEmail are required' });
+      }
+
+      const token = nanoid(32);
+      const appUrl = process.env.APP_URL ?? `https://${req.headers.host}`;
+      const inviteUrl = `${appUrl}/lcp/${token}`;
+
+      const [invite] = await db.insert(lcpInvites).values({
+        token,
+        clientId,
+        lcpEmail,
+        lcpName: lcpName ?? null,
+        mcpPlan: mcpPlan ?? null,
+        status: 'pending',
+        invitedBy: req.user!.id,
+        sentAt: new Date(),
+      }).returning();
+
+      // Fire-and-forget to Apps Script to send the email
+      callLCPReferralScript({
+        clientId,
+        lcpEmail,
+        lcpName,
+        mcpPlan,
+        inviteUrl,
+        inviteToken: token,
+      }).catch((err) => console.error('[LCP invite] Apps Script error:', err));
+
+      res.status(201).json({ invite, inviteUrl });
+    } catch (err: any) {
+      console.error('Error creating LCP invite:', err);
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
+  // Get LCP invite status for a client
+  app.get('/api/onboarding/lcp-invite/:clientId', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const invites = await db.select().from(lcpInvites)
+        .where(eq(lcpInvites.clientId, req.params.clientId))
+        .orderBy(desc(lcpInvites.sentAt));
+      res.json(invites);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
+  // Public: get LCP form data by token (no auth required)
+  app.get('/api/lcp/:token', async (req: Request, res: Response) => {
+    try {
+      const [invite] = await db.select().from(lcpInvites).where(eq(lcpInvites.token, req.params.token));
+      if (!invite) return res.status(404).json({ message: 'Invite not found or expired' });
+      if (invite.status === 'completed') return res.status(410).json({ message: 'This referral has already been completed' });
+
+      // Return basic client info for the form (non-PHI)
+      const [client] = await db.select({ name: users.name, id: users.id }).from(users).where(eq(users.id, invite.clientId));
+      res.json({ invite: { ...invite, token: undefined }, clientName: client?.name ?? 'Client', mcpPlan: invite.mcpPlan });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // Public: LCP submits referral form
+  app.post('/api/lcp/:token/complete', async (req: Request, res: Response) => {
+    try {
+      const [invite] = await db.select().from(lcpInvites).where(eq(lcpInvites.token, req.params.token));
+      if (!invite) return res.status(404).json({ message: 'Invite not found' });
+      if (invite.status === 'completed') return res.status(410).json({ message: 'Already completed' });
+
+      await db.update(lcpInvites).set({
+        status: 'completed',
+        completedAt: new Date(),
+        data: req.body,
+        updatedAt: new Date(),
+      }).where(eq(lcpInvites.token, req.params.token));
+
+      // Notify staff
+      await notifyAdmins(
+        'LCP Referral Completed',
+        `LCP ${invite.lcpName ?? invite.lcpEmail} has completed the referral form for client ${invite.clientId}.`,
+        'lcp_complete',
+        invite.clientId
+      );
+
+      res.json({ message: 'Referral submitted successfully. Thank you!' });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── LIFE DESIGN FORM EMAIL ────────────────────────────────────────────────────
+
+  app.post('/api/onboarding/life-design-send', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId } = req.body;
+      if (!clientId) return res.status(400).json({ message: 'clientId required' });
+
+      const [client] = await db.select().from(users).where(eq(users.id, clientId));
+      if (!client) return res.status(404).json({ message: 'Client not found' });
+
+      const appUrl = process.env.APP_URL ?? `https://${req.headers.host}`;
+      const formToken = nanoid(32);
+
+      // Store token in a phase field for tracking
+      await db.insert(fieldSaves).values({
+        clientId,
+        phaseKey: 'P6',
+        fieldName: 'lifeDesignFormToken',
+        fieldValue: formToken,
+        savedBy: req.user!.id,
+      }).onConflictDoNothing();
+
+      // Fire-and-forget Apps Script to send the 30-day life design form email
+      callIntakeScript({
+        action: 'life_design_form',
+        clientId,
+        clientEmail: client.email,
+        clientName: client.name,
+        formUrl: `${appUrl}/life-design/${formToken}`,
+        staffId: req.user!.id,
+      }).catch((err) => console.error('[LifeDesign email]', err));
+
+      res.json({ message: 'Life Design form email queued', formToken });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
+  // ── YOUTUBE WATCH TRACKING ────────────────────────────────────────────────────
+
+  app.post('/api/onboarding/youtube-watched', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId, videoId, videoTitle, percentWatched } = req.body;
+      if (!clientId || !videoId) return res.status(400).json({ message: 'clientId and videoId required' });
+
+      const [existing] = await db.select().from(youtubeWatchEvents)
+        .where(and(eq(youtubeWatchEvents.clientId, clientId), eq(youtubeWatchEvents.videoId, videoId)));
+
+      if (existing) {
+        await db.update(youtubeWatchEvents).set({
+          percentWatched: Math.max(existing.percentWatched ?? 0, percentWatched ?? 0),
+          completedAt: (percentWatched ?? 0) >= 90 ? new Date() : existing.completedAt,
+        }).where(eq(youtubeWatchEvents.id, existing.id));
+      } else {
+        await db.insert(youtubeWatchEvents).values({
+          clientId,
+          videoId,
+          videoTitle: videoTitle ?? null,
+          percentWatched: percentWatched ?? 0,
+          completedAt: (percentWatched ?? 0) >= 90 ? new Date() : null,
+          recordedBy: req.user!.id,
+        });
+      }
+
+      res.json({ message: 'Watch event recorded' });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
+  app.get('/api/onboarding/youtube-watched/:clientId', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const events = await db.select().from(youtubeWatchEvents)
+        .where(eq(youtubeWatchEvents.clientId, req.params.clientId));
+      res.json(events);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
 
   // Create HTTP server
   const httpServer = createServer(app);

@@ -45,6 +45,7 @@ import CaseNotesPage from "@/pages/case-notes/index";
 import OnboardingPage from "@/pages/onboarding/index";
 import WorkshopStudio from "@/pages/workshop-studio/index";
 import FinancePage from "@/pages/finance/index";
+import LcpFormPage from "@/pages/lcp-form/index";
 
 // Remove ProtectedRoutes component as we're handling auth in Router now
 
@@ -63,6 +64,7 @@ function Router() {
             <Route path="/guest-resources" component={GuestResources} />
             <Route path="/resources" component={Resources} />
             <Route path="/app" component={StaffLogin} />
+            <Route path="/lcp/:token" component={LcpFormPage} />
             <Route component={NotFound} />
           </>
         ) : (
@@ -95,6 +97,7 @@ function Router() {
             <Route path="/app/profile" component={ProfilePage} />
             <Route path="/app/documents" component={DocumentsPage} />
             <Route path="/app/resources" component={Resources} />
+            <Route path="/lcp/:token" component={LcpFormPage} />
             <Route component={NotFound} />
           </>
         )}

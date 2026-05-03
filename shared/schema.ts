@@ -1839,3 +1839,44 @@ export type Fax = typeof faxes.$inferSelect;
 export type Touchpoint = typeof touchpoints.$inferSelect;
 export type InsertTouchpoint = z.infer<typeof insertTouchpointSchema>;
 export type SavedReport = typeof savedReports.$inferSelect;
+
+// ── LCP INVITES ───────────────────────────────────────────────────────────────
+export const lcpInvites = pgTable('lcp_invites', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  token: text('token').notNull().unique(),
+  clientId: varchar('client_id').references(() => users.id).notNull(),
+  lcpEmail: text('lcp_email').notNull(),
+  lcpName: text('lcp_name'),
+  mcpPlan: text('mcp_plan'), // Kaiser, Anthem, HealthNet, Molina
+  status: text('status').default('pending'), // pending | completed | expired
+  invitedBy: varchar('invited_by').references(() => users.id),
+  sentAt: timestamp('sent_at').defaultNow(),
+  completedAt: timestamp('completed_at'),
+  data: jsonb('data'), // LCP's submitted referral form data
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('lcp_invites_token_idx').on(table.token),
+  index('lcp_invites_client_idx').on(table.clientId),
+]);
+
+export const insertLcpInviteSchema = createInsertSchema(lcpInvites).omit({ id: true, createdAt: true, updatedAt: true });
+export type LcpInvite = typeof lcpInvites.$inferSelect;
+export type InsertLcpInvite = z.infer<typeof insertLcpInviteSchema>;
+
+// ── YOUTUBE WATCH EVENTS ──────────────────────────────────────────────────────
+export const youtubeWatchEvents = pgTable('youtube_watch_events', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id).notNull(),
+  videoId: text('video_id').notNull(),
+  videoTitle: text('video_title'),
+  percentWatched: integer('percent_watched').default(0),
+  completedAt: timestamp('completed_at'),
+  recordedBy: varchar('recorded_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('youtube_watch_client_idx').on(table.clientId),
+]);
+
+export const insertYoutubeWatchEventSchema = createInsertSchema(youtubeWatchEvents).omit({ id: true, createdAt: true });
+export type YoutubeWatchEvent = typeof youtubeWatchEvents.$inferSelect;
