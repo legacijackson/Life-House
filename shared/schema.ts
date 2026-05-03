@@ -12,6 +12,7 @@ import {
   pgEnum,
   index,
   uniqueIndex,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -1266,3 +1267,575 @@ export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MASTER BUILD v3 — NEW TABLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── ONBOARDING ────────────────────────────────────────────────────────────────
+export const onboardingPhases = pgTable('onboarding_phases', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  phaseKey: text('phase_key').notNull(),
+  phaseLabel: text('phase_label').notNull(),
+  status: text('status').default('not_started'),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  durationSeconds: integer('duration_seconds'),
+  completedBy: varchar('completed_by').references(() => users.id),
+  blockReason: text('block_reason'),
+  data: jsonb('data'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('onboarding_phases_client_idx').on(table.clientId),
+  index('onboarding_phases_status_idx').on(table.status),
+]);
+
+export const fieldSaves = pgTable('field_saves', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  phaseKey: text('phase_key').notNull(),
+  fieldName: text('field_name').notNull(),
+  fieldValue: text('field_value'),
+  savedBy: varchar('saved_by').references(() => users.id),
+  savedAt: timestamp('saved_at').defaultNow(),
+}, (table) => [
+  index('field_saves_client_phase_idx').on(table.clientId, table.phaseKey),
+]);
+
+// ── CLIENT EXTENDED PROFILE COLUMNS ──────────────────────────────────────────
+// Stored as extended profile data — new columns appended to residentProfiles via
+// a separate table to avoid ALTER TABLE conflicts on the running database.
+export const clientProfiles = pgTable('client_profiles', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id').references(() => users.id).notNull().unique(),
+  clientType: text('client_type').default('resident'),  // resident | non-resident | onboarding
+  onboardingStatus: text('onboarding_status').default('contact'),
+  onboardingPhase: text('onboarding_phase'),
+  patientAccount: text('patient_account'),
+  cin: text('cin'),
+  preferredName: text('preferred_name'),
+  dob: date('dob'),
+  phonePrimary: text('phone_primary'),
+  phoneSecondary: text('phone_secondary'),
+  county: text('county').default('Sacramento'),
+  bedAssignment: text('bed_assignment'),
+  assignedCaseManagerId: varchar('assigned_case_manager_id').references(() => users.id),
+  assignedChwId: varchar('assigned_chw_id').references(() => users.id),
+  enrollmentDate: date('enrollment_date'),
+  releaseDate: date('release_date'),
+  recertificationDate: date('recertification_date'),
+  programProgress: integer('program_progress').default(0),
+  payType: text('pay_type'),
+  rentAmount: decimal('rent_amount'),
+  googleFolderId: text('google_folder_id'),
+  googleFolderUrl: text('google_folder_url'),
+  trackerRow: integer('tracker_row'),
+  appUserId: text('app_user_id'),
+  lastGeoLat: decimal('last_geo_lat'),
+  lastGeoLng: decimal('last_geo_lng'),
+  lastGeoTimestamp: timestamp('last_geo_timestamp'),
+  emergencyFlag: boolean('emergency_flag').default(false),
+  idDocumentUrl: text('id_document_url'),
+  mcpProvider: text('mcp_provider'),
+  authorizationCode: text('authorization_code'),
+  icd10Codes: jsonb('icd10_codes'),
+  prescriptions: text('prescriptions'),
+  otherDiagnoses: text('other_diagnoses'),
+  releaseConditions: jsonb('release_conditions'),
+  dietaryRestrictions: text('dietary_restrictions'),
+  bicCardStatus: text('bic_card_status'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('client_profiles_user_idx').on(table.userId),
+  index('client_profiles_type_idx').on(table.clientType),
+  index('client_profiles_cm_idx').on(table.assignedCaseManagerId),
+]);
+
+// ── EVENTS ────────────────────────────────────────────────────────────────────
+export const lhEvents = pgTable('lh_events', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  title: text('title').notNull(),
+  eventType: text('event_type').notNull(), // one-on-one | group | org-wide | external | training | meeting | touchpoint
+  description: text('description'),
+  agenda: text('agenda'),
+  location: text('location'),
+  teleLink: text('tele_link'),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time'),
+  createdBy: varchar('created_by').references(() => users.id),
+  isOrgWide: boolean('is_org_wide').default(false),
+  mandatoryForClients: boolean('mandatory_for_clients').default(false),
+  mandatoryForStaff: boolean('mandatory_for_staff').default(false),
+  geoRequired: boolean('geo_required').default(false),
+  authorizationRequired: boolean('authorization_required').default(false),
+  authorizationFormType: text('authorization_form_type'),
+  isExternal: boolean('is_external').default(false),
+  attachments: jsonb('attachments'),
+  status: text('status').default('scheduled'),
+  googleCalendarEventId: text('google_calendar_event_id'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('lh_events_start_time_idx').on(table.startTime),
+  index('lh_events_type_idx').on(table.eventType),
+  index('lh_events_created_by_idx').on(table.createdBy),
+]);
+
+export const eventInvitees = pgTable('event_invitees', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  eventId: uuid('event_id').references(() => lhEvents.id),
+  userId: varchar('user_id').references(() => users.id),
+  clientId: varchar('client_id').references(() => users.id),
+  inviteeType: text('invitee_type').notNull(), // staff | client | external
+  externalEmail: text('external_email'),
+  externalName: text('external_name'),
+  status: text('status').default('invited'),
+}, (table) => [
+  index('event_invitees_event_idx').on(table.eventId),
+]);
+
+export const eventAttendance = pgTable('event_attendance', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  eventId: uuid('event_id').references(() => lhEvents.id),
+  clientId: varchar('client_id').references(() => users.id),
+  staffId: varchar('staff_id').references(() => users.id),
+  status: text('status').default('pending'), // present | absent | excused | pending | requested
+  loggedBy: varchar('logged_by').references(() => users.id),
+  loggedAt: timestamp('logged_at'),
+  geoLat: decimal('geo_lat'),
+  geoLng: decimal('geo_lng'),
+  geoVerified: boolean('geo_verified').default(false),
+  loggedAddress: text('logged_address'),
+  notes: text('notes'),
+  caseNoteRequired: boolean('case_note_required').default(true),
+  caseNoteDueAt: timestamp('case_note_due_at'),
+  caseNoteId: uuid('case_note_id'),
+}, (table) => [
+  index('event_attendance_event_idx').on(table.eventId),
+  index('event_attendance_client_idx').on(table.clientId),
+  index('event_attendance_status_idx').on(table.status),
+]);
+
+// ── STAFF CASE NOTES (rich version) ──────────────────────────────────────────
+export const staffCaseNotes = pgTable('staff_case_notes', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id).notNull(),
+  staffId: varchar('staff_id').references(() => users.id).notNull(),
+  caseManagerId: varchar('case_manager_id').references(() => users.id),
+  noteType: text('note_type').notNull(),
+  // general | training | check-in | approval | warning | milestone | incident | goal-update | referral | special-consideration | khrisace
+  priority: integer('priority').notNull().default(4), // 1=immediate 2=same-day 3=within-week 4=general
+  cptCode: text('cpt_code').default('98960'),
+  icd10Code: text('icd10_code'),
+  title: text('title').notNull(),
+  summary: text('summary').notNull(),
+  details: text('details'),
+  outcome: text('outcome'),
+  outcomeType: text('outcome_type'), // past | expected
+  expectedOutcomeDate: date('expected_outcome_date'),
+  location: text('location'),
+  startTime: timestamp('start_time'),
+  endTime: timestamp('end_time'),
+  durationMinutes: integer('duration_minutes'),
+  eventId: uuid('event_id').references(() => lhEvents.id),
+  followUpDate: date('follow_up_date'),
+  confidential: boolean('confidential').default(false),
+  status: text('status').default('draft'), // draft | submitted | overdue | extremely-late | archived
+  submittedAt: timestamp('submitted_at'),
+  dueAt: timestamp('due_at'),
+  googleDriveUrl: text('google_drive_url'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('staff_case_notes_client_idx').on(table.clientId),
+  index('staff_case_notes_staff_idx').on(table.staffId),
+  index('staff_case_notes_status_idx').on(table.status),
+  index('staff_case_notes_due_at_idx').on(table.dueAt),
+]);
+
+export const caseNoteActionItems = pgTable('case_note_action_items', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  caseNoteId: uuid('case_note_id').references(() => staffCaseNotes.id),
+  description: text('description').notNull(),
+  assignedTo: varchar('assigned_to').references(() => users.id),
+  dueDate: date('due_date'),
+  completedAt: timestamp('completed_at'),
+  status: text('status').default('pending'),
+});
+
+// ── CALL LOG ──────────────────────────────────────────────────────────────────
+export const callLog = pgTable('call_log', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  takenBy: varchar('taken_by').references(() => users.id),
+  contactType: text('contact_type').notNull(), // Lead | Client | Resource | Staff | Other
+  status: text('status').default('in-progress'),
+  callbackDate: timestamp('callback_date'),
+  callbackAssignedTo: varchar('callback_assigned_to').references(() => users.id),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  phone: text('phone'),
+  email: text('email'),
+  orgName: text('org_name'),
+  referralSource: text('referral_source'),
+  housingStatus: text('housing_status'),
+  supervisionType: text('supervision_type'),
+  jiDesignated: text('ji_designated'),
+  county: text('county'),
+  releaseDate: text('release_date'),
+  cinNumber: text('cin_number'),
+  mcp: text('mcp'),
+  clientCIN: text('client_cin'),
+  reasonForCall: text('reason_for_call'),
+  followUpNeeded: text('follow_up_needed'),
+  callNotes: text('call_notes'),
+  internalNotes: text('internal_notes'),
+  freedomVoiceCallId: text('freedomvoice_call_id'),
+  freedomVoiceRecordingUrl: text('freedomvoice_recording_url'),
+  linkedClientId: varchar('linked_client_id').references(() => users.id),
+  intakeStarted: boolean('intake_started').default(false),
+  callDate: date('call_date'),
+  callTime: text('call_time'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('call_log_status_idx').on(table.status),
+  index('call_log_taken_by_idx').on(table.takenBy),
+  index('call_log_created_at_idx').on(table.createdAt),
+]);
+
+// ── INTAKE APPLICATIONS ───────────────────────────────────────────────────────
+export const intakeApplications = pgTable('intake_applications', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  type: text('type').notNull(), // lead | applicant | referral
+  status: text('status').default('in-progress'),
+  denialReason: text('denial_reason'),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  phone: text('phone'),
+  email: text('email'),
+  referralSource: text('referral_source'),
+  housingStatus: text('housing_status'),
+  supervisionType: text('supervision_type'),
+  jiDesignated: text('ji_designated'),
+  county: text('county'),
+  cin: text('cin'),
+  mcp: text('mcp'),
+  releaseDate: text('release_date'),
+  notes: text('notes'),
+  assignedTo: varchar('assigned_to').references(() => users.id),
+  callLogId: uuid('call_log_id').references(() => callLog.id),
+  convertedToClientId: varchar('converted_to_client_id').references(() => users.id),
+  onboardingStartedAt: timestamp('onboarding_started_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('intake_applications_type_idx').on(table.type),
+  index('intake_applications_status_idx').on(table.status),
+]);
+
+// ── MAINTENANCE TICKETS (extended) ────────────────────────────────────────────
+export const maintenanceTickets = pgTable('maintenance_tickets', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  submittedBy: varchar('submitted_by').references(() => users.id),
+  title: text('title').notNull(),
+  category: text('category').notNull(),
+  needsCategory: text('needs_category'),
+  description: text('description').notNull(),
+  priority: text('priority').default('normal'),
+  status: text('status').default('open'),
+  imageUrls: jsonb('image_urls'),
+  videoUrls: jsonb('video_urls'),
+  resolvedAt: timestamp('resolved_at'),
+  resolvedBy: varchar('resolved_by').references(() => users.id),
+  resolutionNotes: text('resolution_notes'),
+  cost: decimal('cost'),
+  receiptUrl: text('receipt_url'),
+  googleDriveReceiptUrl: text('google_drive_receipt_url'),
+  isHazardous: boolean('is_hazardous').default(false),
+  financePushStatus: text('finance_push_status'), // pending | pushed | failed
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('maintenance_tickets_status_idx').on(table.status),
+  index('maintenance_tickets_priority_idx').on(table.priority),
+  index('maintenance_tickets_client_idx').on(table.clientId),
+]);
+
+// ── CLIENT EXTENDED RELATIONS ─────────────────────────────────────────────────
+export const clientEmergencyContacts = pgTable('client_emergency_contacts', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  name: text('name').notNull(),
+  relationship: text('relationship').notNull(),
+  phone: text('phone').notNull(),
+  email: text('email'),
+  address: text('address'),
+  isNextOfKin: boolean('is_next_of_kin').default(false),
+  sortOrder: integer('sort_order').default(0),
+});
+
+export const clientSupervisionOfficers = pgTable('client_supervision_officers', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  officerType: text('officer_type').notNull(), // parole | probation | pretrial
+  name: text('name').notNull(),
+  phone: text('phone'),
+  email: text('email'),
+  agency: text('agency'),
+  nextCheckIn: date('next_check_in'),
+});
+
+export const clientHealthProviders = pgTable('client_health_providers', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  providerType: text('provider_type').notNull(), // pcp | therapist | dentist | psychiatrist | other
+  name: text('name').notNull(),
+  organization: text('organization'),
+  phone: text('phone'),
+  email: text('email'),
+  npi: text('npi'),
+});
+
+export const clientBenefits = pgTable('client_benefits', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  benefitType: text('benefit_type').notNull(),
+  status: text('status').notNull(), // active | applied | needed | pending | denied
+  providerName: text('provider_name'),
+  accountNumber: text('account_number'),
+  startDate: date('start_date'),
+  renewalDate: date('renewal_date'),
+  notes: text('notes'),
+});
+
+export const clientWarnings = pgTable('client_warnings', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  issuedBy: varchar('issued_by').references(() => users.id),
+  warningType: text('warning_type').notNull(), // verbal | written | severe | casual
+  reason: text('reason').notNull(),
+  description: text('description'),
+  issuedAt: timestamp('issued_at').defaultNow(),
+  acknowledgedAt: timestamp('acknowledged_at'),
+  googleDriveUrl: text('google_drive_url'),
+}, (table) => [
+  index('client_warnings_client_idx').on(table.clientId),
+]);
+
+export const clientGoals = pgTable('client_goals', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  caseManagerId: varchar('case_manager_id').references(() => users.id),
+  title: text('title').notNull(),
+  description: text('description'),
+  category: text('category'),
+  targetDate: date('target_date'),
+  completedAt: timestamp('completed_at'),
+  status: text('status').default('active'),
+  carePlanId: uuid('care_plan_id'),
+}, (table) => [
+  index('client_goals_client_idx').on(table.clientId),
+]);
+
+export const carePlans = pgTable('care_plans', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  caseManagerId: varchar('case_manager_id').references(() => users.id),
+  title: text('title').notNull(),
+  content: jsonb('content'),
+  status: text('status').default('draft'),
+  esignSubmissionId: text('esign_submission_id'),
+  signedAt: timestamp('signed_at'),
+  googleDriveUrl: text('google_drive_url'),
+  version: integer('version').default(1),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  dueAt: timestamp('due_at'),
+}, (table) => [
+  index('care_plans_client_idx').on(table.clientId),
+]);
+
+export const clientSnapshots = pgTable('client_snapshots', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  snapshotData: jsonb('snapshot_data').notNull(),
+  googleDriveUrl: text('google_drive_url'),
+  takenAt: timestamp('taken_at').defaultNow(),
+  weekOf: date('week_of'),
+}, (table) => [
+  index('client_snapshots_client_idx').on(table.clientId),
+  index('client_snapshots_week_idx').on(table.weekOf),
+]);
+
+// ── AUTHORIZATION FORMS ───────────────────────────────────────────────────────
+export const authorizationRequests = pgTable('authorization_requests', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  assignedBy: varchar('assigned_by').references(() => users.id),
+  formType: text('form_type').notNull(), // overnight | car-rental | guest | food | clothing
+  status: text('status').default('pending'),
+  googleFormResponseId: text('google_form_response_id'),
+  googleDriveUrl: text('google_drive_url'),
+  eventId: uuid('event_id').references(() => lhEvents.id),
+  submittedAt: timestamp('submitted_at'),
+  reviewedBy: varchar('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  denialReason: text('denial_reason'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('auth_requests_client_idx').on(table.clientId),
+  index('auth_requests_status_idx').on(table.status),
+]);
+
+// ── FAXES ─────────────────────────────────────────────────────────────────────
+export const faxes = pgTable('faxes', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  direction: text('direction').notNull(), // inbound | outbound
+  status: text('status').default('queued'),
+  telnyxFaxId: text('telnyx_fax_id'),
+  toNumber: text('to_number'),
+  fromNumber: text('from_number'),
+  docId: uuid('doc_id').references(() => documents.id),
+  coverPageIncluded: boolean('cover_page_included').default(true),
+  pages: integer('pages'),
+  sentAt: timestamp('sent_at'),
+  receivedAt: timestamp('received_at'),
+  filedTo: text('filed_to'),
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ── TOUCHPOINTS ────────────────────────────────────────────────────────────────
+export const touchpoints = pgTable('touchpoints', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  caseManagerId: varchar('case_manager_id').references(() => users.id),
+  scheduledAt: timestamp('scheduled_at').notNull(),
+  completedAt: timestamp('completed_at'),
+  type: text('type').default('check-in'),
+  notes: text('notes'),
+  caseNoteId: uuid('case_note_id').references(() => staffCaseNotes.id),
+  status: text('status').default('scheduled'),
+}, (table) => [
+  index('touchpoints_client_idx').on(table.clientId),
+  index('touchpoints_cm_idx').on(table.caseManagerId),
+  index('touchpoints_scheduled_idx').on(table.scheduledAt),
+]);
+
+// ── MANAGED FORMS ─────────────────────────────────────────────────────────────
+export const managedForms = pgTable('managed_forms', {
+  key: text('key').primaryKey(),
+  label: text('label').notNull(),
+  googleFileId: text('google_file_id'),
+  googleFileUrl: text('google_file_url'),
+  version: text('version'),
+  lastCheckedAt: timestamp('last_checked_at'),
+  lastUpdatedAt: timestamp('last_updated_at'),
+  updatedBy: varchar('updated_by').references(() => users.id),
+});
+
+// ── APP SETTINGS ──────────────────────────────────────────────────────────────
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedBy: varchar('updated_by').references(() => users.id),
+});
+
+// ── SAVED REPORTS ─────────────────────────────────────────────────────────────
+export const savedReports = pgTable('saved_reports', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  templateId: uuid('template_id').references(() => reportTemplates.id),
+  name: text('name').notNull(),
+  generatedBy: varchar('generated_by').references(() => users.id),
+  dateRange: jsonb('date_range'),
+  data: jsonb('data'),
+  googleDriveUrl: text('google_drive_url'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ── EXTENDED RESOURCES ────────────────────────────────────────────────────────
+// Additional fields for the full resource management system
+export const resourceExtended = pgTable('resource_extended', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  resourceId: uuid('resource_id').references(() => resources.id).notNull().unique(),
+  contactPerson: text('contact_person'),
+  applicationLink: text('application_link'),
+  logoUrl: text('logo_url'),
+  serviceTime: text('service_time'),
+  cost: text('cost'),
+  services: text('services'),
+  requirements: text('requirements'),
+  addedFromCallId: uuid('added_from_call_id').references(() => callLog.id),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSERT SCHEMAS — NEW TABLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const insertOnboardingPhaseSchema = createInsertSchema(onboardingPhases).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFieldSaveSchema = createInsertSchema(fieldSaves).omit({ id: true, savedAt: true });
+export const insertClientProfileSchema = createInsertSchema(clientProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertLhEventSchema = createInsertSchema(lhEvents).omit({ id: true, createdAt: true });
+export const insertEventInviteeSchema = createInsertSchema(eventInvitees).omit({ id: true });
+export const insertEventAttendanceSchema = createInsertSchema(eventAttendance).omit({ id: true });
+export const insertStaffCaseNoteSchema = createInsertSchema(staffCaseNotes).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCaseNoteActionItemSchema = createInsertSchema(caseNoteActionItems).omit({ id: true });
+export const insertCallLogSchema = createInsertSchema(callLog).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertIntakeApplicationSchema = createInsertSchema(intakeApplications).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertMaintenanceTicketSchema = createInsertSchema(maintenanceTickets).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertClientEmergencyContactSchema = createInsertSchema(clientEmergencyContacts).omit({ id: true });
+export const insertClientSupervisionOfficerSchema = createInsertSchema(clientSupervisionOfficers).omit({ id: true });
+export const insertClientHealthProviderSchema = createInsertSchema(clientHealthProviders).omit({ id: true });
+export const insertClientBenefitSchema = createInsertSchema(clientBenefits).omit({ id: true });
+export const insertClientWarningSchema = createInsertSchema(clientWarnings).omit({ id: true });
+export const insertClientGoalSchema = createInsertSchema(clientGoals).omit({ id: true });
+export const insertCarePlanSchema = createInsertSchema(carePlans).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertClientSnapshotSchema = createInsertSchema(clientSnapshots).omit({ id: true });
+export const insertAuthorizationRequestSchema = createInsertSchema(authorizationRequests).omit({ id: true, createdAt: true });
+export const insertFaxSchema = createInsertSchema(faxes).omit({ id: true, createdAt: true });
+export const insertTouchpointSchema = createInsertSchema(touchpoints).omit({ id: true });
+export const insertSavedReportSchema = createInsertSchema(savedReports).omit({ id: true, createdAt: true });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES — NEW TABLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type OnboardingPhase = typeof onboardingPhases.$inferSelect;
+export type InsertOnboardingPhase = z.infer<typeof insertOnboardingPhaseSchema>;
+export type FieldSave = typeof fieldSaves.$inferSelect;
+export type InsertFieldSave = z.infer<typeof insertFieldSaveSchema>;
+export type ClientProfile = typeof clientProfiles.$inferSelect;
+export type InsertClientProfile = z.infer<typeof insertClientProfileSchema>;
+export type LhEvent = typeof lhEvents.$inferSelect;
+export type InsertLhEvent = z.infer<typeof insertLhEventSchema>;
+export type EventInvitee = typeof eventInvitees.$inferSelect;
+export type EventAttendance = typeof eventAttendance.$inferSelect;
+export type InsertEventAttendance = z.infer<typeof insertEventAttendanceSchema>;
+export type StaffCaseNote = typeof staffCaseNotes.$inferSelect;
+export type InsertStaffCaseNote = z.infer<typeof insertStaffCaseNoteSchema>;
+export type CaseNoteActionItem = typeof caseNoteActionItems.$inferSelect;
+export type CallLog = typeof callLog.$inferSelect;
+export type InsertCallLog = z.infer<typeof insertCallLogSchema>;
+export type IntakeApplication = typeof intakeApplications.$inferSelect;
+export type InsertIntakeApplication = z.infer<typeof insertIntakeApplicationSchema>;
+export type MaintenanceTicket = typeof maintenanceTickets.$inferSelect;
+export type InsertMaintenanceTicket = z.infer<typeof insertMaintenanceTicketSchema>;
+export type ClientEmergencyContact = typeof clientEmergencyContacts.$inferSelect;
+export type ClientSupervisionOfficer = typeof clientSupervisionOfficers.$inferSelect;
+export type ClientHealthProvider = typeof clientHealthProviders.$inferSelect;
+export type ClientBenefit = typeof clientBenefits.$inferSelect;
+export type ClientWarning = typeof clientWarnings.$inferSelect;
+export type ClientGoal = typeof clientGoals.$inferSelect;
+export type CarePlan = typeof carePlans.$inferSelect;
+export type ClientSnapshot = typeof clientSnapshots.$inferSelect;
+export type AuthorizationRequest = typeof authorizationRequests.$inferSelect;
+export type Fax = typeof faxes.$inferSelect;
+export type Touchpoint = typeof touchpoints.$inferSelect;
+export type InsertTouchpoint = z.infer<typeof insertTouchpointSchema>;
+export type SavedReport = typeof savedReports.$inferSelect;

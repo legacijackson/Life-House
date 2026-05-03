@@ -4,14 +4,14 @@ import multer from "multer";
 import { storage } from "./storage";
 import { csvProcessor } from "./csv-processor";
 import { z } from "zod";
-import { 
-  insertUserSchema, 
-  insertReferralSchema, 
-  insertAttendanceSchema, 
-  insertServiceEventSchema, 
-  insertCaseNoteSchema, 
-  insertTicketSchema, 
-  insertApplicationSchema, 
+import {
+  insertUserSchema,
+  insertReferralSchema,
+  insertAttendanceSchema,
+  insertServiceEventSchema,
+  insertCaseNoteSchema,
+  insertTicketSchema,
+  insertApplicationSchema,
   insertDonationSchema,
   insertInquirySchema,
   insertPartnerSchema,
@@ -21,14 +21,38 @@ import {
   faqs,
   faqRoles,
   faqPages,
-  faqFeedback
+  faqFeedback,
+  donorDonations,
+  donors,
+  // Master build v3 new tables
+  callLog,
+  intakeApplications,
+  clientProfiles,
+  clientEmergencyContacts,
+  clientHealthProviders,
+  clientBenefits,
+  clientWarnings,
+  clientGoals,
+  carePlans,
+  maintenanceTickets,
+  staffCaseNotes,
+  lhEvents,
+  eventInvitees,
+  eventAttendance,
+  touchpoints,
+  authorizationRequests,
+  onboardingPhases,
+  fieldSaves,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, like, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, like, desc, sql, inArray, isNull, lt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
 import { setupAuth } from "./replitAuth";
+import { notifyNewLead, notifyCallbackAssigned, notifyAdmins, createNotification } from "./services/notifications";
+import { callCallLogScript } from "./services/apps-script";
+import { pushMaintenanceExpense } from "./services/finance";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -4162,6 +4186,685 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (error) {
       console.error('Kit webhook error:', error);
       res.status(200).json({ received: true }); // Always return 200 to Kit
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MASTER BUILD v3 — NEW API ROUTES
+  // ─────────────────────────────────────────────────────────────────────────
+
+
+  // ── Clients ──────────────────────────────────────────────────────────────
+
+  app.get('/api/clients', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { type } = req.query as Record<string, string>;
+      let query = db.select().from(users);
+      const clientUsers = await db.select().from(users).where(eq(users.role, "Resident" as any));
+      const profiles = await db.select().from(clientProfiles);
+      const profileMap = Object.fromEntries(profiles.map((p) => [p.userId, p]));
+
+      const result = clientUsers
+        .filter((u) => {
+          const p = profileMap[u.id];
+          if (!type || type === "all") return true;
+          return p?.clientType === type;
+        })
+        .map((u) => ({
+          ...u,
+          profile: profileMap[u.id] ?? null,
+        }));
+
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get('/api/clients/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, req.params.id));
+      if (!user) return res.status(404).json({ message: "Client not found" });
+      const [profile] = await db.select().from(clientProfiles).where(eq(clientProfiles.userId, req.params.id));
+      res.json({ ...user, profile: profile ?? null });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get('/api/clients/:id/emergency-contacts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const rows = await db.select().from(clientEmergencyContacts).where(eq(clientEmergencyContacts.clientId, req.params.id));
+    res.json(rows);
+  });
+
+  app.post('/api/clients/:id/emergency-contacts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const [row] = await db.insert(clientEmergencyContacts).values({ ...req.body, clientId: req.params.id }).returning();
+    res.json(row);
+  });
+
+  app.get('/api/clients/:id/health-providers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const rows = await db.select().from(clientHealthProviders).where(eq(clientHealthProviders.clientId, req.params.id));
+    res.json(rows);
+  });
+
+  app.post('/api/clients/:id/health-providers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const [row] = await db.insert(clientHealthProviders).values({ ...req.body, clientId: req.params.id }).returning();
+    res.json(row);
+  });
+
+  app.get('/api/clients/:id/benefits', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const rows = await db.select().from(clientBenefits).where(eq(clientBenefits.clientId, req.params.id));
+    res.json(rows);
+  });
+
+  app.post('/api/clients/:id/benefits', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const [row] = await db.insert(clientBenefits).values({ ...req.body, clientId: req.params.id }).returning();
+    res.json(row);
+  });
+
+  app.get('/api/clients/:id/warnings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const rows = await db.select().from(clientWarnings).where(eq(clientWarnings.clientId, req.params.id));
+    res.json(rows);
+  });
+
+  app.post('/api/clients/:id/warnings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const [row] = await db.insert(clientWarnings).values({
+      ...req.body,
+      clientId: req.params.id,
+      issuedBy: req.user.id,
+    }).returning();
+    res.json(row);
+  });
+
+  app.get('/api/clients/:id/goals', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const rows = await db.select().from(clientGoals).where(eq(clientGoals.clientId, req.params.id));
+    res.json(rows);
+  });
+
+  app.post('/api/clients/:id/goals', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const [row] = await db.insert(clientGoals).values({
+      ...req.body,
+      clientId: req.params.id,
+      caseManagerId: req.user.id,
+    }).returning();
+    res.json(row);
+  });
+
+  // ── Call Log ──────────────────────────────────────────────────────────────
+
+  app.get('/api/call-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select().from(callLog).orderBy(desc(callLog.createdAt));
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/call-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.insert(callLog).values({
+        ...req.body,
+        takenBy: req.user.id,
+      }).returning();
+
+      // Fire-and-forget Apps Script + notification
+      callCallLogScript({ ...req.body, callId: row.id }).catch(console.error);
+
+      if (req.body.contactType === "Lead" || req.body.contactType === "Other") {
+        notifyNewLead({
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          phone: req.body.phone,
+          contactType: req.body.contactType,
+          callId: row.id,
+        }).catch(console.error);
+      }
+
+      if (req.body.status === "callback" && req.body.callbackAssignedTo) {
+        notifyCallbackAssigned(req.body.callbackAssignedTo, {
+          callerName: [req.body.firstName, req.body.lastName].filter(Boolean).join(" ") || "Unknown",
+          callbackDate: req.body.callbackDate ? new Date(req.body.callbackDate) : undefined,
+          callId: row.id,
+        }).catch(console.error);
+      }
+
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch('/api/call-log/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.update(callLog)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(callLog.id, req.params.id))
+        .returning();
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Intake Applications ───────────────────────────────────────────────────
+
+  app.get('/api/intake-applications', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select().from(intakeApplications).orderBy(desc(intakeApplications.createdAt));
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/intake-applications', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.insert(intakeApplications).values(req.body).returning();
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch('/api/intake-applications/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.body.status === "denied" && !req.body.denialReason) {
+        return res.status(400).json({ message: "Denial reason is required when denying an application" });
+      }
+      const [row] = await db.update(intakeApplications)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(intakeApplications.id, req.params.id))
+        .returning();
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Staff Case Notes ──────────────────────────────────────────────────────
+
+  app.get('/api/staff-case-notes', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId, status, type } = req.query as Record<string, string>;
+      let query = db.select().from(staffCaseNotes);
+      const conditions: any[] = [];
+
+      if (clientId) conditions.push(eq(staffCaseNotes.clientId, clientId));
+      if (status) conditions.push(eq(staffCaseNotes.status, status));
+      if (type) conditions.push(eq(staffCaseNotes.noteType, type));
+
+      const isAdmin = req.user.isAdmin;
+      if (!isAdmin && !clientId) {
+        conditions.push(eq(staffCaseNotes.caseManagerId, req.user.id));
+      }
+
+      const rows = conditions.length
+        ? await db.select().from(staffCaseNotes).where(and(...conditions)).orderBy(desc(staffCaseNotes.createdAt))
+        : await db.select().from(staffCaseNotes).orderBy(desc(staffCaseNotes.createdAt));
+
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/staff-case-notes', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const dueAt = req.body.eventId
+        ? null
+        : req.body.status === "submitted"
+          ? new Date(Date.now() + 48 * 60 * 60 * 1000)
+          : null;
+
+      const [row] = await db.insert(staffCaseNotes).values({
+        ...req.body,
+        staffId: req.user.id,
+        caseManagerId: req.body.caseManagerId ?? req.user.id,
+        dueAt,
+        submittedAt: req.body.status === "submitted" ? new Date() : null,
+        priority: Number(req.body.priority) || 4,
+        durationMinutes: req.body.durationMinutes ? Number(req.body.durationMinutes) : null,
+      }).returning();
+
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch('/api/staff-case-notes/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [existing] = await db.select().from(staffCaseNotes).where(eq(staffCaseNotes.id, req.params.id));
+      if (!existing) return res.status(404).json({ message: "Note not found" });
+
+      // Case managers cannot modify submitted notes without admin approval
+      if (existing.status === "submitted" && !req.user.isAdmin) {
+        return res.status(403).json({ message: "Cannot modify submitted notes" });
+      }
+
+      const [row] = await db.update(staffCaseNotes)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(staffCaseNotes.id, req.params.id))
+        .returning();
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Events ────────────────────────────────────────────────────────────────
+
+  app.get('/api/lh-events', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select().from(lhEvents).orderBy(desc(lhEvents.startTime));
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/lh-events', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.insert(lhEvents).values({
+        ...req.body,
+        createdBy: req.user.id,
+        startTime: new Date(req.body.startTime),
+        endTime: req.body.endTime ? new Date(req.body.endTime) : null,
+      }).returning();
+
+      // Create attendance records for invitees
+      if (req.body.clientIds && Array.isArray(req.body.clientIds)) {
+        const caseNoteDueAt = row.endTime
+          ? new Date(new Date(row.endTime).getTime() + 48 * 60 * 60 * 1000)
+          : null;
+
+        for (const clientId of req.body.clientIds) {
+          await db.insert(eventAttendance).values({
+            eventId: row.id,
+            clientId,
+            caseNoteRequired: true,
+            caseNoteDueAt,
+          });
+          await db.insert(eventInvitees).values({
+            eventId: row.id,
+            clientId,
+            inviteeType: "client",
+          });
+        }
+      }
+
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Event Attendance ──────────────────────────────────────────────────────
+
+  app.get('/api/event-attendance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { eventId, clientId } = req.query as Record<string, string>;
+      const conditions: any[] = [];
+      if (eventId) conditions.push(eq(eventAttendance.eventId, eventId));
+      if (clientId) conditions.push(eq(eventAttendance.clientId, clientId));
+
+      const rows = conditions.length
+        ? await db.select().from(eventAttendance).where(and(...conditions))
+        : await db.select().from(eventAttendance);
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch('/api/event-attendance/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.update(eventAttendance)
+        .set({ ...req.body, loggedBy: req.user.id, loggedAt: new Date() })
+        .where(eq(eventAttendance.id, req.params.id))
+        .returning();
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Maintenance Tickets ───────────────────────────────────────────────────
+
+  app.get('/api/maintenance-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select().from(maintenanceTickets).orderBy(desc(maintenanceTickets.createdAt));
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/maintenance-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Auto-flag hazardous keywords
+      const hazardKeywords = [
+        "water damage", "mold", "mould", "flood", "gas leak", "electrical fire",
+        "sewage", "asbestos", "lead paint", "carbon monoxide",
+      ];
+      const text = `${req.body.title ?? ""} ${req.body.description ?? ""}`.toLowerCase();
+      const isHazardous = hazardKeywords.some((kw) => text.includes(kw));
+
+      const [row] = await db.insert(maintenanceTickets).values({
+        ...req.body,
+        submittedBy: req.user.id,
+        isHazardous,
+        priority: req.body.priority ?? "normal",
+      }).returning();
+
+      // Notify admins on high/urgent
+      if (row.priority === "high" || row.priority === "urgent" || isHazardous) {
+        notifyAdmins({
+          type: "maintenance_urgent",
+          title: `${isHazardous ? "⚠️ HAZARD" : row.priority.toUpperCase()} Maintenance Ticket`,
+          body: row.title,
+          priority: isHazardous ? "urgent" : (row.priority as any),
+          linkType: "maintenance_ticket",
+          linkId: row.id,
+        }).catch(console.error);
+      }
+
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch('/api/maintenance-tickets/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.update(maintenanceTickets)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(maintenanceTickets.id, req.params.id))
+        .returning();
+
+      // Push expense to Finance app when receipt is uploaded on resolve
+      if (req.body.status === "resolved" && req.body.receiptUrl && row.cost) {
+        pushMaintenanceExpense({
+          id: row.id,
+          title: row.title,
+          category: row.category,
+          cost: row.cost,
+          receiptUrl: row.receiptUrl,
+          resolvedAt: row.resolvedAt ? new Date(row.resolvedAt) : new Date(),
+        }).catch(console.error);
+      }
+
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Authorization Requests ────────────────────────────────────────────────
+
+  app.get('/api/authorization-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId } = req.query as Record<string, string>;
+      const rows = clientId
+        ? await db.select().from(authorizationRequests).where(eq(authorizationRequests.clientId, clientId))
+        : await db.select().from(authorizationRequests);
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/authorization-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.insert(authorizationRequests).values({
+        ...req.body,
+        assignedBy: req.user.id,
+      }).returning();
+
+      // Notify client's case manager
+      const [profile] = await db.select().from(clientProfiles).where(eq(clientProfiles.userId, req.body.clientId));
+      if (profile?.assignedCaseManagerId) {
+        createNotification({
+          userId: profile.assignedCaseManagerId,
+          type: "authorization_assigned",
+          title: `Authorization form assigned — ${req.body.formType}`,
+          priority: "normal",
+          linkType: "authorization_request",
+          linkId: row.id,
+        }).catch(console.error);
+      }
+
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Onboarding ────────────────────────────────────────────────────────────
+
+  app.get('/api/onboarding/phases', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId } = req.query as Record<string, string>;
+      if (!clientId) return res.json([]);
+      const rows = await db.select().from(onboardingPhases).where(eq(onboardingPhases.clientId, clientId));
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/onboarding/field-save', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId, phaseKey, fields } = req.body;
+
+      for (const [fieldName, fieldValue] of Object.entries(fields ?? {})) {
+        // Upsert: delete existing then insert
+        await db.delete(fieldSaves).where(
+          and(
+            eq(fieldSaves.clientId, clientId),
+            eq(fieldSaves.phaseKey, phaseKey),
+            eq(fieldSaves.fieldName, fieldName),
+          ),
+        );
+        await db.insert(fieldSaves).values({
+          clientId,
+          phaseKey,
+          fieldName,
+          fieldValue: String(fieldValue),
+          savedBy: req.user.id,
+        });
+      }
+
+      // Update or create onboarding phase record
+      const [existing] = await db.select().from(onboardingPhases).where(
+        and(
+          eq(onboardingPhases.clientId, clientId),
+          eq(onboardingPhases.phaseKey, phaseKey),
+        ),
+      );
+
+      const phaseLabel = `Phase ${phaseKey}`;
+      const mergedData = { ...(existing?.data as Record<string, unknown> ?? {}), ...fields };
+
+      if (existing) {
+        await db.update(onboardingPhases).set({ data: mergedData, updatedAt: new Date() })
+          .where(eq(onboardingPhases.id, existing.id));
+      } else {
+        await db.insert(onboardingPhases).values({
+          clientId,
+          phaseKey,
+          phaseLabel,
+          status: "in_progress",
+          startedAt: new Date(),
+          data: mergedData,
+        });
+      }
+
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/onboarding/complete-phase', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId, phaseKey } = req.body;
+      const now = new Date();
+
+      const [existing] = await db.select().from(onboardingPhases).where(
+        and(
+          eq(onboardingPhases.clientId, clientId),
+          eq(onboardingPhases.phaseKey, phaseKey),
+        ),
+      );
+
+      const durationSeconds = existing?.startedAt
+        ? Math.round((now.getTime() - new Date(existing.startedAt).getTime()) / 1000)
+        : null;
+
+      if (existing) {
+        await db.update(onboardingPhases).set({
+          status: "completed",
+          completedAt: now,
+          completedBy: req.user.id,
+          durationSeconds,
+          updatedAt: now,
+        }).where(eq(onboardingPhases.id, existing.id));
+      } else {
+        await db.insert(onboardingPhases).values({
+          clientId,
+          phaseKey,
+          phaseLabel: `Phase ${phaseKey}`,
+          status: "completed",
+          completedAt: now,
+          completedBy: req.user.id,
+        });
+      }
+
+      // Update client profile onboarding status
+      await db.update(clientProfiles)
+        .set({ onboardingPhase: phaseKey, updatedAt: now })
+        .where(eq(clientProfiles.userId, clientId));
+
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Touchpoints ───────────────────────────────────────────────────────────
+
+  app.get('/api/touchpoints', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId } = req.query as Record<string, string>;
+      const conditions: any[] = [];
+      if (clientId) conditions.push(eq(touchpoints.clientId, clientId));
+      if (!req.user.isAdmin) conditions.push(eq(touchpoints.caseManagerId, req.user.id));
+
+      const rows = conditions.length
+        ? await db.select().from(touchpoints).where(and(...conditions)).orderBy(desc(touchpoints.scheduledAt))
+        : await db.select().from(touchpoints).orderBy(desc(touchpoints.scheduledAt));
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/touchpoints', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.insert(touchpoints).values({
+        ...req.body,
+        caseManagerId: req.user.id,
+        scheduledAt: new Date(req.body.scheduledAt),
+      }).returning();
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Finance Integration Endpoints ─────────────────────────────────────────
+
+  const MAIN_APP_FINANCE_TOKEN = process.env.MAIN_APP_FINANCE_TOKEN;
+
+  function requireFinanceToken(req: Request, res: Response, next: NextFunction) {
+    const auth = req.headers.authorization;
+    if (!MAIN_APP_FINANCE_TOKEN || auth !== `Bearer ${MAIN_APP_FINANCE_TOKEN}`) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  }
+
+  app.get('/api/finance/embed-check', requireAuth, async (_req: Request, res: Response) => {
+    try {
+      const financeUrl = process.env.FINANCE_APP_URL ?? "https://lifehouseaccounting.replit.app";
+      const check = await fetch(financeUrl, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+      const xfo = check.headers.get("x-frame-options") ?? "";
+      const csp = check.headers.get("content-security-policy") ?? "";
+      const canEmbed = !xfo && !csp.includes("frame-ancestors");
+      res.json({ canEmbed });
+    } catch {
+      res.json({ canEmbed: false });
+    }
+  });
+
+  app.get('/api/finance/donations', requireFinanceToken, async (req: Request, res: Response) => {
+    try {
+      const { since } = req.query as Record<string, string>;
+      let query = db.select({
+        date: donorDonations.createdAt,
+        amount: donorDonations.amount,
+        donor: donors.firstName,
+        type: donorDonations.frequency,
+        notes: donorDonations.notes,
+      }).from(donorDonations).innerJoin(donors, eq(donorDonations.donorId, donors.id));
+
+      const rows = await query;
+      const filtered = since ? rows.filter((r) => r.date && new Date(r.date) >= new Date(since)) : rows;
+      res.json(filtered);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get('/api/finance/billable-services', requireFinanceToken, async (req: Request, res: Response) => {
+    try {
+      const { month } = req.query as Record<string, string>;
+      const rows = await db.select().from(staffCaseNotes)
+        .where(eq(staffCaseNotes.status, "submitted"));
+      res.json(rows.map((n) => ({
+        clientId: n.clientId,
+        cptCode: n.cptCode,
+        icd10: n.icd10Code,
+        date: n.submittedAt,
+        durationMinutes: n.durationMinutes,
+        caseManagerId: n.caseManagerId,
+      })));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get('/api/finance/rent-roll', requireFinanceToken, async (req: Request, res: Response) => {
+    try {
+      const profiles = await db.select().from(clientProfiles);
+      const userIds = profiles.map((p) => p.userId);
+      const clientUsers = userIds.length > 0
+        ? await db.select().from(users).where(inArray(users.id, userIds))
+        : [];
+      const userMap = Object.fromEntries(clientUsers.map((u) => [u.id, u]));
+
+      res.json(profiles.map((p) => ({
+        clientId: p.userId,
+        name: userMap[p.userId]?.name ?? "Unknown",
+        bed: p.bedAssignment,
+        payType: p.payType,
+        rentAmount: p.rentAmount,
+        enrollmentDate: p.enrollmentDate,
+      })));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
     }
   });
 

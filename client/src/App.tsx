@@ -17,10 +17,8 @@ import Refer from "@/pages/refer";
 import Donate from "@/pages/donate";
 import Home from "./pages/home";
 
-import Intake from "@/pages/intake";
 import Referrals from "@/pages/referrals";
 import Residents from "@/pages/residents";
-import CaseNotes from "@/pages/case-notes";
 import ResidentCaseNotes from "@/pages/resident-case-notes";
 import Attendance from "@/pages/attendance";
 import Resources from "@/pages/resources";
@@ -39,6 +37,14 @@ import FirstLoginWizard from "@/pages/first-login-wizard";
 import IntakeReferrals from "@/pages/intake-referrals";
 import NotFound from "@/pages/not-found";
 import DocumentsPage from "@/pages/documents";
+
+// New master build pages
+import ClientsPage from "@/pages/clients/index";
+import IntakePage from "@/pages/intake/index";
+import CaseNotesPage from "@/pages/case-notes/index";
+import OnboardingPage from "@/pages/onboarding/index";
+import WorkshopStudio from "@/pages/workshop-studio/index";
+import FinancePage from "@/pages/finance/index";
 
 // Remove ProtectedRoutes component as we're handling auth in Router now
 
@@ -62,11 +68,18 @@ function Router() {
         ) : (
           <>
             <Route path="/" component={Home} />
-            <Route path="/app/intake" component={Intake} />
+            {/* New master build routes */}
+            <Route path="/app/clients" component={ClientsPage} />
+            <Route path="/app/intake" component={IntakePage} />
+            <Route path="/app/case-notes" component={CaseNotesPage} />
+            <Route path="/app/onboarding" component={OnboardingPage} />
+            <Route path="/app/workshop-studio" component={WorkshopStudio} />
+            <Route path="/app/finance" component={FinancePage} />
+
+            {/* Legacy routes preserved */}
             <Route path="/app/referrals" component={Referrals} />
             <Route path="/app/residents" component={Residents} />
             <Route path="/app/residents/:id/case-notes" component={ResidentCaseNotes} />
-            <Route path="/app/case-notes" component={CaseNotes} />
             <Route path="/app/attendance" component={Attendance} />
             <Route path="/app/properties" component={Properties} />
             <Route path="/app/maintenance" component={Maintenance} />

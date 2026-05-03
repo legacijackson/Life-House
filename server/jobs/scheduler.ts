@@ -1,4 +1,7 @@
 import { storage } from "../storage";
+import { syncFreedomVoiceCalls } from "./freedomvoice-sync";
+import { checkCaseNoteDeadlines } from "./case-note-deadlines";
+import { takeWeeklyClientSnapshots } from "./weekly-snapshots";
 
 // Simple in-memory job scheduler for background tasks
 class JobScheduler {
@@ -13,6 +16,9 @@ class JobScheduler {
     this.scheduleResourceDiff();
     this.scheduleStopArmsReminder();
     this.scheduleOverdueNotesWatchdog();
+    this.scheduleFreedomVoiceSync();
+    this.scheduleCaseNoteDeadlines();
+    this.scheduleWeeklySnapshots();
   }
 
   stop() {
@@ -184,6 +190,35 @@ class JobScheduler {
     runOverdueNotesWatchdog();
     const interval = setInterval(runOverdueNotesWatchdog, 2 * 60 * 60 * 1000);
     this.jobs.set('overdueNotesWatchdog', interval);
+  }
+
+  // FreedomVoice sync — every 5 minutes
+  private scheduleFreedomVoiceSync() {
+    syncFreedomVoiceCalls();
+    const interval = setInterval(syncFreedomVoiceCalls, 5 * 60 * 1000);
+    this.jobs.set('freedomVoiceSync', interval);
+  }
+
+  // Case note deadline checker — every hour
+  private scheduleCaseNoteDeadlines() {
+    checkCaseNoteDeadlines();
+    const interval = setInterval(checkCaseNoteDeadlines, 60 * 60 * 1000);
+    this.jobs.set('caseNoteDeadlines', interval);
+  }
+
+  // Weekly client snapshots — every Sunday at 2 AM PT (10 AM UTC)
+  private scheduleWeeklySnapshots() {
+    const checkAndRun = async () => {
+      if (!this.enabled) return;
+      const now = new Date();
+      const isUtcSunday = now.getUTCDay() === 0;
+      const isUtc10AM = now.getUTCHours() === 10 && now.getUTCMinutes() < 60;
+      if (isUtcSunday && isUtc10AM) {
+        await takeWeeklyClientSnapshots();
+      }
+    };
+    const interval = setInterval(checkAndRun, 60 * 60 * 1000);
+    this.jobs.set('weeklySnapshots', interval);
   }
 }
 

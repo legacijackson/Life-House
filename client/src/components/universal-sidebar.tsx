@@ -45,25 +45,30 @@ const residentNavigation = [
 // Staff navigation (for case workers)
 const staffNavigation = [
   { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
-  { name: "Residents", href: "/app/residents", icon: Users },
-  { name: "Intake and Referrals", href: "/app/intake", icon: UserPlus },
-  { name: "Reports", href: "/app/reports", icon: BarChart3 },
+  { name: "Clients", href: "/app/clients", icon: Users },
+  { name: "Intake & Referrals", href: "/app/intake", icon: UserPlus },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
-  { name: "Attendance", href: "/app/attendance", icon: Calendar },
+  { name: "Events & Attendance", href: "/app/attendance", icon: Calendar },
+  { name: "Onboarding", href: "/app/onboarding", icon: UserPlus },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Resources", href: "/app/resources", icon: Archive },
   { name: "Maintenance", href: "/app/maintenance", icon: Building },
+  { name: "Workshop Studio", href: "/app/workshop-studio", icon: Building },
 ];
 
 // Admin navigation (includes all staff items plus admin panel)
 const adminNavigation = [
   { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
-  { name: "Residents", href: "/app/residents", icon: Users },
-  { name: "Intake and Referrals", href: "/app/intake", icon: UserPlus },
-  { name: "Reports", href: "/app/reports", icon: BarChart3 },
+  { name: "Clients", href: "/app/clients", icon: Users },
+  { name: "Intake & Referrals", href: "/app/intake", icon: UserPlus },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
-  { name: "Attendance", href: "/app/attendance", icon: Calendar },
+  { name: "Events & Attendance", href: "/app/attendance", icon: Calendar },
+  { name: "Onboarding", href: "/app/onboarding", icon: UserPlus },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Resources", href: "/app/resources", icon: Archive },
   { name: "Maintenance", href: "/app/maintenance", icon: Building },
+  { name: "Workshop Studio", href: "/app/workshop-studio", icon: Building },
+  { name: "Finance", href: "/app/finance", icon: BarChart3 },
   { name: "Admin Panel", href: "/app/admin-panel", icon: Settings },
 ];
 
