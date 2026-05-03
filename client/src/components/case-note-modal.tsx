@@ -118,11 +118,11 @@ export function CaseNoteModal({
   // AI assistance mutation
   const aiAssistMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      return await apiRequest('POST', '/api/ai/notes', {
-        prompt,
+      return await apiRequest('POST', '/api/ai/draft-note', {
+        bulletPoints: [prompt],
         residentId: form.getValues('residentId'),
-        noteType: form.getValues('type')
-      });
+        noteType: form.getValues('type'),
+      }).then((r) => r.json());
     },
     onSuccess: (data: any) => {
       form.setValue('content', data.noteText || data.content || '');

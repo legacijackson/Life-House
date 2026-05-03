@@ -5261,6 +5261,29 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
+  app.delete('/api/notifications/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(notifications).where(and(
+        eq(notifications.id, req.params.id),
+        eq(notifications.userId, req.user!.id as any)
+      ));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  // Staff attendance request approval (placeholder — uses eventAttendance table)
+  app.patch('/api/staff/attendance-requests/:id', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { approved } = req.body;
+      const status = approved ? 'present' : 'absent';
+      const [row] = await db.update(eventAttendance)
+        .set({ status, loggedBy: req.user.id, loggedAt: new Date() })
+        .where(eq(eventAttendance.id, req.params.id))
+        .returning();
+      res.json(row);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  }));
+
   // ── Touchpoints ───────────────────────────────────────────────────────────
 
   app.get('/api/touchpoints', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
