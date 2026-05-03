@@ -55,6 +55,7 @@ import {
   residentResources,
   referrals,
   partners,
+  programs,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -931,158 +932,43 @@ startxref
   // Staff Dashboard Routes
   app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userRole = req.user.role;
-      const isAdmin = userRole === 'Admin';
+      const isAdmin = req.user.role === 'Admin';
       const caseManagerId = req.user.id;
 
-      // Get total residents for admin or assigned residents for case managers
-      const totalResidents = isAdmin ? 45 : 12;
-      const activeResidents = isAdmin ? 38 : 10;
-      const pendingIntakes = isAdmin ? 7 : 3;
-      const maintenanceTickets = isAdmin ? 15 : 5;
+      const [residentCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.role, 'Resident'));
+
+      const [pendingIntakeCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(intakeApplications)
+        .where(eq(intakeApplications.status, 'pending'));
+
+      const [maintenanceCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(maintenanceTickets)
+        .where(eq(maintenanceTickets.status, 'open'));
+
+      const overdueNotesList = await db
+        .select()
+        .from(staffCaseNotes)
+        .where(eq(staffCaseNotes.status, 'overdue'))
+        .orderBy(staffCaseNotes.followUpDate)
+        .limit(5);
 
       const dashboardData = {
-        totalResidents,
-        activeResidents,
-        pendingIntakes,
-        overdueNotes: 3,
-        maintenanceTickets,
-        completionRate: 85,
-        recentActivity: [
-          {
-            id: '1',
-            type: 'case_note',
-            description: 'Added case note for Marcus Johnson',
-            timestamp: '2 hours ago',
-            residentName: 'Marcus Johnson'
-          },
-          {
-            id: '2',
-            type: 'intake',
-            description: 'New intake application received',
-            timestamp: '4 hours ago'
-          }
-        ],
-        overdueNotesList: [
-          {
-            id: '1',
-            residentId: '1',
-            residentName: 'Marcus Johnson',
-            noteType: '1-on-1 Session',
-            dueDate: '2024-01-28',
-            daysOverdue: 2
-          },
-          {
-            id: '2',
-            residentId: '2',
-            residentName: 'Sarah Williams',
-            noteType: 'Life Design Session',
-            dueDate: '2024-01-27',
-            daysOverdue: 3
-          },
-          {
-            id: '3',
-            residentId: '3',
-            residentName: 'David Rodriguez',
-            noteType: 'Professional Development',
-            dueDate: '2024-01-26',
-            daysOverdue: 4
-          }
-        ],
-        notifications: [
-          {
-            id: '1',
-            type: 'overdue',
-            message: 'You have 3 overdue case notes that need attention',
-            timestamp: '30 minutes ago',
-            read: false
-          },
-          {
-            id: '2',
-            type: 'reminder',
-            message: 'Monthly report due tomorrow',
-            timestamp: '2 hours ago',
-            read: false
-          },
-          {
-            id: '3',
-            type: 'update',
-            message: 'Marcus Johnson advanced to Stage 4',
-            timestamp: '5 hours ago',
-            read: true
-          }
-        ],
-        messages: await (async () => {
-          // Fetch real messages from database
-          const inboxMessages = await storage.getMessages(caseManagerId, 'inbox');
-          
-          // Format messages for dashboard display
-          const formattedMessages = await Promise.all(inboxMessages.slice(0, 5).map(async (msg) => {
-            const fromUser = await storage.getUser(msg.fromUserId);
-            const timeDiff = msg.createdAt ? Date.now() - new Date(msg.createdAt).getTime() : 0;
-            const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-            const timestamp = hours < 1 ? 'Just now' : hours < 24 ? `${hours} hour${hours > 1 ? 's' : ''} ago` : new Date(msg.createdAt!).toLocaleDateString();
-            
-            return {
-              id: msg.id,
-              from: fromUser?.name || 'Unknown User',
-              subject: msg.subject,
-              preview: msg.body.length > 50 ? msg.body.substring(0, 50) + '...' : msg.body,
-              timestamp,
-              read: msg.isRead || false
-            };
-          }));
-          
-          // If no messages, create a welcome message
-          if (formattedMessages.length === 0) {
-            // Create a welcome message for new users
-            const adminUser = await storage.getUserByEmail('admin@lifehouse.org');
-            if (adminUser) {
-              await storage.createMessage({
-                fromUserId: adminUser.id,
-                toUserId: caseManagerId,
-                subject: 'Welcome to Life House',
-                body: 'Welcome to the Life House management system! Click this message to view the full conversation and reply.',
-              });
-              
-              // Refetch messages
-              const newMessages = await storage.getMessages(caseManagerId, 'inbox');
-              return newMessages.slice(0, 5).map(msg => ({
-                id: msg.id,
-                from: 'Admin Team',
-                subject: msg.subject,
-                preview: msg.body.length > 50 ? msg.body.substring(0, 50) + '...' : msg.body,
-                timestamp: 'Just now',
-                read: false
-              }));
-            }
-          }
-          
-          return formattedMessages;
-        })(),
-        upcomingEvents: [
-          {
-            id: '1',
-            type: '1-on-1',
-            title: 'Weekly Check-in',
-            residentName: 'Marcus Johnson',
-            datetime: 'Today at 2:00 PM'
-          },
-          {
-            id: '2',
-            type: 'Group',
-            title: 'Financial Literacy Workshop',
-            residentName: 'All Residents',
-            datetime: 'Tomorrow at 10:00 AM'
-          },
-          {
-            id: '3',
-            type: 'Assessment',
-            title: 'Stage Review',
-            residentName: 'David Rodriguez',
-            datetime: 'Friday at 3:00 PM'
-          }
-        ]
+        totalResidents: residentCount?.count ?? 0,
+        activeResidents: residentCount?.count ?? 0,
+        pendingIntakes: pendingIntakeCount?.count ?? 0,
+        overdueNotes: overdueNotesList.length,
+        maintenanceTickets: maintenanceCount?.count ?? 0,
+        completionRate: 0,
+        recentActivity: [],
+        overdueNotesList,
+        notifications: [],
+        messages: [],
+        upcomingEvents: []
       };
       res.json(dashboardData);
     } catch (error) {
@@ -1329,15 +1215,22 @@ startxref
 
   app.get('/api/admin/status', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const [residentCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.role, 'Resident'));
+      const [staffCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(sql`${users.role} != 'Resident'`);
+
       const status = {
         database: 'healthy' as const,
         s3Connection: 'healthy' as const,
-        slackIntegration: 'warning' as const,
-        lastBackup: '2025-07-30 02:00 AM',
-        uptime: '15 days, 8 hours',
-        totalResidents: 45,
-        totalStaff: 12,
-        systemVersion: '2.1.0'
+        slackIntegration: process.env.SLACK_WEBHOOK_URL ? 'healthy' : 'warning',
+        totalResidents: residentCount?.count ?? 0,
+        totalStaff: staffCount?.count ?? 0,
+        systemVersion: '2.1.0',
       };
       res.json(status);
     } catch (error) {
@@ -2251,13 +2144,8 @@ startxref
   // Programs route
   app.get('/api/programs', async (req: Request, res: Response) => {
     try {
-      // Mock programs data since getPrograms method doesn't exist yet
-      const programs = [
-        { id: '1', name: 'Housing Stability Program', description: 'Core housing support services' },
-        { id: '2', name: 'Job Readiness Program', description: 'Employment preparation and support' },
-        { id: '3', name: 'Financial Literacy Program', description: 'Budgeting and financial skills training' }
-      ];
-      res.json(programs);
+      const rows = await db.select().from(programs).orderBy(asc(programs.name));
+      res.json(rows);
     } catch (error) {
       console.error('Error fetching programs:', error);
       res.status(500).json({ error: 'Failed to fetch programs' });
@@ -2552,19 +2440,7 @@ startxref
   // Unified resources endpoint (CR-42: Role-based data scoping)
   app.get('/api/resources', async (req: Request, res: Response) => {
     try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      let user: AuthenticatedRequest['user'] | null = null;
-
-      // Check if user is authenticated
-      if (token && token.startsWith('mock-token-')) {
-        const userId = token.replace('mock-token-', '');
-        user = {
-          id: userId,
-          role: "CaseManager", // In production, get actual role from token
-          name: "Sarah Martinez",
-          email: "sarah.martinez@example.com"
-        };
-      }
+      const user = (req as AuthenticatedRequest).user ?? null;
 
       const searchQuery = req.query.q as string;
       const categoryFilter = req.query.category as string;

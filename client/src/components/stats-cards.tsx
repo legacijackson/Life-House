@@ -14,17 +14,15 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ stats }: StatsCardsProps) {
-  const defaultStats = {
-    activeResidents: 12,
-    pendingNotes: 5,
-    avgStage: 4.2,
-    openTickets: 3,
-    totalCaseNotes: 156,
-    totalResources: 42,
-    totalReferrals: 89,
+  const data = {
+    activeResidents: stats?.activeResidents ?? 0,
+    pendingNotes: stats?.pendingNotes ?? 0,
+    avgStage: stats?.avgStage ?? 0,
+    openTickets: stats?.openTickets ?? 0,
+    totalCaseNotes: stats?.totalCaseNotes ?? 0,
+    totalResources: stats?.totalResources ?? 0,
+    totalReferrals: stats?.totalReferrals ?? 0,
   };
-
-  const data = stats || defaultStats;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
