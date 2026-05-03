@@ -49,6 +49,7 @@ import {
   rooms,
   properties as propertiesTable,
   faxes,
+  auditLog,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -3112,27 +3113,22 @@ startxref
   // Audit Logs
   app.get('/api/admin/audit-logs', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const logs = [
-        {
-          id: '1',
-          action: 'create_user',
-          entity: 'User',
-          entityId: 'user-123',
-          actorName: 'Admin User',
-          timestamp: new Date().toISOString(),
-          ip: req.ip
-        },
-        {
-          id: '2',
-          action: 'update_application',
-          entity: 'Application',
-          entityId: 'app-456',
-          actorName: 'Case Manager',
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          ip: req.ip
-        }
-      ];
-      res.json(logs);
+      const actorAlias = aliasedTable(users, 'actor');
+      const rows = await db
+        .select({
+          id: auditLog.id,
+          action: auditLog.action,
+          entity: auditLog.entity,
+          entityId: auditLog.entityId,
+          actorName: actorAlias.name,
+          timestamp: auditLog.ts,
+          ip: auditLog.ip,
+        })
+        .from(auditLog)
+        .leftJoin(actorAlias, eq(auditLog.actorId, actorAlias.id))
+        .orderBy(desc(auditLog.ts))
+        .limit(200);
+      res.json(rows);
     } catch (error) {
       console.error('Error fetching audit logs:', error);
       res.status(500).json({ message: 'Failed to fetch audit logs' });
