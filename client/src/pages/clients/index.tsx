@@ -296,6 +296,14 @@ function ClientProfileDrawer({ client, onClose }: { client: Client; onClose: () 
     onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/clients", client.id, "care-plans"] }),
   });
 
+  const updateProfile = useMutation({
+    mutationFn: (fields: Record<string, any>) => apiRequest("PATCH", `/api/clients/${client.id}/profile`, fields),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({ title: "Profile updated" });
+    },
+  });
+
   const p = client.profile ?? {};
   const daysInProgram = p.programProgress ?? 0;
   const progressPct = Math.min(Math.round((daysInProgram / 90) * 100), 100);
@@ -529,12 +537,16 @@ function ClientProfileDrawer({ client, onClose }: { client: Client; onClose: () 
               </div>
             )}
 
-            {p.prescriptions && (
-              <InfoBlock label="Prescriptions" value={p.prescriptions} />
-            )}
-            {p.dietaryRestrictions && (
-              <InfoBlock label="Dietary Restrictions" value={p.dietaryRestrictions} />
-            )}
+            <EditableBlock
+              label="Prescriptions"
+              value={p.prescriptions}
+              onSave={(v) => updateProfile.mutate({ prescriptions: v })}
+            />
+            <EditableBlock
+              label="Dietary Restrictions"
+              value={p.dietaryRestrictions}
+              onSave={(v) => updateProfile.mutate({ dietaryRestrictions: v })}
+            />
 
             {/* Health Providers */}
             <div>
@@ -914,6 +926,35 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-xs font-semibold text-gray-700 mb-0.5">{label}</p>
       <p className="text-xs text-gray-700 whitespace-pre-line">{value}</p>
+    </div>
+  );
+}
+
+function EditableBlock({ label, value, onSave }: { label: string; value?: string | null; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-0.5">
+        <p className="text-xs font-semibold text-gray-700">{label}</p>
+        <button onClick={() => { setDraft(value ?? ""); setEditing(!editing); }} className="text-xs text-indigo-500 hover:text-indigo-700">
+          {editing ? "Cancel" : "Edit"}
+        </button>
+      </div>
+      {editing ? (
+        <div className="space-y-1.5">
+          <Textarea
+            className="text-xs"
+            rows={3}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+          <Button size="sm" className="h-6 text-xs" onClick={() => { onSave(draft); setEditing(false); }}>Save</Button>
+        </div>
+      ) : (
+        <p className="text-xs text-gray-700 whitespace-pre-line">{value ?? <span className="text-gray-400 italic">Not set — click Edit to add</span>}</p>
+      )}
     </div>
   );
 }

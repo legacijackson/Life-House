@@ -45,6 +45,7 @@ import {
   fieldSaves,
   lcpInvites,
   youtubeWatchEvents,
+  notifications,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -4325,6 +4326,28 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     res.json(row);
   });
 
+  // PATCH client profile fields (prescriptions, dietary restrictions, notes, etc.)
+  app.patch('/api/clients/:id/profile', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allowed = ['prescriptions', 'dietaryRestrictions', 'notes', 'icd10Codes', 'mcpProvider', 'authorizationCode', 'bicCardStatus', 'patientAccount', 'bedAssignment', 'payType', 'rentAmount'];
+      const updates: Record<string, any> = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      if (Object.keys(updates).length === 0) return res.status(400).json({ message: 'No valid fields to update' });
+      updates.updatedAt = new Date();
+
+      const [existing] = await db.select().from(clientProfiles).where(eq(clientProfiles.userId, req.params.id));
+      if (existing) {
+        const [row] = await db.update(clientProfiles).set(updates).where(eq(clientProfiles.userId, req.params.id)).returning();
+        res.json(row);
+      } else {
+        const [row] = await db.insert(clientProfiles).values({ userId: req.params.id, ...updates }).returning();
+        res.status(201).json(row);
+      }
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  }));
+
   app.patch('/api/clients/:id/goals/:goalId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.update(clientGoals).set({ ...req.body })
@@ -4969,6 +4992,37 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
+  });
+
+  // ── Notifications ─────────────────────────────────────────────────────────
+
+  app.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { unreadOnly } = req.query as Record<string, string>;
+      const conditions: any[] = [eq(notifications.userId, req.user!.id as any)];
+      if (unreadOnly === '1') conditions.push(eq(notifications.status, 'unread'));
+      const rows = await db.select().from(notifications)
+        .where(and(...conditions))
+        .orderBy(desc(notifications.createdAt))
+        .limit(50);
+      res.json(rows);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.patch('/api/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.update(notifications).set({ status: 'read', readAt: new Date() })
+        .where(and(eq(notifications.id, req.params.id), eq(notifications.userId, req.user!.id as any)));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.patch('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.update(notifications).set({ status: 'read', readAt: new Date() })
+        .where(and(eq(notifications.userId, req.user!.id as any), eq(notifications.status, 'unread')));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
   // ── Touchpoints ───────────────────────────────────────────────────────────

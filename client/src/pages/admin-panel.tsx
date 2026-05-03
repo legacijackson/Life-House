@@ -2261,22 +2261,71 @@ export default function AdminPanel() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">
-                {[
-                  { label: 'Google Drive Client Folder ID', env: 'GOOGLE_CLIENTS_FOLDER_ID' },
-                  { label: 'Google Chat Webhook URL', env: 'GOOGLE_CHAT_WEBHOOK' },
-                  { label: 'Apps Script — Call Log URL', env: 'APPS_SCRIPT_CALL_LOG_URL' },
-                  { label: 'Apps Script — Intake URL', env: 'APPS_SCRIPT_INTAKE_URL' },
-                  { label: 'Apps Script — LCP Referral URL', env: 'APPS_SCRIPT_LCP_REFERRAL_URL' },
-                  { label: 'FreedomVoice Account Number', env: 'FREEDOMVOICE_ACCOUNT_NUMBER' },
-                  { label: 'Finance App URL', env: 'FINANCE_APP_URL' },
-                ].map(({ label, env }) => (
-                  <div key={env} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                    <span className="text-gray-700 font-medium">{label}</span>
-                    <code className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{env}</code>
-                  </div>
-                ))}
-                <p className="text-xs text-gray-400 mt-2">
-                  Configure these in Replit Secrets / environment variables.
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Core Integrations</p>
+                  {[
+                    { label: 'Google Drive Client Folder ID', env: 'GOOGLE_CLIENTS_FOLDER_ID' },
+                    { label: 'Google Service Account JSON (base64)', env: 'GOOGLE_SERVICE_ACCOUNT_JSON' },
+                    { label: 'Google Chat Webhook URL', env: 'GOOGLE_CHAT_WEBHOOK' },
+                    { label: 'Google Chat Callbacks Thread', env: 'GOOGLE_CHAT_CALLBACKS_THREAD' },
+                    { label: 'Apps Script — Call Log URL', env: 'APPS_SCRIPT_CALL_LOG_URL' },
+                    { label: 'Apps Script — Intake URL', env: 'APPS_SCRIPT_INTAKE_URL' },
+                    { label: 'Apps Script — LCP Referral URL', env: 'APPS_SCRIPT_LCP_REFERRAL_URL' },
+                    { label: 'FreedomVoice Account Number', env: 'FREEDOMVOICE_ACCOUNT_NUMBER' },
+                    { label: 'FreedomVoice API Token', env: 'FREEDOMVOICE_API_TOKEN' },
+                    { label: 'Finance App URL', env: 'FINANCE_APP_URL' },
+                    { label: 'Finance API Token', env: 'FINANCE_API_TOKEN' },
+                    { label: 'App Public URL (for form links)', env: 'APP_URL' },
+                  ].map(({ label, env }) => (
+                    <div key={env} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                      <span className="text-gray-700 font-medium text-sm">{label}</span>
+                      <code className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{env}</code>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-1 pt-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">eFax (HylaFAX + Telnyx)</p>
+                  {[
+                    { label: 'HylaFAX Server Host', env: 'HYLAFAX_HOST', note: 'IP or hostname of your HylaFAX droplet' },
+                    { label: 'HylaFAX Port', env: 'HYLAFAX_PORT', note: 'Default: 4559' },
+                    { label: 'HylaFAX Username', env: 'HYLAFAX_USER', note: 'HylaFAX admin username' },
+                    { label: 'Telnyx API Key', env: 'TELNYX_API_KEY', note: 'From Telnyx dashboard' },
+                    { label: 'Telnyx DID (Fax Number)', env: 'TELNYX_FAX_NUMBER', note: 'Your eFax phone number' },
+                    { label: 'Inbound Fax Webhook URL', env: 'TELNYX_WEBHOOK_SECRET', note: 'Webhook secret for verifying Telnyx callbacks' },
+                    { label: 'Fax Cover Page Template ID', env: 'FAX_COVER_TEMPLATE_ID', note: 'Google Docs template ID for cover pages' },
+                  ].map(({ label, env, note }) => (
+                    <div key={env} className="p-2 bg-amber-50 rounded border border-amber-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-700 font-medium text-sm">{label}</span>
+                        <code className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded">{env}</code>
+                      </div>
+                      {note && <p className="text-xs text-gray-400 mt-0.5">{note}</p>}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-1 pt-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">DocuSeal eSign</p>
+                  {[
+                    { label: 'DocuSeal API Key', env: 'DOCUSEAL_API_KEY', note: 'From your DocuSeal instance' },
+                    { label: 'DocuSeal Base URL', env: 'DOCUSEAL_BASE_URL', note: 'e.g. https://docuseal.your-domain.com' },
+                    { label: 'Lease Template ID', env: 'DOCUSEAL_LEASE_TEMPLATE_ID', note: 'DocuSeal template for lease/occupancy agreement' },
+                    { label: 'Care Plan Template ID', env: 'DOCUSEAL_CARE_PLAN_TEMPLATE_ID', note: 'DocuSeal template for care plans' },
+                    { label: 'Medical Release Template ID', env: 'DOCUSEAL_MEDICAL_RELEASE_TEMPLATE_ID', note: 'DocuSeal template for medical release' },
+                  ].map(({ label, env, note }) => (
+                    <div key={env} className="p-2 bg-indigo-50 rounded border border-indigo-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-700 font-medium text-sm">{label}</span>
+                        <code className="text-xs text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">{env}</code>
+                      </div>
+                      {note && <p className="text-xs text-gray-400 mt-0.5">{note}</p>}
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs text-gray-400 mt-3">
+                  Configure all values in Replit Secrets / environment variables. Restart the server after changes.
                 </p>
               </div>
             </CardContent>

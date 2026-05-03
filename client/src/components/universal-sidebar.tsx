@@ -1,27 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/lib/rbac";
 import { Logo } from "@/components/logo";
-import { 
+import { apiRequest } from "@/lib/queryClient";
+import {
   Home,
   Users,
   Archive,
   Heart,
   FileText,
-  DollarSign,
   Building,
   Settings,
   BarChart3,
   Menu,
   X,
   ExternalLink,
-  Phone,
   MessageSquare,
   Calendar,
   UserPlus,
-  LogOut
+  LogOut,
+  Bell,
+  CheckCheck,
 } from "lucide-react";
 
 // Define navigation for different contexts
@@ -71,6 +73,102 @@ const adminNavigation = [
   { name: "Finance", href: "/app/finance", icon: BarChart3 },
   { name: "Admin Panel", href: "/app/admin-panel", icon: Settings },
 ];
+
+// ── Notifications Bell ────────────────────────────────────────────────────────
+
+function NotificationsBell() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const qc = useQueryClient();
+
+  const { data: notifs = [] } = useQuery<any[]>({
+    queryKey: ["/api/notifications"],
+    queryFn: () => apiRequest("GET", "/api/notifications").then((r) => r.json()),
+    refetchInterval: 30_000,
+  });
+
+  const unread = (notifs as any[]).filter((n) => n.status === "unread");
+
+  const markRead = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/notifications/${id}/read`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/notifications"] }),
+  });
+
+  const markAllRead = useMutation({
+    mutationFn: () => apiRequest("PATCH", "/api/notifications/mark-all-read"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/notifications"] }),
+  });
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="relative p-2 rounded-lg text-gray-500 hover:text-green-700 hover:bg-green-50 transition-colors"
+        title="Notifications"
+      >
+        <Bell className="w-5 h-5" />
+        {unread.length > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+            {unread.length > 9 ? "9+" : unread.length}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute bottom-10 left-0 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
+            <span className="text-sm font-semibold text-gray-800">Notifications</span>
+            {unread.length > 0 && (
+              <button
+                onClick={() => markAllRead.mutate()}
+                className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+              >
+                <CheckCheck className="w-3.5 h-3.5" /> Mark all read
+              </button>
+            )}
+          </div>
+          <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+            {(notifs as any[]).length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-gray-400">No notifications</div>
+            ) : (
+              (notifs as any[]).slice(0, 20).map((n: any) => (
+                <div
+                  key={n.id}
+                  onClick={() => { if (n.status === "unread") markRead.mutate(n.id); }}
+                  className={cn(
+                    "px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors",
+                    n.status === "unread" && "bg-blue-50/50"
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    {n.status === "unread" && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0" />
+                    )}
+                    <div className={n.status !== "unread" ? "ml-3.5" : ""}>
+                      <p className="text-xs font-medium text-gray-800">{n.title}</p>
+                      {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        {new Date(n.createdAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface UniversalSidebarProps {
   children: React.ReactNode;
@@ -334,19 +432,22 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
                 Settings
               </Button>
             </Link>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => {
-                localStorage.removeItem("token");
-                localStorage.removeItem("userData");
-                window.location.href = "/";
-              }}
-              className="text-gray-600 hover:text-red-600"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <NotificationsBell />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  localStorage.removeItem("token");
+                  localStorage.removeItem("userData");
+                  window.location.href = "/";
+                }}
+                className="text-gray-600 hover:text-red-600"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         ) : (
           <Button 
