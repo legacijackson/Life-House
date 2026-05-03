@@ -48,6 +48,7 @@ import {
   notifications,
   rooms,
   properties as propertiesTable,
+  faxes,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -59,6 +60,8 @@ import { setupAuth } from "./replitAuth";
 import { notifyNewLead, notifyCallbackAssigned, notifyAdmins, createNotification } from "./services/notifications";
 import { callCallLogScript, callLCPReferralScript, callIntakeScript } from "./services/apps-script";
 import { pushMaintenanceExpense } from "./services/finance";
+import { sendFaxViaTelnyx, getFaxStatus } from "./services/fax";
+import { createSubmission, getSubmission, getEmbedUrl, leaseTemplateId, carePlanTemplateId, medicalReleaseTemplateId } from "./services/docuseal";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -4843,6 +4846,52 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     }
   });
 
+  app.patch('/api/authorization-requests/:id', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status, denialReason, googleDriveUrl } = req.body;
+      const update: Record<string, any> = {};
+      if (status) update.status = status;
+      if (denialReason !== undefined) update.denialReason = denialReason;
+      if (googleDriveUrl !== undefined) update.googleDriveUrl = googleDriveUrl;
+      if (status === 'approved' || status === 'denied') {
+        update.reviewedBy = req.user.id;
+        update.reviewedAt = new Date();
+      }
+      const [updated] = await db
+        .update(authorizationRequests)
+        .set(update)
+        .where(eq(authorizationRequests.id, id))
+        .returning();
+      if (!updated) return res.status(404).json({ message: 'Request not found' });
+
+      // Notify the client
+      if (updated.clientId) {
+        createNotification({
+          userId: updated.clientId,
+          type: 'authorization_reviewed',
+          title: `Your ${updated.formType} request has been ${status}`,
+          priority: status === 'denied' ? 'high' : 'normal',
+          linkType: 'authorization_request',
+          linkId: id,
+        }).catch(console.error);
+      }
+
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
+  app.delete('/api/authorization-requests/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(authorizationRequests).where(eq(authorizationRequests.id, req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
   // ── Onboarding ────────────────────────────────────────────────────────────
 
   app.get('/api/onboarding/phases', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -5368,6 +5417,116 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       res.status(500).json({ message: err.message });
     }
   }));
+
+  // ── eFax routes ──────────────────────────────────────────────────────────
+
+  app.post('/api/fax/send', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { to, mediaUrl, clientId, docId } = req.body;
+      if (!to) return res.status(400).json({ message: 'Recipient fax number (to) is required' });
+      const result = await sendFaxViaTelnyx({ to, mediaUrl });
+      // Persist fax record
+      const [faxRecord] = await db.insert(faxes).values({
+        clientId: clientId ?? null,
+        docId: docId ?? null,
+        direction: 'outbound',
+        status: result.status,
+        telnyxFaxId: result.id,
+        toNumber: to,
+        fromNumber: result.from,
+        sentAt: new Date(),
+      }).returning();
+      res.json({ success: true, fax: result, record: faxRecord });
+    } catch (err: any) {
+      console.error('Send fax error:', err.message);
+      res.status(500).json({ message: err.message || 'Failed to send fax' });
+    }
+  }));
+
+  app.get('/api/fax', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId } = req.query as Record<string, string>;
+      const rows = clientId
+        ? await db.select().from(faxes).where(eq(faxes.clientId, clientId)).orderBy(desc(faxes.createdAt))
+        : await db.select().from(faxes).orderBy(desc(faxes.createdAt)).limit(50);
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
+  app.get('/api/fax/:id/status', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const status = await getFaxStatus(req.params.id);
+      res.json(status);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
+  // Telnyx webhook for incoming/outgoing fax events
+  app.post('/api/webhooks/telnyx/fax', async (req: Request, res: Response) => {
+    try {
+      const event = req.body;
+      console.log('Telnyx fax webhook:', JSON.stringify(event).slice(0, 200));
+      // TODO: handle fax.sent, fax.failed, fax.received events
+      res.json({ received: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── DocuSeal eSign routes ─────────────────────────────────────────────────
+
+  app.post('/api/docuseal/submissions', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { templateType, submitters } = req.body;
+      if (!templateType || !submitters?.length) {
+        return res.status(400).json({ message: 'templateType and submitters are required' });
+      }
+      const templateMap: Record<string, string | undefined> = {
+        lease: leaseTemplateId(),
+        care_plan: carePlanTemplateId(),
+        medical_release: medicalReleaseTemplateId(),
+      };
+      const templateId = templateMap[templateType];
+      if (!templateId) return res.status(400).json({ message: `Unknown templateType: ${templateType}` });
+      const result = await createSubmission({ templateId, submitters, sendEmail: req.body.sendEmail ?? false });
+      res.json(result);
+    } catch (err: any) {
+      console.error('DocuSeal submission error:', err.message);
+      res.status(500).json({ message: err.message || 'Failed to create signing session' });
+    }
+  }));
+
+  app.get('/api/docuseal/submissions/:id', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const data = await getSubmission(parseInt(req.params.id));
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
+  app.get('/api/docuseal/embed/:slug', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    const url = getEmbedUrl(req.params.slug);
+    res.json({ url });
+  });
+
+  // DocuSeal webhook
+  app.post('/api/webhooks/docuseal', async (req: Request, res: Response) => {
+    try {
+      const payload = req.body;
+      console.log('DocuSeal webhook:', payload?.event_type, JSON.stringify(payload?.data).slice(0, 100));
+      if (payload?.event_type === 'submission.completed') {
+        // TODO: mark related authorization request or document as signed
+        console.log('DocuSeal submission completed:', payload.data?.id);
+      }
+      res.json({ received: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
 
   // Create HTTP server
   const httpServer = createServer(app);

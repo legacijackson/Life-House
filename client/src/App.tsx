@@ -47,6 +47,7 @@ import WorkshopStudio from "@/pages/workshop-studio/index";
 import FinancePage from "@/pages/finance/index";
 import LcpFormPage from "@/pages/lcp-form/index";
 import LifeDesignFormPage from "@/pages/life-design/index";
+import AuthorizationRequestsPage from "@/pages/authorization-requests";
 
 // Remove ProtectedRoutes component as we're handling auth in Router now
 
@@ -99,6 +100,7 @@ function Router() {
             <Route path="/app/profile" component={ProfilePage} />
             <Route path="/app/documents" component={DocumentsPage} />
             <Route path="/app/resources" component={Resources} />
+            <Route path="/app/authorization-requests" component={AuthorizationRequestsPage} />
             <Route path="/lcp/:token" component={LcpFormPage} />
             <Route path="/life-design/:token" component={LifeDesignFormPage} />
             <Route component={NotFound} />

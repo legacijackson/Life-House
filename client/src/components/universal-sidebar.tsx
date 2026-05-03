@@ -24,6 +24,8 @@ import {
   LogOut,
   Bell,
   CheckCheck,
+  ClipboardCheck,
+  CheckSquare,
 } from "lucide-react";
 
 // Define navigation for different contexts
@@ -37,10 +39,11 @@ const publicNavigation = [
 
 // Resident navigation
 const residentNavigation = [
-  { name: "Dashboard", href: "/app/resident-portal", icon: Home },
+  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Check-in", href: "/app/check-in", icon: CheckSquare },
   { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Requests", href: "/app/authorization-requests", icon: ClipboardCheck },
   { name: "Maintenance", href: "/app/maintenance", icon: Building },
-  { name: "Check-in", href: "/app/check-in", icon: Calendar },
   { name: "Messages", href: "/app/messages", icon: MessageSquare },
 ];
 
@@ -51,7 +54,10 @@ const staffNavigation = [
   { name: "Intake & Referrals", href: "/app/intake", icon: UserPlus },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Events & Attendance", href: "/app/attendance", icon: Calendar },
+  { name: "Check-in Roster", href: "/app/check-in", icon: CheckSquare },
   { name: "Onboarding", href: "/app/onboarding", icon: UserPlus },
+  { name: "Auth Requests", href: "/app/authorization-requests", icon: ClipboardCheck },
+  { name: "Properties", href: "/app/properties", icon: Building },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Resources", href: "/app/resources", icon: Archive },
   { name: "Maintenance", href: "/app/maintenance", icon: Building },
@@ -65,7 +71,10 @@ const adminNavigation = [
   { name: "Intake & Referrals", href: "/app/intake", icon: UserPlus },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Events & Attendance", href: "/app/attendance", icon: Calendar },
+  { name: "Check-in Roster", href: "/app/check-in", icon: CheckSquare },
   { name: "Onboarding", href: "/app/onboarding", icon: UserPlus },
+  { name: "Auth Requests", href: "/app/authorization-requests", icon: ClipboardCheck },
+  { name: "Properties", href: "/app/properties", icon: Building },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Resources", href: "/app/resources", icon: Archive },
   { name: "Maintenance", href: "/app/maintenance", icon: Building },
