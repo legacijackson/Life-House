@@ -1661,8 +1661,22 @@ startxref
   // Generic fallback routes
   app.get('/api/residents', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Return empty array for now - implement proper resident fetching
-      res.json([]);
+      const rows = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          phone: users.phone,
+          createdAt: users.createdAt,
+          moveInDate: residentProfiles.moveInDate,
+          propertyAssignment: residentProfiles.propertyAssignment,
+          roomAssignment: residentProfiles.roomAssignment,
+          employmentStatus: residentProfiles.employmentStatus,
+        })
+        .from(users)
+        .leftJoin(residentProfiles, eq(users.id, residentProfiles.userId))
+        .where(eq(users.role, 'Resident'));
+      res.json(rows);
     } catch (error) {
       console.error('Get residents error:', error);
       res.status(500).json({ message: 'Failed to fetch residents' });

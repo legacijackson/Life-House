@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { ReferResidentModal } from "@/components/refer-resident-modal";
 import { CaseNoteModal } from "@/components/case-note-modal";
@@ -161,10 +162,9 @@ export default function Residents() {
   const [followUpRequired, setFollowUpRequired] = useState(false);
   const { toast } = useToast();
 
-  // In a real app, this would fetch from API
-  const { data: residents = mockResidents, isLoading } = useQuery<Resident[]>({
+  const { data: residents = [], isLoading } = useQuery<Resident[]>({
     queryKey: ['/api/residents'],
-    enabled: false // Using mock data for now
+    queryFn: () => apiRequest('GET', '/api/residents').then((r) => r.json()),
   });
 
   const filteredResidents = residents.filter((resident) => {
