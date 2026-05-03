@@ -289,34 +289,29 @@ function IntakeFunnelChart({ calls, applications }: { calls: any[]; applications
 // ── Benefits Status Report ────────────────────────────────────────────────────
 
 function BenefitsStatusChart({ clients }: { clients: any[] }) {
-  const BENEFIT_TYPES = ["Medi-Cal", "CalFresh", "SSI", "SSDI", "GA/GR", "Medicare", "Housing Voucher"];
   const STATUSES = ["active", "applied", "pending", "needed", "denied"];
   const STATUS_COLORS: Record<string, string> = {
     active: "#22c55e", applied: "#6366f1", pending: "#f59e0b", needed: "#ef4444", denied: "#9ca3af",
   };
 
-  // Aggregate from client profile data (stored in clientBenefits)
-  const benefitCounts = BENEFIT_TYPES.map((type) => ({
-    name: type,
-    active: Math.floor(clients.length * 0.4 + Math.random() * 5),
-    applied: Math.floor(clients.length * 0.2 + Math.random() * 3),
-    pending: Math.floor(Math.random() * 4),
-    needed: Math.floor(Math.random() * 3),
-    denied: Math.floor(Math.random() * 2),
-  }));
+  const { data: benefitCounts = [] } = useQuery<any[]>({
+    queryKey: ["/api/reports/benefits-summary"],
+    queryFn: () => apiRequest("GET", "/api/reports/benefits-summary").then((r) => r.json()),
+  });
 
   const total = clients.length;
-  const mediCalCount = Math.floor(total * 0.72);
-  const calFreshCount = Math.floor(total * 0.55);
-  const ssiCount = Math.floor(total * 0.31);
+  const mediCalActive = benefitCounts.find((b) => b.name === "Medi-Cal")?.active ?? 0;
+  const calFreshActive = benefitCounts.find((b) => b.name === "CalFresh")?.active ?? 0;
+  const ssiActive = (benefitCounts.find((b) => b.name === "SSI")?.active ?? 0) +
+    (benefitCounts.find((b) => b.name === "SSDI")?.active ?? 0);
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Medi-Cal Active", value: mediCalCount, color: "text-green-700", bg: "bg-green-50" },
-          { label: "CalFresh Active", value: calFreshCount, color: "text-blue-700", bg: "bg-blue-50" },
-          { label: "SSI/SSDI Active", value: ssiCount, color: "text-purple-700", bg: "bg-purple-50" },
+          { label: "Medi-Cal Active", value: mediCalActive, color: "text-green-700", bg: "bg-green-50" },
+          { label: "CalFresh Active", value: calFreshActive, color: "text-blue-700", bg: "bg-blue-50" },
+          { label: "SSI/SSDI Active", value: ssiActive, color: "text-purple-700", bg: "bg-purple-50" },
         ].map((s) => (
           <div key={s.label} className={`text-center p-4 rounded-lg ${s.bg}`}>
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
@@ -343,28 +338,36 @@ function BenefitsStatusChart({ clients }: { clients: any[] }) {
 
 // ── STOP Touchpoints Report ───────────────────────────────────────────────────
 
-function StopTouchpointsChart({ clients }: { clients: any[] }) {
-  const touchpointTypes = [
-    "Housing Stability Check",
-    "Employment Check-In",
-    "Benefits Review",
-    "Mental Health Check-In",
-    "Supervision Compliance",
-    "Case Plan Review",
-    "Crisis Intervention",
-  ];
+function StopTouchpointsChart({ since }: { since: string }) {
+  const { data: rows = [] } = useQuery<any[]>({
+    queryKey: ["/api/touchpoints", since],
+    queryFn: () => apiRequest("GET", `/api/touchpoints`).then((r) => r.json()),
+  });
 
-  const data = touchpointTypes.map((type) => ({
+  const typeMap: Record<string, { completed: number; scheduled: number; missed: number }> = {};
+  for (const t of rows) {
+    const key = t.type ?? "check-in";
+    if (!typeMap[key]) typeMap[key] = { completed: 0, scheduled: 0, missed: 0 };
+    if (t.status === "completed") typeMap[key].completed++;
+    else if (t.status === "missed") typeMap[key].missed++;
+    else typeMap[key].scheduled++;
+  }
+
+  const data = Object.entries(typeMap).map(([type, counts]) => ({
     name: type.length > 18 ? type.slice(0, 16) + "…" : type,
     fullName: type,
-    completed: Math.floor(Math.random() * 30 + 10),
-    scheduled: Math.floor(Math.random() * 15 + 5),
-    missed: Math.floor(Math.random() * 8),
+    ...counts,
   }));
 
-  const totalCompleted = data.reduce((s, d) => s + d.completed, 0);
-  const totalMissed = data.reduce((s, d) => s + d.missed, 0);
-  const complianceRate = Math.round((totalCompleted / (totalCompleted + totalMissed)) * 100);
+  const totalCompleted = rows.filter((r) => r.status === "completed").length;
+  const totalMissed = rows.filter((r) => r.status === "missed").length;
+  const complianceRate = totalCompleted + totalMissed > 0
+    ? Math.round((totalCompleted / (totalCompleted + totalMissed)) * 100)
+    : 0;
+
+  if (rows.length === 0) {
+    return <p className="text-sm text-gray-400 text-center py-8">No touchpoints recorded in this period.</p>;
+  }
 
   return (
     <div className="space-y-5">
@@ -382,21 +385,23 @@ function StopTouchpointsChart({ clients }: { clients: any[] }) {
           <p className="text-xs text-gray-500 mt-1">Compliance Rate</p>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis type="number" tick={{ fontSize: 11 }} />
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
-          <Tooltip
-            formatter={(val, name) => [val, name]}
-            labelFormatter={(label) => data.find((d) => d.name === label)?.fullName ?? label}
-          />
-          <Legend wrapperStyle={{ fontSize: "11px" }} />
-          <Bar dataKey="completed" fill={COLORS[1]} name="Completed" />
-          <Bar dataKey="scheduled" fill={COLORS[0]} name="Scheduled" />
-          <Bar dataKey="missed" fill={COLORS[3]} name="Missed" />
-        </BarChart>
-      </ResponsiveContainer>
+      {data.length > 0 && (
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={data} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" tick={{ fontSize: 11 }} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
+            <Tooltip
+              formatter={(val, name) => [val, name]}
+              labelFormatter={(label) => data.find((d) => d.name === label)?.fullName ?? label}
+            />
+            <Legend wrapperStyle={{ fontSize: "11px" }} />
+            <Bar dataKey="completed" fill={COLORS[1]} name="Completed" />
+            <Bar dataKey="scheduled" fill={COLORS[0]} name="Scheduled" />
+            <Bar dataKey="missed" fill={COLORS[3]} name="Missed" />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 }
@@ -500,7 +505,7 @@ function ReportView({ reportId, days }: { reportId: ReportId; days: number }) {
           {reportId === "maintenance" && <MaintenanceSummaryChart tickets={tickets as any[]} />}
           {reportId === "intake-funnel" && <IntakeFunnelChart calls={calls as any[]} applications={applications as any[]} />}
           {reportId === "benefits" && <BenefitsStatusChart clients={clients as any[]} />}
-          {reportId === "stop-touchpoints" && <StopTouchpointsChart clients={clients as any[]} />}
+          {reportId === "stop-touchpoints" && <StopTouchpointsChart since={since} />}
         </CardContent>
       </Card>
     </div>

@@ -52,7 +52,7 @@ import {
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { eq, and, like, desc, sql, inArray, isNull, lt } from "drizzle-orm";
+import { eq, and, like, desc, sql, inArray, isNull, lt, gte, asc, aliasedTable } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
@@ -920,6 +920,27 @@ startxref
 
 
 
+  // Benefits summary for reports
+  app.get('/api/reports/benefits-summary', requireAuth, async (_req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select({
+        benefitType: clientBenefits.benefitType,
+        status: clientBenefits.status,
+      }).from(clientBenefits);
+
+      // Group by type × status
+      const map: Record<string, Record<string, number>> = {};
+      for (const r of rows) {
+        if (!map[r.benefitType]) map[r.benefitType] = {};
+        map[r.benefitType][r.status] = (map[r.benefitType][r.status] ?? 0) + 1;
+      }
+      const result = Object.entries(map).map(([name, counts]) => ({ name, ...counts }));
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // Staff Dashboard Routes
   app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -1189,27 +1210,33 @@ startxref
 
   app.get('/api/staff/stop-touchpoints', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const touchpoints = [
-        {
-          id: '1',
-          residentId: '1',
-          residentName: 'Marcus Johnson',
-          dueDate: '2025-08-01T10:00:00Z',
-          type: 'check_in',
-          priority: 'normal',
-          status: 'pending'
-        },
-        {
-          id: '2',
-          residentId: '2',
-          residentName: 'David Rodriguez',
-          dueDate: '2025-07-31T14:00:00Z',
-          type: 'assessment',
-          priority: 'urgent',
-          status: 'pending'
-        }
-      ];
-      res.json(touchpoints);
+      const clientUsers = aliasedTable(users, 'client_users');
+      const cmUsers = aliasedTable(users, 'cm_users');
+      const { status, from, to } = req.query as Record<string, string>;
+      const conditions: any[] = [];
+      if (status) conditions.push(eq(touchpoints.status, status));
+      if (from) conditions.push(gte(touchpoints.scheduledAt, new Date(from)));
+      if (to) conditions.push(lt(touchpoints.scheduledAt, new Date(to)));
+
+      const rows = await db
+        .select({
+          id: touchpoints.id,
+          clientId: touchpoints.clientId,
+          clientName: clientUsers.name,
+          caseManagerId: touchpoints.caseManagerId,
+          caseManagerName: cmUsers.name,
+          scheduledAt: touchpoints.scheduledAt,
+          completedAt: touchpoints.completedAt,
+          type: touchpoints.type,
+          status: touchpoints.status,
+          notes: touchpoints.notes,
+        })
+        .from(touchpoints)
+        .leftJoin(clientUsers, eq(touchpoints.clientId, clientUsers.id))
+        .leftJoin(cmUsers, eq(touchpoints.caseManagerId, cmUsers.id))
+        .where(conditions.length ? and(...conditions) : undefined)
+        .orderBy(asc(touchpoints.scheduledAt));
+      res.json(rows);
     } catch (error) {
       console.error('STOP touchpoints error:', error);
       res.status(500).json({ message: 'Failed to fetch STOP touchpoints' });
@@ -2413,18 +2440,6 @@ startxref
     } catch (error) {
       console.error('Error deleting note:', error);
       res.status(500).json({ error: 'Failed to delete note' });
-    }
-  });
-
-  // STOP touchpoints
-  app.get('/api/staff/stop-touchpoints', async (req: Request, res: Response) => {
-    try {
-      // Mock touchpoints data since getStopTouchpoints method doesn't exist yet
-      const touchpoints = { count: 42, lastUpdated: new Date().toISOString() };
-      res.json(touchpoints);
-    } catch (error) {
-      console.error('Error fetching STOP touchpoints:', error);
-      res.status(500).json({ error: 'Failed to fetch touchpoints' });
     }
   });
 
@@ -5170,6 +5185,28 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
         scheduledAt: new Date(req.body.scheduledAt),
       }).returning();
       res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.patch('/api/touchpoints/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const updates: any = { ...req.body };
+      if (updates.scheduledAt) updates.scheduledAt = new Date(updates.scheduledAt);
+      if (updates.completedAt) updates.completedAt = new Date(updates.completedAt);
+      const [row] = await db.update(touchpoints).set(updates).where(eq(touchpoints.id, req.params.id)).returning();
+      if (!row) return res.status(404).json({ message: 'Not found' });
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.delete('/api/touchpoints/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(touchpoints).where(eq(touchpoints.id, req.params.id));
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
