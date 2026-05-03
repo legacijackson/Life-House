@@ -4325,6 +4325,97 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     res.json(row);
   });
 
+  app.patch('/api/clients/:id/goals/:goalId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.update(clientGoals).set({ ...req.body })
+        .where(and(eq(clientGoals.id, req.params.goalId), eq(clientGoals.clientId, req.params.id)))
+        .returning();
+      res.json(row);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.delete('/api/clients/:id/goals/:goalId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(clientGoals)
+        .where(and(eq(clientGoals.id, req.params.goalId), eq(clientGoals.clientId, req.params.id)));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.patch('/api/clients/:id/benefits/:benefitId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.update(clientBenefits).set({ ...req.body })
+        .where(and(eq(clientBenefits.id, req.params.benefitId), eq(clientBenefits.clientId, req.params.id)))
+        .returning();
+      res.json(row);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.delete('/api/clients/:id/benefits/:benefitId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(clientBenefits)
+        .where(and(eq(clientBenefits.id, req.params.benefitId), eq(clientBenefits.clientId, req.params.id)));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.delete('/api/clients/:id/emergency-contacts/:contactId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(clientEmergencyContacts)
+        .where(and(eq(clientEmergencyContacts.id, req.params.contactId), eq(clientEmergencyContacts.clientId, req.params.id)));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.delete('/api/clients/:id/health-providers/:providerId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(clientHealthProviders)
+        .where(and(eq(clientHealthProviders.id, req.params.providerId), eq(clientHealthProviders.clientId, req.params.id)));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  // ── Care Plans ────────────────────────────────────────────────────────────
+
+  app.get('/api/clients/:id/care-plans', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select().from(carePlans)
+        .where(eq(carePlans.clientId, req.params.id))
+        .orderBy(desc(carePlans.createdAt));
+      res.json(rows);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.post('/api/clients/:id/care-plans', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.insert(carePlans).values({
+        ...req.body,
+        clientId: req.params.id,
+        caseManagerId: req.user!.id,
+        status: 'draft',
+        version: 1,
+      }).returning();
+      res.status(201).json(row);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  }));
+
+  app.patch('/api/clients/:id/care-plans/:planId', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.update(carePlans).set({ ...req.body, updatedAt: new Date() })
+        .where(and(eq(carePlans.id, req.params.planId), eq(carePlans.clientId, req.params.id)))
+        .returning();
+      res.json(row);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  }));
+
+  app.delete('/api/clients/:id/care-plans/:planId', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(carePlans)
+        .where(and(eq(carePlans.id, req.params.planId), eq(carePlans.clientId, req.params.id)));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  }));
+
   // ── Call Log ──────────────────────────────────────────────────────────────
 
   app.get('/api/call-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
