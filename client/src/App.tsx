@@ -75,6 +75,7 @@ function Router() {
           <>
             <Route path="/" component={Home} />
             {/* New master build routes */}
+            <Route path="/app/dashboard" component={Dashboard} />
             <Route path="/app/clients" component={ClientsPage} />
             <Route path="/app/intake" component={IntakePage} />
             <Route path="/app/case-notes" component={CaseNotesPage} />
