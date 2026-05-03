@@ -29,6 +29,8 @@ import {
   prospectiveResidents,
   crmActivities,
   messages,
+  staffCaseNotes,
+  maintenanceTickets,
   type User,
   type InsertUser,
   type UpsertUser,
@@ -757,41 +759,38 @@ Notes: ${residentData.eligibilityNotes || 'None'}`
   }
 
   async getDashboardStats(userId: string, role: string): Promise<any> {
-    if (role === 'CaseManager') {
-      // Get residents assigned to this case manager
-      const [activeResidents] = await db
-        .select({ count: count() })
-        .from(users)
-        .where(and(
-          eq(users.role, 'Resident'),
-          // In a real system, you'd have a case manager assignment table
-          sql`true` // Placeholder - implement proper assignment logic
-        ));
+    const isAdmin = role === 'Admin';
+    const isCM = role === 'CaseManager' || role === 'Staff';
 
-      // Get pending notes count
-      const [pendingNotes] = await db
-        .select({ count: count() })
-        .from(caseNotes)
-        .where(eq(caseNotes.createdBy, userId));
+    const [activeResidents] = await db
+      .select({ count: count() })
+      .from(users)
+      .where(eq(users.role, 'Resident'));
 
-      // Get open tickets count
-      const [openTickets] = await db
-        .select({ count: count() })
-        .from(tickets)
-        .where(eq(tickets.status, 'new'));
+    const noteConditions: any[] = [
+      sql`${staffCaseNotes.status} NOT IN ('archived', 'submitted')`
+    ];
+    if (isCM && !isAdmin) noteConditions.push(eq(staffCaseNotes.staffId, userId));
+    const [pendingNotes] = await db
+      .select({ count: count() })
+      .from(staffCaseNotes)
+      .where(and(...noteConditions));
 
-      return {
-        activeResidents: activeResidents?.count || 0,
-        pendingNotes: pendingNotes?.count || 0,
-        openTickets: openTickets?.count || 0,
-        avgStage: 4.2, // Would be calculated from program enrollments
-      };
-    }
+    const [openTickets] = await db
+      .select({ count: count() })
+      .from(maintenanceTickets)
+      .where(sql`${maintenanceTickets.status} NOT IN ('resolved', 'closed')`);
+
+    const [totalCaseNotes] = await db
+      .select({ count: count() })
+      .from(staffCaseNotes)
+      .where(sql`${staffCaseNotes.status} != 'archived'`);
 
     return {
-      activeResidents: 0,
-      pendingNotes: 0,
-      openTickets: 0,
+      activeResidents: Number(activeResidents?.count ?? 0),
+      pendingNotes: Number(pendingNotes?.count ?? 0),
+      openTickets: Number(openTickets?.count ?? 0),
+      totalCaseNotes: Number(totalCaseNotes?.count ?? 0),
       avgStage: 0,
     };
   }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,8 +29,13 @@ export default function GuestResourcesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"life-house" | "community">("life-house");
 
-  // Community resources from CSV files
-  const communityResources: Resource[] = [
+  const { data: apiResources = [] } = useQuery<any[]>({
+    queryKey: ['/api/resources/public'],
+    queryFn: () => fetch('/api/resources/public').then((r) => r.json()),
+  });
+
+  // Community resources from CSV files (fallback when DB is empty)
+  const hardcodedCommunityResources: Resource[] = [
     // Sacramento County Resources
     {
       id: "saint-johns-program",
@@ -255,6 +261,21 @@ export default function GuestResourcesPage() {
       eligibility: "Formerly and currently incarcerated Californians"
     }
   ];
+
+  // Merge: prefer DB data when available, fall back to hardcoded
+  const communityResources: Resource[] = apiResources.length > 0
+    ? apiResources.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description ?? '',
+        category: r.category,
+        location: r.address ?? `${r.geo?.city ?? ''}, ${r.geo?.state ?? ''}`.trim().replace(/^,\s*|,\s*$/, ''),
+        phone: r.phone ?? (r.contact as any)?.phone ?? '',
+        website: r.website ?? r.url ?? '',
+        tags: Array.isArray(r.tags) ? r.tags : [],
+        eligibility: r.eligibility,
+      }))
+    : hardcodedCommunityResources;
 
   // Life House flagship programs from the screenshots
   const lifeHousePrograms: Resource[] = [

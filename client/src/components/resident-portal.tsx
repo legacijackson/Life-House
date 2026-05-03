@@ -86,12 +86,18 @@ export function ResidentPortal() {
   // Resources query with search
   const { data: resources, isLoading: resourcesLoading } = useQuery<Resource[]>({
     queryKey: ['/api/resources', searchQuery, selectedCategory],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (searchQuery) params.set('q', searchQuery);
+      if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
+      return fetch(`/api/resources?${params}`).then((r) => r.json());
+    },
     enabled: searchQuery.length > 2 || selectedCategory !== 'all',
   });
 
   // Maintenance ticket mutation
   const createTicketMutation = useMutation({
-    mutationFn: (ticketData: any) => apiRequest('/api/tickets', ticketData),
+    mutationFn: (ticketData: any) => apiRequest('POST', '/api/tickets', ticketData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tickets'] });
       toast({

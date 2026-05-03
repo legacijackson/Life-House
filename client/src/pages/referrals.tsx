@@ -79,7 +79,13 @@ export default function Referrals() {
 
   // Fetch referrals
   const { data: referrals = [], isLoading } = useQuery<Referral[]>({
-    queryKey: ["/api/referrals", statusFilter],
+    queryKey: ["/api/admin/referrals", statusFilter],
+    queryFn: () => {
+      const url = statusFilter && statusFilter !== 'all'
+        ? `/api/admin/referrals?status=${statusFilter}`
+        : '/api/admin/referrals';
+      return apiRequest('GET', url).then((r) => r.json());
+    },
   });
 
   const form = useForm<UpdateReferralData>({
@@ -93,11 +99,11 @@ export default function Referrals() {
   // Update referral mutation
   const updateReferralMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateReferralData }) => {
-      const response = await apiRequest("PATCH", `/api/referrals/${id}`, data);
+      const response = await apiRequest("PATCH", `/api/admin/referrals/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/referrals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/referrals"] });
       toast({
         title: "Success",
         description: "Referral updated successfully",

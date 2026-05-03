@@ -4,6 +4,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Card,
   CardContent,
@@ -28,7 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { FileIcon, UploadIcon, DownloadIcon, TrashIcon, FileTextIcon, ImageIcon, PenToolIcon, EditIcon, Send, FileSignature } from 'lucide-react';
+import { FileIcon, UploadIcon, DownloadIcon, TrashIcon, FileTextIcon, ImageIcon, PenToolIcon, EditIcon, Send, FileSignature, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
 import { SignatureCanvas } from '@/components/signature-canvas';
@@ -69,6 +71,12 @@ export default function DocumentsPage() {
   // Fetch documents
   const { data: documents = [], isLoading } = useQuery<Document[]>({
     queryKey: ['/api/documents'],
+  });
+
+  // Fetch fax history
+  const { data: faxHistory = [] } = useQuery<any[]>({
+    queryKey: ['/api/fax'],
+    queryFn: () => apiRequest('GET', '/api/fax').then((r) => r.json()),
   });
 
   // Upload mutation
@@ -250,6 +258,16 @@ export default function DocumentsPage() {
     return <div>Loading documents...</div>;
   }
 
+  const getFaxStatusColor = (status: string) => {
+    switch (status) {
+      case 'sent': return 'bg-green-100 text-green-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      case 'queued': case 'sending': return 'bg-yellow-100 text-yellow-800';
+      case 'received': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="container mx-auto py-8">
       <Card>
@@ -258,6 +276,52 @@ export default function DocumentsPage() {
           <CardDescription>Upload, view, and manage documents</CardDescription>
         </CardHeader>
         <CardContent>
+          <Tabs defaultValue="documents">
+            <TabsList className="mb-4">
+              <TabsTrigger value="documents">
+                <FileIcon className="w-4 h-4 mr-2" />
+                Documents
+              </TabsTrigger>
+              <TabsTrigger value="fax-history">
+                <History className="w-4 h-4 mr-2" />
+                Fax History {faxHistory.length > 0 && `(${faxHistory.length})`}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="fax-history">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Document</TableHead>
+                    <TableHead>To</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Sent</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {faxHistory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                        No faxes sent yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : faxHistory.map((fax: any) => (
+                    <TableRow key={fax.id}>
+                      <TableCell className="font-medium">{fax.documentId ?? '—'}</TableCell>
+                      <TableCell>{fax.toNumber}</TableCell>
+                      <TableCell>
+                        <Badge className={getFaxStatusColor(fax.status)}>{fax.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {fax.createdAt ? format(new Date(fax.createdAt), 'MMM d, yyyy h:mm a') : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            <TabsContent value="documents">
           <div className="mb-4 flex gap-2">
             <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
               <DialogTrigger asChild>
@@ -524,6 +588,8 @@ export default function DocumentsPage() {
               )}
             </TableBody>
           </Table>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

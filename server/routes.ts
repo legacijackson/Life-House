@@ -53,6 +53,8 @@ import {
   appSettings,
   resources,
   residentResources,
+  referrals,
+  partners,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -617,6 +619,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
       }
       res.status(500).json({ message: 'Failed to submit partner request' });
+    }
+  });
+
+  // Partner portal endpoints
+  app.get('/api/partner/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [partner] = await db.select().from(partners).where(eq(partners.email, req.user.email)).limit(1);
+      res.json(partner ?? null);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.get('/api/partner/referrals', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select().from(referrals)
+        .where(eq(referrals.referrerEmail, req.user.email))
+        .orderBy(desc(referrals.createdAt));
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
     }
   });
 
