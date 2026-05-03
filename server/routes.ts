@@ -5351,6 +5351,17 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) { res.status(500).json({ message: err.message }); }
   });
 
+  // GET pending attendance requests (uses eventAttendance with pending/excused status)
+  app.get('/api/staff/attendance-requests', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select().from(eventAttendance)
+        .where(eq(eventAttendance.status, 'excused'))
+        .orderBy(desc(eventAttendance.createdAt))
+        .limit(50);
+      res.json(rows);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  }));
+
   // Staff attendance request approval (placeholder — uses eventAttendance table)
   app.patch('/api/staff/attendance-requests/:id', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
