@@ -60,12 +60,10 @@ interface HomepagePhoto {
 }
 
 interface SystemSetting {
-  id: string;
   key: string;
   value: string;
-  description: string;
-  category: 'general' | 'integrations' | 'notifications' | 'security';
-  updatedAt: string;
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 interface HomepageContent {
@@ -107,15 +105,16 @@ interface User {
 
 interface Property {
   id: string;
-  name: string;
   address: string;
-  type: string;
-  capacity: number;
-  currentOccupancy: number;
-  isActive: boolean;
-  manager?: string;
-  createdAt: string;
-  updatedAt: string;
+  city: string;
+  state: string;
+  zip: string;
+  bedrooms?: number;
+  bedsTotal?: number;
+  bedsAvailable?: number;
+  occupancyLimit?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Donor {
@@ -256,6 +255,38 @@ function DonorManagement() {
     },
     onError: () => {
       toast({ title: "Failed to create donor", variant: "destructive" });
+    },
+  });
+
+  // Record payment mutation
+  const createDonationMutation = useMutation({
+    mutationFn: async (payment: typeof newPaymentData) => {
+      const response = await apiRequest('/api/donor-donations', {
+        method: 'POST',
+        body: {
+          donorId: payment.donorId,
+          amount: payment.amount,
+          paymentMethod: payment.paymentMethod,
+          designation: payment.designation,
+          notes: payment.notes,
+          frequency: 'one-time',
+          status: 'completed',
+          taxDeductible: true,
+          receiptSent: false,
+          processedAt: new Date(payment.donationDate).toISOString(),
+        },
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Payment recorded successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/donors'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/donor-donations'] });
+      setShowAddPayment(false);
+      setNewPaymentData({ donorId: '', amount: '', paymentMethod: 'cash', designation: 'general', notes: '', donationDate: new Date().toISOString().split('T')[0] });
+    },
+    onError: () => {
+      toast({ title: "Failed to record payment", variant: "destructive" });
     },
   });
 
@@ -636,22 +667,11 @@ function DonorManagement() {
                 });
                 return;
               }
-              toast({
-                title: "Payment recorded successfully",
-                description: `$${newPaymentData.amount} donation has been recorded.`
-              });
-              setShowAddPayment(false);
-              setNewPaymentData({
-                donorId: '',
-                amount: '',
-                paymentMethod: 'cash',
-                designation: 'general',
-                notes: '',
-                donationDate: new Date().toISOString().split('T')[0]
-              });
-              queryClient.invalidateQueries({ queryKey: ['/api/donors'] });
-            }}>
-              Record Payment
+              createDonationMutation.mutate(newPaymentData);
+            }}
+            disabled={createDonationMutation.isPending}
+          >
+            {createDonationMutation.isPending ? "Recording..." : "Record Payment"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1483,16 +1503,15 @@ export default function AdminPanel() {
 
   // Property management state
   const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] = useState(false);
+  const [isEditPropertyModalOpen, setIsEditPropertyModalOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [newPropertyData, setNewPropertyData] = useState({
-    name: '',
     address: '',
     city: '',
     state: '',
-    zipCode: '',
-    type: 'transitional',
-    capacity: 0,
-    currentOccupancy: 0,
-    manager: '',
+    zip: '',
+    bedsTotal: 0,
+    occupancyLimit: 0,
   });
 
   // Fetch admin data - use comprehensive endpoint for users
@@ -1657,6 +1676,45 @@ export default function AdminPanel() {
     }
   });
 
+  // Property mutations
+  const createPropertyMutation = useMutation({
+    mutationFn: async (data: typeof newPropertyData) => {
+      const response = await apiRequest('/api/properties', {
+        method: 'POST',
+        body: { ...data, zipCode: data.zip },
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Property added successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/properties'] });
+      setIsAddPropertyModalOpen(false);
+      setNewPropertyData({ address: '', city: '', state: '', zip: '', bedsTotal: 0, occupancyLimit: 0 });
+    },
+    onError: () => {
+      toast({ title: "Failed to add property", variant: "destructive" });
+    },
+  });
+
+  const updatePropertyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Property> }) => {
+      const response = await apiRequest(`/api/properties/${id}`, {
+        method: 'PATCH',
+        body: data,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Property updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/properties'] });
+      setIsEditPropertyModalOpen(false);
+      setSelectedProperty(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update property", variant: "destructive" });
+    },
+  });
+
   // Photo management mutations
   const uploadPhotoMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -1707,10 +1765,10 @@ export default function AdminPanel() {
 
   // Settings mutation
   const updateSettingMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<SystemSetting> }) => {
-      const response = await apiRequest(`/api/admin/settings/${id}`, {
+    mutationFn: async ({ key, value }: { key: string; value: string }) => {
+      const response = await apiRequest(`/api/admin/settings/${encodeURIComponent(key)}`, {
         method: 'PATCH',
-        body: data
+        body: { value },
       });
       return response.json();
     },
@@ -2071,12 +2129,19 @@ export default function AdminPanel() {
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {properties.map((property: any) => (
+                  {properties.map((property: Property) => (
                     <Card key={property.id}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{property.address}</h3>
-                          <Button variant="outline" size="sm">
+                          <h3 className="font-semibold text-sm">{property.address}</h3>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedProperty(property);
+                              setIsEditPropertyModalOpen(true);
+                            }}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                         </div>
@@ -2085,8 +2150,8 @@ export default function AdminPanel() {
                             <MapPin className="h-4 w-4 mr-1" />
                             {property.city}, {property.state} {property.zip}
                           </div>
-                          <div>Beds: {property.bedsAvailable}/{property.bedsTotal}</div>
-                          <div>Occupancy: {property.occupancyLimit}</div>
+                          <div>Total beds: {property.bedsTotal ?? '—'}</div>
+                          <div>Available: {property.bedsAvailable ?? '—'} | Limit: {property.occupancyLimit ?? '—'}</div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2201,17 +2266,18 @@ export default function AdminPanel() {
               ) : (
                 <div className="space-y-4">
                   {systemSettings.map((setting: SystemSetting) => (
-                    <div key={setting.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={setting.key} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
-                        <h3 className="font-semibold">{setting.key}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">{setting.description}</p>
-                        <Badge variant="outline" className="mt-1">
-                          {setting.category}
-                        </Badge>
+                        <h3 className="font-semibold text-sm font-mono">{setting.key}</h3>
+                        {setting.updatedAt && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Updated {new Date(setting.updatedAt).toLocaleDateString()}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         <code className="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                          {setting.value.length > 30 ? setting.value.substring(0, 30) + '...' : setting.value}
+                          {(setting.value?.length ?? 0) > 30 ? setting.value.substring(0, 30) + '...' : setting.value}
                         </code>
                         <Button
                           variant="outline"
@@ -2576,8 +2642,8 @@ export default function AdminPanel() {
                 </Button>
                 <Button
                   onClick={() => updateSettingMutation.mutate({
-                    id: selectedSetting.id,
-                    data: { value: selectedSetting.value }
+                    key: selectedSetting.key,
+                    value: selectedSetting.value,
                   })}
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -3035,128 +3101,164 @@ export default function AdminPanel() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="property-name">Property Name</Label>
-              <Input
-                id="property-name"
-                value={newPropertyData.name}
-                onChange={(e) => setNewPropertyData({...newPropertyData, name: e.target.value})}
-                placeholder="e.g., Oak Avenue House"
-              />
-            </div>
-            <div>
-              <Label htmlFor="property-address">Address</Label>
+              <Label htmlFor="property-address">Street Address *</Label>
               <Input
                 id="property-address"
                 value={newPropertyData.address}
                 onChange={(e) => setNewPropertyData({...newPropertyData, address: e.target.value})}
                 placeholder="123 Main Street"
+                required
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="property-city">City</Label>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-1">
+                <Label htmlFor="property-city">City *</Label>
                 <Input
                   id="property-city"
                   value={newPropertyData.city}
                   onChange={(e) => setNewPropertyData({...newPropertyData, city: e.target.value})}
-                  placeholder="San Francisco"
+                  placeholder="Oakland"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="property-state">State</Label>
+                <Label htmlFor="property-state">State *</Label>
                 <Input
                   id="property-state"
                   value={newPropertyData.state}
                   onChange={(e) => setNewPropertyData({...newPropertyData, state: e.target.value})}
                   placeholder="CA"
                   maxLength={2}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="property-zip">ZIP *</Label>
+                <Input
+                  id="property-zip"
+                  value={newPropertyData.zip}
+                  onChange={(e) => setNewPropertyData({...newPropertyData, zip: e.target.value})}
+                  placeholder="94612"
+                  required
                 />
               </div>
             </div>
-            <div>
-              <Label htmlFor="property-zip">ZIP Code</Label>
-              <Input
-                id="property-zip"
-                value={newPropertyData.zipCode}
-                onChange={(e) => setNewPropertyData({...newPropertyData, zipCode: e.target.value})}
-                placeholder="94122"
-              />
-            </div>
-            <div>
-              <Label htmlFor="property-type">Property Type</Label>
-              <Select 
-                value={newPropertyData.type} 
-                onValueChange={(value) => setNewPropertyData({...newPropertyData, type: value})}
-              >
-                <SelectTrigger id="property-type">
-                  <SelectValue placeholder="Select property type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="transitional">Transitional Housing</SelectItem>
-                  <SelectItem value="emergency">Emergency Shelter</SelectItem>
-                  <SelectItem value="permanent">Permanent Supportive</SelectItem>
-                  <SelectItem value="sober">Sober Living</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="property-capacity">Total Capacity</Label>
+                <Label htmlFor="property-beds-total">Total Beds</Label>
                 <Input
-                  id="property-capacity"
+                  id="property-beds-total"
                   type="number"
-                  value={newPropertyData.capacity}
-                  onChange={(e) => setNewPropertyData({...newPropertyData, capacity: parseInt(e.target.value) || 0})}
+                  min={0}
+                  value={newPropertyData.bedsTotal}
+                  onChange={(e) => setNewPropertyData({...newPropertyData, bedsTotal: parseInt(e.target.value) || 0})}
                   placeholder="10"
                 />
               </div>
               <div>
-                <Label htmlFor="property-occupancy">Current Occupancy</Label>
+                <Label htmlFor="property-occupancy">Max Occupancy</Label>
                 <Input
                   id="property-occupancy"
                   type="number"
-                  value={newPropertyData.currentOccupancy}
-                  onChange={(e) => setNewPropertyData({...newPropertyData, currentOccupancy: parseInt(e.target.value) || 0})}
-                  placeholder="5"
+                  min={0}
+                  value={newPropertyData.occupancyLimit}
+                  onChange={(e) => setNewPropertyData({...newPropertyData, occupancyLimit: parseInt(e.target.value) || 0})}
+                  placeholder="10"
                 />
               </div>
-            </div>
-            <div>
-              <Label htmlFor="property-manager">Property Manager</Label>
-              <Input
-                id="property-manager"
-                value={newPropertyData.manager}
-                onChange={(e) => setNewPropertyData({...newPropertyData, manager: e.target.value})}
-                placeholder="Manager name"
-              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddPropertyModalOpen(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={() => {
-                toast({
-                  title: "Property added successfully",
-                  description: `${newPropertyData.name} has been added to the system.`
-                });
-                setIsAddPropertyModalOpen(false);
-                setNewPropertyData({
-                  name: '',
-                  address: '',
-                  city: '',
-                  state: '',
-                  zipCode: '',
-                  type: 'transitional',
-                  capacity: 0,
-                  currentOccupancy: 0,
-                  manager: '',
-                });
-                queryClient.invalidateQueries({ queryKey: ['/api/admin/properties'] });
+                if (!newPropertyData.address || !newPropertyData.city || !newPropertyData.state || !newPropertyData.zip) {
+                  toast({ title: "Please fill in all required fields", variant: "destructive" });
+                  return;
+                }
+                createPropertyMutation.mutate(newPropertyData);
               }}
+              disabled={createPropertyMutation.isPending}
             >
-              Add Property
+              {createPropertyMutation.isPending ? "Adding..." : "Add Property"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Property Modal */}
+      <Dialog open={isEditPropertyModalOpen} onOpenChange={setIsEditPropertyModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Property</DialogTitle>
+          </DialogHeader>
+          {selectedProperty && (
+            <div className="space-y-4">
+              <div>
+                <Label>Street Address</Label>
+                <Input
+                  value={selectedProperty.address}
+                  onChange={(e) => setSelectedProperty({...selectedProperty, address: e.target.value})}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-1">
+                  <Label>City</Label>
+                  <Input
+                    value={selectedProperty.city}
+                    onChange={(e) => setSelectedProperty({...selectedProperty, city: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>State</Label>
+                  <Input
+                    value={selectedProperty.state}
+                    maxLength={2}
+                    onChange={(e) => setSelectedProperty({...selectedProperty, state: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>ZIP</Label>
+                  <Input
+                    value={selectedProperty.zip}
+                    onChange={(e) => setSelectedProperty({...selectedProperty, zip: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Total Beds</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={selectedProperty.bedsTotal ?? 0}
+                    onChange={(e) => setSelectedProperty({...selectedProperty, bedsTotal: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+                <div>
+                  <Label>Max Occupancy</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={selectedProperty.occupancyLimit ?? 0}
+                    onChange={(e) => setSelectedProperty({...selectedProperty, occupancyLimit: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditPropertyModalOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!selectedProperty) return;
+                updatePropertyMutation.mutate({ id: selectedProperty.id, data: selectedProperty });
+              }}
+              disabled={updatePropertyMutation.isPending}
+            >
+              {updatePropertyMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

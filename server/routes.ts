@@ -1610,19 +1610,15 @@ startxref
   app.post('/api/properties', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const propertyData = req.body;
+      const zip = propertyData.zip || propertyData.zipCode;
 
-      // Validate required fields
-      if (!propertyData.address || !propertyData.city || !propertyData.state || !propertyData.zipCode) {
-        return res.status(400).json({ message: 'Missing required property information' });
+      if (!propertyData.address || !propertyData.city || !propertyData.state || !zip) {
+        return res.status(400).json({ message: 'address, city, state, and zip are required' });
       }
 
-      // Create property object
-      const newProperty = {
-        ...propertyData,
-        createdBy: req.user.id
-      };
+      const { zipCode: _z, ...rest } = propertyData;
+      const newProperty = { ...rest, zip };
 
-      // Save to database
       const created = await storage.createProperty(newProperty);
 
       res.status(201).json({
@@ -1632,6 +1628,26 @@ startxref
     } catch (error) {
       console.error('Create property error:', error);
       res.status(500).json({ message: 'Failed to create property' });
+    }
+  }));
+
+  app.patch('/api/properties/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { address, city, state, zip, bedsTotal, occupancyLimit, bedrooms } = req.body;
+      const updates: Record<string, any> = { updatedAt: new Date() };
+      if (address !== undefined) updates.address = address;
+      if (city !== undefined) updates.city = city;
+      if (state !== undefined) updates.state = state;
+      if (zip !== undefined) updates.zip = zip;
+      if (bedsTotal !== undefined) updates.bedsTotal = bedsTotal;
+      if (occupancyLimit !== undefined) updates.occupancyLimit = occupancyLimit;
+      if (bedrooms !== undefined) updates.bedrooms = bedrooms;
+      const [row] = await db.update(propertiesTable).set(updates).where(eq(propertiesTable.id, req.params.id)).returning();
+      if (!row) return res.status(404).json({ message: 'Property not found' });
+      res.json(row);
+    } catch (error) {
+      console.error('Update property error:', error);
+      res.status(500).json({ message: 'Failed to update property' });
     }
   }));
 
