@@ -3994,6 +3994,24 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
   }));
 
   // Message API Routes
+  app.get('/api/messages', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const type = (req.query.type as 'inbox' | 'sent') ?? 'inbox';
+      const msgs = await storage.getMessages(req.user.id, type);
+      // Enrich with sender/recipient names
+      const allUsers = await storage.getUsers();
+      const userMap = Object.fromEntries(allUsers.map((u: any) => [u.id, u.name || u.email]));
+      const enriched = msgs.map((m: any) => ({
+        ...m,
+        fromName: userMap[m.fromUserId] ?? 'Unknown',
+        toName: userMap[m.toUserId] ?? 'Unknown',
+      }));
+      res.json(enriched);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  }));
+
   app.get('/api/messages/thread/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
