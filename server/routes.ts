@@ -1479,30 +1479,68 @@ startxref
   // Resident Portal Routes
   app.get('/api/resident/dashboard', roleRoute(['Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const dashboardData = {
-        currentStage: 3,
-        nextMilestone: 'Complete financial literacy course',
-        daysInProgram: 85,
-        savings: 850,
-        savingsGoal: 2000,
-        upcomingAppointments: [
-          {
-            id: '1',
-            title: 'Case Manager Check-in',
-            date: '2025-08-01',
-            time: '10:00 AM'
-          }
-        ],
-        recentActivity: [
-          {
-            id: '1',
-            type: 'milestone',
-            description: 'Completed Stage 2 requirements',
-            date: '2025-07-28'
-          }
-        ]
-      };
-      res.json(dashboardData);
+      const userId = req.user.id;
+
+      // Get onboarding phases
+      const phases = await db.select().from(onboardingPhases).where(eq(onboardingPhases.clientId, userId));
+      const completedPhases = phases.filter((p) => p.isCompleted).length;
+      const totalPhases = phases.length;
+
+      // Get upcoming events for this resident
+      const now = new Date();
+      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const invites = await db
+        .select({ eventId: eventInvitees.eventId })
+        .from(eventInvitees)
+        .where(eq(eventInvitees.clientId, userId));
+      const eventIds = invites.map((i) => i.eventId).filter(Boolean) as string[];
+      let upcomingAppointments: any[] = [];
+      if (eventIds.length) {
+        const evts = await db
+          .select()
+          .from(lhEvents)
+          .where(and(
+            inArray(lhEvents.id, eventIds),
+            gte(lhEvents.startTime, now),
+            lt(lhEvents.startTime, nextWeek)
+          ))
+          .orderBy(asc(lhEvents.startTime))
+          .limit(5);
+        upcomingAppointments = evts.map((e) => ({
+          id: e.id,
+          title: e.title,
+          date: e.startTime ? new Date(e.startTime).toLocaleDateString() : '',
+          time: e.startTime ? new Date(e.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '',
+        }));
+      }
+
+      // Recent case note summaries
+      const recentNotes = await db
+        .select({ id: staffCaseNotes.id, noteType: staffCaseNotes.noteType, title: staffCaseNotes.title, createdAt: staffCaseNotes.createdAt })
+        .from(staffCaseNotes)
+        .where(eq(staffCaseNotes.clientId, userId))
+        .orderBy(desc(staffCaseNotes.createdAt))
+        .limit(5);
+
+      // Get resident profile for move-in date
+      const [profile] = await db.select().from(residentProfiles).where(eq(residentProfiles.userId, userId)).limit(1);
+      const moveInDate = profile?.moveInDate;
+      const daysInProgram = moveInDate
+        ? Math.floor((Date.now() - new Date(moveInDate).getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+
+      res.json({
+        completedPhases,
+        totalPhases,
+        daysInProgram,
+        upcomingAppointments,
+        recentActivity: recentNotes.map((n) => ({
+          id: n.id,
+          type: n.noteType,
+          description: n.title,
+          date: n.createdAt ? new Date(n.createdAt).toLocaleDateString() : '',
+        })),
+      });
     } catch (error) {
       console.error('Resident dashboard error:', error);
       res.status(500).json({ message: 'Failed to fetch resident dashboard data' });
@@ -1542,18 +1580,15 @@ startxref
     try {
       const { title, description, priority } = req.body;
 
-      // In production, create actual maintenance ticket
-      const ticket = {
-        id: Date.now().toString(),
+      const [ticket] = await db.insert(maintenanceTickets).values({
         title,
         description,
-        priority,
-        status: 'submitted',
-        submittedAt: new Date().toISOString(),
-        submittedBy: req.user.id
-      };
-
-      console.log('New maintenance request:', ticket);
+        category: req.body.category ?? 'general',
+        priority: priority ?? 'normal',
+        status: 'open',
+        clientId: req.user.id,
+        submittedBy: req.user.id,
+      }).returning();
 
       res.status(201).json({
         success: true,
