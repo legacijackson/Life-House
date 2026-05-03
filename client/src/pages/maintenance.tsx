@@ -61,6 +61,9 @@ interface Ticket {
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
+  isHazard?: boolean;
+  cost?: string;
+  receiptUrl?: string;
 }
 
 const ticketSchema = z.object({
@@ -70,6 +73,8 @@ const ticketSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]),
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
+  cost: z.string().optional(),
+  receiptUrl: z.string().optional(),
 });
 
 type TicketFormData = z.infer<typeof ticketSchema>;
@@ -83,7 +88,8 @@ export default function Maintenance() {
 
   // Fetch tickets
   const { data: tickets = [], isLoading } = useQuery<Ticket[]>({
-    queryKey: ["/api/tickets", statusFilter, priorityFilter],
+    queryKey: ["/api/maintenance-tickets", statusFilter, priorityFilter],
+    queryFn: () => apiRequest("GET", "/api/maintenance-tickets").then((r) => r.json()),
   });
 
   // Fetch properties for dropdown
@@ -102,11 +108,11 @@ export default function Maintenance() {
   // Create ticket mutation
   const createTicketMutation = useMutation({
     mutationFn: async (data: TicketFormData) => {
-      const response = await apiRequest("POST", "/api/tickets", data);
+      const response = await apiRequest("POST", "/api/maintenance-tickets", data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance-tickets"] });
       toast.success("Maintenance ticket created successfully!");
       form.reset();
       setIsCreateModalOpen(false);
@@ -119,11 +125,11 @@ export default function Maintenance() {
   // Update ticket status mutation
   const updateTicketMutation = useMutation({
     mutationFn: async ({ ticketId, status }: { ticketId: string; status: string }) => {
-      const response = await apiRequest("PATCH", `/api/tickets/${ticketId}`, { status });
+      const response = await apiRequest("PATCH", `/api/maintenance-tickets/${ticketId}`, { status });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance-tickets"] });
       toast.success("Ticket status updated!");
     },
     onError: () => {
@@ -354,10 +360,13 @@ export default function Maintenance() {
                         <tr key={ticket.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
                                 {getCategoryIcon(ticket.category)} {ticket.title}
+                                {ticket.isHazard && (
+                                  <Badge className="bg-red-100 text-red-700 text-xs ml-1">⚠️ Hazard</Badge>
+                                )}
                               </div>
-                              <div className="text-sm text-gray-500">#{ticket.id}</div>
+                              <div className="text-sm text-gray-500">#{ticket.id.slice(-6)}</div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -533,6 +542,35 @@ export default function Maintenance() {
                     </FormItem>
                   )}
                 />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estimated Cost ($)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="0.00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="receiptUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Receipt URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="flex justify-end space-x-4 pt-4">
                   <Button
