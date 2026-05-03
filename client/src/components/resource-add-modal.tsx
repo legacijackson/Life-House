@@ -53,7 +53,7 @@ export function ResourceAddModal({ onSuccess }: ResourceAddModalProps) {
 
   const addMutation = useMutation({
     mutationFn: async (data: ResourceFormData) => {
-      return apiRequest('/api/resources', 'POST', data);
+      return apiRequest('POST', '/api/resources', data);
     },
     onSuccess: () => {
       toast.success("Resource added successfully!");

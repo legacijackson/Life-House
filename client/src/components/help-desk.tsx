@@ -72,7 +72,7 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
   // FAQ feedback mutation
   const feedbackMutation = useMutation({
     mutationFn: ({ faqId, helpful }: { faqId: string; helpful: boolean }) =>
-      apiRequest('/api/support/feedback', 'POST', { faqId, helpful }),
+      apiRequest('POST', '/api/support/feedback', { faqId, helpful }),
     onSuccess: () => {
       toast.success('Thank you for your feedback!');
     },

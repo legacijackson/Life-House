@@ -40,10 +40,7 @@ export function ChatWidget() {
 
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
-      apiRequest('/api/ai/chat', {
-        method: 'POST',
-        body: JSON.stringify({ message, context: 'case_management' }),
-      }),
+      apiRequest('POST', '/api/ai/chat', { message, context: 'case_management' }).then((r) => r.json()),
     onSuccess: (response) => {
       const assistantMessage: Message = {
         id: Date.now().toString() + '_assistant',
