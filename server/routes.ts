@@ -699,45 +699,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Geofence check-in endpoint (CR-43)
-  app.post('/api/check-in', async (req: Request, res: Response) => {
-    try {
-      const { sessionId, location } = req.body;
-      const token = req.headers.authorization?.replace('Bearer ', '');
-
-      if (!token) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-
-      // For development, extract user ID from mock token
-      const userId = token.replace('mock-token-', '');
-
-      // In production:
-      // 1. Validate session exists and is active
-      // 2. Calculate distance from session location
-      // 3. Validate within geofence radius
-      // 4. Record check-in to database
-      // 5. Send notifications
-
-      const checkIn = {
-        id: `checkin_${Date.now()}`,
-        userId,
-        sessionId,
-        location,
-        timestamp: new Date().toISOString(),
-      };
-
-      console.log('Session check-in:', checkIn);
-
-      res.status(201).json({
-        success: true,
-        checkIn,
-        message: 'Check-in successful'
-      });
-    } catch (error) {
-      console.error('Check-in error:', error);
-      res.status(500).json({ message: 'Check-in failed' });
-    }
-  });
 
   // Simple CSV processor test
   app.post('/api/test-csv-processor', requireAuth, roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
@@ -780,10 +741,6 @@ Legal Aid Society,Free legal services,legal,Sacramento,CA`;
   }));
 
   // Current user
-  app.get('/api/auth/user', authRoute(async (req: AuthenticatedRequest, res: Response) => {
-    res.json(req.user);
-  }));
-
   // Reports Management Routes
   app.get('/api/reports/templates', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -1207,34 +1164,29 @@ startxref
 
   app.get('/api/staff/residents', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const residents = [
-        {
-          id: '1',
-          name: 'Marcus Johnson',
-          email: 'marcus.j@email.com',
-          currentStage: 3,
-          lastContact: '2 days ago',
-          status: 'Active',
-          caseManagerId: req.user.id,
-          savings: 850,
-          upcomingEvents: 2
-        },
-        {
-          id: '2',
-          name: 'David Rodriguez',
-          email: 'david.r@email.com',
-          currentStage: 5,
-          lastContact: '1 week ago',
-          status: 'Active',
-          caseManagerId: req.user.id,
-          savings: 1200,
-          upcomingEvents: 1
-        }
-      ];
-      res.json(residents);
-    } catch (error) {
-      console.error('Get residents error:', error);
-      res.status(500).json({ message: 'Failed to fetch residents' });
+      const rows = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          stage: users.stage,
+          caseManagerId: users.caseManagerId,
+          employmentStatus: users.employmentStatus,
+          moveInDate: users.moveInDate,
+        })
+        .from(users)
+        .where(eq(users.role, 'Resident'))
+        .orderBy(users.name);
+      res.json(rows.map(r => ({
+        ...r,
+        currentStage: r.stage ?? 1,
+        status: r.employmentStatus || 'Active',
+        lastContact: r.moveInDate ? new Date(r.moveInDate).toLocaleDateString() : null,
+        savings: 0,
+        upcomingEvents: 0,
+      })));
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
     }
   }));
 
@@ -1633,89 +1585,8 @@ startxref
 
 
 
-  app.get('/api/staff/residents', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const residents = [
-        {
-          id: '1',
-          name: 'Marcus Johnson',
-          stage: 3,
-          caseManagerId: req.user.id,
-          nextAppointment: '2025-08-01'
-        },
-        {
-          id: '2',
-          name: 'David Rodriguez',
-          stage: 5,
-          caseManagerId: req.user.id,
-          nextAppointment: '2025-08-03'
-        }
-      ];
-      res.json(residents);
-    } catch (error) {
-      console.error('Staff residents error:', error);
-      res.status(500).json({ message: 'Failed to fetch residents' });
-    }
-  }));
 
-  app.post('/api/staff/monthly-report', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      // Generate monthly report data
-      const reportData = {
-        month: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
-        totalResidents: 45,
-        newIntakes: 12,
-        graduations: 5,
-        avgStageProgress: 3.2,
-        touchPoints: 287,
-        savingsTotal: 56250,
-        programCompletionRate: 0.78,
-        housingRetentionRate: 0.92
-      };
 
-      // In production, this would generate an actual PDF
-      const fileName = `Life_House_Monthly_Report_${new Date().toISOString().slice(0, 7)}.pdf`;
-      const downloadUrl = `/api/reports/download/${Date.now()}`;
-
-      // Simulate PDF generation
-      console.log('Generating monthly report:', fileName);
-
-      res.json({
-        success: true,
-        downloadUrl,
-        fileName,
-        reportData
-      });
-    } catch (error) {
-      console.error('Monthly report generation error:', error);
-      res.status(500).json({ message: 'Failed to generate monthly report' });
-    }
-  }));
-
-  app.post('/api/staff/generate-pdf', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { residentId, type } = req.body;
-
-      if (!residentId || !type) {
-        return res.status(400).json({ message: 'Missing required parameters' });
-      }
-
-      // In production, generate actual PDF based on type
-      const fileName = `${type}_${residentId}_${Date.now()}.pdf`;
-      const downloadUrl = `/api/documents/download/${Date.now()}`;
-
-      console.log('Generating PDF:', { residentId, type, fileName });
-
-      res.json({
-        success: true,
-        downloadUrl,
-        fileName
-      });
-    } catch (error) {
-      console.error('PDF generation error:', error);
-      res.status(500).json({ message: 'Failed to generate PDF' });
-    }
-  }));
 
   // Generic fallback routes
   app.get('/api/residents', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
@@ -2348,24 +2219,6 @@ startxref
     }
   });
 
-  // Create attendance record
-  app.post('/api/attendance', async (req: Request, res: Response) => {
-    try {
-      const validatedData = insertAttendanceSchema.parse(req.body);
-      const attendance = await storage.createAttendance(validatedData);
-      res.status(201).json({
-        success: true,
-        attendance
-      });
-    } catch (error) {
-      console.error('Error creating attendance:', error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: 'Invalid form data', errors: error.errors });
-      }
-      res.status(500).json({ message: 'Failed to create attendance record' });
-    }
-  });
-
   // Events/Calendar routes
   app.post('/api/events', async (req: Request, res: Response) => {
     try {
@@ -2625,18 +2478,6 @@ startxref
     }
   });
 
-  // Residents
-  app.get('/api/residents', async (req: Request, res: Response) => {
-    try {
-      // Use correct method name
-      const residents = await storage.getUser('all');
-      res.json(residents);
-    } catch (error) {
-      console.error('Get residents error:', error);
-      res.status(500).json({ message: 'Failed to fetch residents' });
-    }
-  });
-
   // Support/FAQ system routes
   app.get('/api/support', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -2707,16 +2548,6 @@ startxref
     });
   });
 
-  // Highlight resources endpoint for flagship programs
-  app.get('/api/resources/highlight', async (req: Request, res: Response) => {
-    try {
-      const highlightResources = await storage.getHighlightResources();
-      res.json(highlightResources);
-    } catch (error) {
-      console.error('Error fetching highlight resources:', error);
-      res.status(500).json({ message: 'Failed to fetch highlight resources' });
-    }
-  });
 
   // Unified resources endpoint (CR-42: Role-based data scoping)
   app.get('/api/resources', async (req: Request, res: Response) => {
@@ -3305,77 +3136,6 @@ startxref
   }));
 
   // Onboard resident from application
-  app.post('/api/admin/onboard-resident', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { applicationId, propertyId, roomId, moveInDate, caseManagerId, programEnrollments, medicalInfo, notes } = req.body;
-
-      // Get the application
-      const application = await storage.getApplicationById(applicationId);
-      if (!application) {
-        return res.status(404).json({ message: 'Application not found' });
-      }
-
-      // First create a user account for the resident
-      const hashedPassword = await bcrypt.hash('temporary123', 10);
-      const userData = {
-        role: 'Resident' as const,
-        name: application.name,
-        email: application.email,
-        phone: application.phone,
-        passwordHash: hashedPassword,
-        isActive: true
-      };
-
-      const user = await storage.createUser(userData);
-
-      // Create resident profile
-      const residentData = {
-        userId: user.id,
-        name: application.name,
-        email: application.email,
-        phone: application.phone,
-        dateOfBirth: application.dateOfBirth,
-        emergencyContact: application.emergencyContact,
-        emergencyPhone: application.emergencyPhone,
-        caseManagerId,
-        propertyId,
-        roomId,
-        moveInDate: new Date(moveInDate),
-        status: 'active' as const,
-        medicalInfo,
-        notes
-      };
-
-      const resident = await storage.createResidentProfile(residentData);
-
-      // Update application status to onboard
-      await storage.updateApplication(applicationId, { status: 'onboard' });
-
-      // Create audit log entry
-      await storage.createAuditLogEntry({
-        userId: req.user.id,
-        action: 'onboard_resident',
-        resourceType: 'resident',
-        resourceId: resident.id,
-        changes: { 
-          applicationId, 
-          residentId: resident.id,
-          programEnrollments,
-          medicalInfo,
-          notes 
-        }
-      });
-
-      res.json({ 
-        success: true, 
-        resident,
-        message: 'Resident onboarded successfully' 
-      });
-    } catch (error) {
-      console.error('Error onboarding resident:', error);
-      res.status(500).json({ message: 'Failed to onboard resident' });
-    }
-  }));
 
   // Referrals Management
   app.get('/api/admin/referrals', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
@@ -4944,6 +4704,17 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
         ? await db.select().from(eventAttendance).where(and(...conditions))
         : await db.select().from(eventAttendance);
       res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/event-attendance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [row] = await db.insert(eventAttendance)
+        .values({ ...req.body, loggedBy: req.user.id, loggedAt: new Date() })
+        .returning();
+      res.json(row);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
