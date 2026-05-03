@@ -210,7 +210,7 @@ export default function Intake() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Intake & Referrals</h1>
-                <p className="text-sm text-gray-600">Manage referrals and resident onboarding</p>
+                <p className="text-sm text-gray-600">Manage referrals and client onboarding</p>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-500">
@@ -464,7 +464,7 @@ export default function Intake() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleApplicationStatusUpdate(selectedApplication.id, 'onboard')}>
                       <UserPlus className="w-4 h-4 mr-2 text-blue-600" />
-                      Onboard Resident
+                      Onboard Client
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleApplicationStatusUpdate(selectedApplication.id, 'closed')}>
                       <AlertCircle className="w-4 h-4 mr-2 text-gray-600" />

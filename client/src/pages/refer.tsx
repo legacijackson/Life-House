@@ -125,7 +125,7 @@ export default function Refer() {
           <Card className="shadow-xl">
             <CardHeader className="text-center">
               <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
-                Refer a <span className="text-blue-600">Resident</span>
+                Refer a <span className="text-blue-600">Client</span>
               </CardTitle>
               <CardDescription className="text-lg">
                 Help someone start their journey with Life House Reentry. For case managers, parole officers, and community partners.

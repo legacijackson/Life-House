@@ -100,7 +100,7 @@ function exportCsv(rows: Record<string, unknown>[], filename: string) {
 
 function EnrollmentChart({ clients }: { clients: any[] }) {
   const byType = [
-    { name: "Resident", count: clients.filter((c) => !c.profile?.clientType || c.profile?.clientType === "resident").length },
+    { name: "Client", count: clients.filter((c) => !c.profile?.clientType || c.profile?.clientType === "resident").length },
     { name: "Non-Resident", count: clients.filter((c) => c.profile?.clientType === "non-resident").length },
     { name: "Onboarding", count: clients.filter((c) => c.profile?.clientType === "onboarding").length },
   ];

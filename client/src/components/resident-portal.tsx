@@ -164,7 +164,7 @@ export function ResidentPortal() {
     <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Resident Portal</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Client Portal</h1>
           <p className="text-gray-600">Welcome back! Here's your current status and resources.</p>
         </div>
 

@@ -147,7 +147,7 @@ export default function Landing() {
                 onClick={() => window.location.href = '/refer'}
               >
                 <Users className="w-5 h-5 mr-2" />
-                Refer a Resident
+                Refer a Client
               </Button>
               <Button 
                 size="lg" 
@@ -263,7 +263,7 @@ export default function Landing() {
       {/* 7-Stage Program Overview */}
       <section id="programs" className="py-16" style={{ backgroundColor: '#fffaeb' }}>
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-4 text-gray-900">Our 7-Stage Resident Transformation</h2>
+          <h2 className="text-3xl font-bold text-center mb-4 text-gray-900">Our 7-Stage Client Transformation</h2>
           <p className="text-center text-gray-600 mb-12 max-w-3xl mx-auto">
             Our evidence-informed approach meets people where they are and moves them toward income, savings, and permanent housing.
           </p>
@@ -339,7 +339,7 @@ export default function Landing() {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <CardTitle className="text-green-800">Our Residents</CardTitle>
+              <CardTitle className="text-green-800">Our Clients</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 text-sm">
@@ -378,7 +378,7 @@ export default function Landing() {
               <div className="flex items-start space-x-4 mb-4">
                 <img 
                   src="https://images.pexels.com/photos/4881619/pexels-photo-4881619.jpeg?auto=compress&cs=tinysrgb&w=200"
-                  alt="Residents celebrating success"
+                  alt="Clients celebrating success"
                   className="w-16 h-16 rounded-lg object-cover"
                 />
                 <div className="flex-1">
@@ -528,7 +528,7 @@ export default function Landing() {
                 onClick={() => window.location.href = '/refer'}
               >
                 <Users className="w-4 h-4 mr-2" />
-                Refer a Resident
+                Refer a Client
               </Button>
               <Button 
                 variant="outline" 
@@ -570,7 +570,7 @@ export default function Landing() {
               <h3 className="font-semibold mb-4">Get Involved</h3>
               <ul className="space-y-2 text-sm text-green-100">
                 <li className="cursor-pointer hover:text-white" onClick={() => setIsIntakeModalOpen(true)}>• Apply for Housing</li>
-                <li className="cursor-pointer hover:text-white" onClick={() => window.location.href = '/refer'}>• Refer a Resident</li>
+                <li className="cursor-pointer hover:text-white" onClick={() => window.location.href = '/refer'}>• Refer a Client</li>
                 <li className="cursor-pointer hover:text-white" onClick={() => setIsPartnerModalOpen(true)}>• Partner With Us</li>
                 <li className="cursor-pointer hover:text-white" onClick={() => window.location.href = '/donate'}>• Donate</li>
               </ul>

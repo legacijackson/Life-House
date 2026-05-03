@@ -105,7 +105,7 @@ export function ReferResidentModal({
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Resident Referral</DialogTitle>
+          <DialogTitle>Create Client Referral</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -115,7 +115,7 @@ export function ReferResidentModal({
                 name="residentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Resident *</FormLabel>
+                    <FormLabel>Client *</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value}

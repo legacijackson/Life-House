@@ -235,7 +235,7 @@ export default function IntakeReferrals() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Intake & Referrals</h1>
         <p className="text-gray-600 dark:text-gray-300 mt-2">
-          Manage housing applications and resident referrals
+          Manage housing applications and client referrals
         </p>
       </div>
 
@@ -398,7 +398,7 @@ export default function IntakeReferrals() {
         <TabsContent value="referrals" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Resident Referrals</CardTitle>
+              <CardTitle>Client Referrals</CardTitle>
             </CardHeader>
             <CardContent>
               {referralsLoading ? (

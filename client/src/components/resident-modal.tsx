@@ -60,7 +60,7 @@ export function ResidentModal({ resident, onClose }: ResidentModalProps) {
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Resident Profile</DialogTitle>
+          <DialogTitle>Client Profile</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">

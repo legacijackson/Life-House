@@ -115,8 +115,8 @@ export function StaffDashboard() {
   });
 
   // Residents assigned to this case manager
-  const { data: residents } = useQuery<Resident[]>({
-    queryKey: ['/api/staff/residents'],
+  const { data: clients } = useQuery<Resident[]>({
+    queryKey: ['/api/staff/clients'],
   });
 
   // Get pending attendance requests
@@ -229,26 +229,26 @@ export function StaffDashboard() {
     }
   });
 
-  // Update resident details mutation
+  // Update client details mutation
   const updateResidentDetailsMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest(`/api/residents/${data.id}`, {
+      return apiRequest(`/api/clients/${data.id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/staff/residents'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/staff/clients'] });
       toast({
-        title: "Resident Updated",
-        description: "Resident details have been updated successfully."
+        title: "Client Updated",
+        description: "Client details have been updated successfully."
       });
       setShowResidentDetails(false);
     },
     onError: () => {
       toast({
         title: "Update Failed",
-        description: "Unable to update resident details. Please try again.",
+        description: "Unable to update client details. Please try again.",
         variant: "destructive"
       });
     }
@@ -323,7 +323,7 @@ export function StaffDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Residents</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
               <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
@@ -514,18 +514,18 @@ export function StaffDashboard() {
           </Card>
         </div>
 
-        {/* My Residents - moved down */}
+        {/* My Clients - moved down */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Users className="w-5 h-5 mr-2 text-blue-600" />
-                My Residents
+                My Clients
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                {residents?.map(resident => (
+                {clients?.map(resident => (
                   <div key={resident.id} className="p-3 border rounded-lg hover:bg-gray-50">
                     <div 
                       className="flex items-center justify-between cursor-pointer"
@@ -588,7 +588,7 @@ export function StaffDashboard() {
                 )) || (
                   <div className="text-center py-8 text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No residents assigned yet</p>
+                    <p>No clients assigned yet</p>
                   </div>
                 )}
               </div>
@@ -660,7 +660,7 @@ export function StaffDashboard() {
                 onClick={() => setShowOnboardingModal(true)}
               >
                 <UserPlus className="w-6 h-6 mb-2" />
-                <span>Onboard Resident</span>
+                <span>Onboard Client</span>
               </Button>
               {/* Show Case Manager Onboarding for Admin users */}
               {localStorage.getItem('userRole') === 'Admin' && (
@@ -834,7 +834,7 @@ export function StaffDashboard() {
                 </Button>
               </div>
               <CardDescription>
-                {localStorage.getItem('userRole') === 'Admin' ? 'Edit resident details (Admin only)' : 'View resident details'}
+                {localStorage.getItem('userRole') === 'Admin' ? 'Edit client details (Admin only)' : 'View client details'}
               </CardDescription>
             </CardHeader>
             <CardContent className="overflow-y-auto max-h-[calc(90vh-100px)]">

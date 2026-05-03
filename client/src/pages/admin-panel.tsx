@@ -1246,7 +1246,7 @@ function CrmManagement() {
             <div className="flex items-center space-x-2">
               <Tabs value={activeView} onValueChange={(v) => setActiveView(v as any)}>
                 <TabsList>
-                  <TabsTrigger value="prospects">Prospective Residents</TabsTrigger>
+                  <TabsTrigger value="prospects">Prospective Clients</TabsTrigger>
                   <TabsTrigger value="activities">Activities</TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -1372,11 +1372,11 @@ function CrmManagement() {
         </CardContent>
       </Card>
 
-      {/* Add Prospective Resident Dialog */}
+      {/* Add Prospective Client Dialog */}
       <Dialog open={showAddProspect} onOpenChange={setShowAddProspect}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Prospective Resident</DialogTitle>
+            <DialogTitle>Add Prospective Client</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={(e) => {
@@ -1947,7 +1947,7 @@ export default function AdminPanel() {
               variant="outline"
             >
               <UserPlus className="h-8 w-8" />
-              <span className="text-sm">Onboard Resident</span>
+              <span className="text-sm">Onboard Client</span>
             </Button>
             <Button 
               onClick={() => setIsStaffOnboardingOpen(true)}
@@ -2811,7 +2811,7 @@ export default function AdminPanel() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Resident">Resident</SelectItem>
+                  <SelectItem value="Resident">Client</SelectItem>
                   <SelectItem value="CaseManager">Case Manager</SelectItem>
                   <SelectItem value="Intake">Intake</SelectItem>
                   <SelectItem value="Referrer">Referrer</SelectItem>
@@ -2894,7 +2894,7 @@ export default function AdminPanel() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Resident">Resident</SelectItem>
+                  <SelectItem value="Resident">Client</SelectItem>
                   <SelectItem value="CaseManager">Case Manager</SelectItem>
                   <SelectItem value="Intake">Intake</SelectItem>
                   <SelectItem value="Referrer">Referrer</SelectItem>

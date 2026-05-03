@@ -38,7 +38,7 @@ const navigation = [
 ];
 
 const newPortalNavigation = [
-  { name: "Resident Portal", href: "/app/resident-portal", icon: Users, badge: "New" },
+  { name: "Client Portal", href: "/app/resident-portal", icon: Users, badge: "New" },
   { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: BarChart3, badge: "New" },
   { name: "Admin Panel", href: "/app/admin-panel", icon: Settings, badge: "New" },
 ];
@@ -72,12 +72,12 @@ export function Sidebar() {
     
     const currentUserRole = (user as any)?.role || userRole;
     
-    // Special case for Resident Portal - only residents and admins can access
-    if (portalName === "Resident Portal") {
+    // Special case for Client Portal - only clients and admins can access
+    if (portalName === "Client Portal") {
       if (currentUserRole !== "Resident" && currentUserRole !== "Admin") {
         toast({
           title: "Access Denied",
-          description: "You need Resident access to view the Resident Portal.",
+          description: "You need Client access to view the Client Portal.",
           variant: "destructive",
         });
         return false;
@@ -89,7 +89,7 @@ export function Sidebar() {
       if (!["CaseManager", "Intake", "Admin"].includes(currentUserRole)) {
         toast({
           title: "Access Denied", 
-          description: "Only staff members can access the Staff Dashboard. Residents should use the Resident Portal.",
+          description: "Only staff members can access the Staff Dashboard. Clients should use the Client Portal.",
           variant: "destructive",
         });
         return false;
@@ -333,7 +333,7 @@ export function Sidebar() {
               // Define required roles for each portal
               const getRequiredRoles = (itemName: string) => {
                 switch (itemName) {
-                  case "Resident Portal":
+                  case "Client Portal":
                     return ["Resident", "Admin"];
                   case "Staff Dashboard":
                     return ["CaseManager", "Intake", "Admin"];

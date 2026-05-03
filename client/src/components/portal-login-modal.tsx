@@ -66,7 +66,7 @@ const getPortalRoute = (role: string) => {
 // Get portal route by portal name
 const getPortalRouteByName = (portalName: string) => {
   const routes: Record<string, string> = {
-    "Resident Portal": "/app/resident-portal",
+    "Client Portal": "/app/resident-portal",
     "Staff Dashboard": "/app/staff-dashboard", 
     "Admin Panel": "/app/admin-panel",
   };
@@ -76,7 +76,7 @@ const getPortalRouteByName = (portalName: string) => {
 // Validate if user role can access target portal
 const validatePortalAccess = (userRole: string, targetPortal: string) => {
   const accessRules: Record<string, string[]> = {
-    "Resident Portal": ["Resident", "Admin"],
+    "Client Portal": ["Resident", "Admin"],
     "Staff Dashboard": ["CaseManager", "Intake", "Admin"],
     "Admin Panel": ["Admin"],
   };
@@ -237,7 +237,7 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
                   <strong>Accessing {targetPortal}</strong>
                 </p>
                 <p className="text-xs text-blue-700 mt-1">
-                  {targetPortal === "Resident Portal" && "Please log in with your resident credentials to access your personal dashboard."}
+                  {targetPortal === "Client Portal" && "Please log in with your client credentials to access your personal dashboard."}
                   {targetPortal === "Staff Dashboard" && "Please log in with your staff credentials (Case Manager, Intake, or Admin)."}
                   {targetPortal === "Admin Panel" && "Please log in with your administrator credentials."}
                 </p>
@@ -262,7 +262,7 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="Resident" id="resident" />
                             <FormLabel htmlFor="resident" className="font-normal cursor-pointer">
-                              Resident - Access my personal dashboard and resources
+                              Client - Access my personal dashboard and resources
                             </FormLabel>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -414,7 +414,7 @@ export function PortalLoginModal({ isOpen, onClose, targetPortal }: PortalLoginM
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="Resident" id="signup-resident" />
                             <FormLabel htmlFor="signup-resident" className="font-normal cursor-pointer">
-                              Resident - Access my personal dashboard and resources
+                              Client - Access my personal dashboard and resources
                             </FormLabel>
                           </div>
                           <div className="flex items-center space-x-2">

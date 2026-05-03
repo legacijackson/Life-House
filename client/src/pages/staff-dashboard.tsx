@@ -75,11 +75,11 @@ function initials(name?: string) {
 function typeBadge(type?: string) {
   switch (type) {
     case "non-resident":
-      return <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Non-Resident</Badge>;
+      return <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Non-Client</Badge>;
     case "onboarding":
       return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Onboarding</Badge>;
     default:
-      return <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Resident</Badge>;
+      return <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Client</Badge>;
   }
 }
 

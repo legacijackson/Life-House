@@ -90,8 +90,8 @@ export default function Residents() {
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">My Residents</h1>
-                <p className="text-sm text-gray-600">Manage your assigned resident caseload through the 7-stage transformation program</p>
+                <h1 className="text-2xl font-bold text-gray-900">My Clients</h1>
+                <p className="text-sm text-gray-600">Manage your assigned client caseload through the 7-stage transformation program</p>
               </div>
               <div className="flex items-center space-x-2">
                 <Badge variant="secondary" className="bg-blue-50 text-blue-700">
@@ -110,7 +110,7 @@ export default function Residents() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search residents by name or email..."
+                  placeholder="Search clients by name or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -138,18 +138,18 @@ export default function Residents() {
             {/* Residents List */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                Residents ({filteredResidents.length})
+                Clients ({filteredResidents.length})
               </h2>
               
               {filteredResidents.length === 0 ? (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center h-64 text-center">
                     <Users className="h-12 w-12 text-gray-300 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">No residents found</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">No clients found</h3>
                     <p className="text-sm text-gray-500 max-w-sm">
                       {searchTerm || stageFilter !== 'all' 
                         ? "Try adjusting your search criteria or filters" 
-                        : "No residents have been added to the system yet"}
+                        : "No clients have been added to the system yet"}
                     </p>
                   </CardContent>
                 </Card>
@@ -212,7 +212,7 @@ export default function Residents() {
               ))}
             </div>
 
-            {/* Resident Details */}
+            {/* Client Details */}
             <div>
               {selectedResident ? (
                 <Card>

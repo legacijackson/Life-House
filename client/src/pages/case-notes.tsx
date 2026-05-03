@@ -173,7 +173,7 @@ export default function CaseNotes() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Case Notes</h1>
-                <p className="text-sm text-gray-600">Document resident interactions and progress through Life House programs</p>
+                <p className="text-sm text-gray-600">Document client interactions and progress through Life House programs</p>
               </div>
               <Button onClick={() => setIsCreating(true)}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -190,7 +190,7 @@ export default function CaseNotes() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search case notes by title, content, or resident..."
+                  placeholder="Search case notes by title, content, or client..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -216,10 +216,10 @@ export default function CaseNotes() {
                 </Select>
                 <Select value={residentFilter} onValueChange={setResidentFilter}>
                   <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Resident" />
+                    <SelectValue placeholder="Client" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Residents</SelectItem>
+                    <SelectItem value="all">All Clients</SelectItem>
                     {residents.map((r) => (
                       <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                     ))}

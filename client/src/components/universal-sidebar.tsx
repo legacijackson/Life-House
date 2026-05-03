@@ -340,7 +340,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
                 <p className="text-xs text-gray-500">
                   {(user as any)?.isAdmin ? 'Admin' :
                    (user as any)?.role === 'CaseManager' || (user as any)?.role === 'Intake' ? 'Staff' :
-                   (user as any)?.role === 'Resident' ? 'Resident' : 'Guest'}
+                   (user as any)?.role === 'Resident' ? 'Client' : 'Guest'}
                 </p>
                 {(user as any)?.isAdmin && (
                   <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Admin Access</span>

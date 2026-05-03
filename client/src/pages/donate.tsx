@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,14 @@ import { AnimatedInput } from "@/components/ui/animated-input";
 import { AnimatedSelect } from "@/components/ui/animated-select";
 import { AnimatedCheckbox } from "@/components/ui/animated-checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Home, Heart, DollarSign, Users, Shield, Target } from "lucide-react";
-import { Link } from "wouter";
+import { Home, Heart, DollarSign, Users, Shield, Target, CheckCircle, XCircle } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { Logo } from "@/components/logo";
 import { useFormAnimation, formAnimationVariants, sectionAnimationVariants, fieldGroupVariants } from '@/hooks/use-form-animation';
 import { validators } from '@/lib/validation';
 
 export default function Donate() {
+  const [location] = useLocation();
   const [donationType, setDonationType] = useState('monthly');
   const [amount, setAmount] = useState('50');
   const [customAmount, setCustomAmount] = useState('');
@@ -31,6 +32,11 @@ export default function Donate() {
     dedication: '',
     mailingList: true
   });
+
+  // Parse success/canceled query params from Stripe redirect
+  const params = new URLSearchParams(window.location.search);
+  const stripeSuccess = params.get('success') === 'true';
+  const stripeCanceled = params.get('canceled') === 'true';
 
   const {
     formRef,
@@ -93,62 +99,30 @@ export default function Donate() {
     setSubmitting(true);
 
     try {
-      // For monthly donations, redirect to Stripe
-      if (donationType === 'monthly') {
-        const response = await fetch('/api/create-subscription', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...formData,
-            amount: finalAmount,
-            frequency: 'monthly'
-          }),
-        });
+      // Route all donations through Stripe Checkout
+      const isRecurring = donationType === 'monthly';
+      const endpoint = isRecurring ? '/api/create-subscription' : '/api/donate';
+      const payload = isRecurring
+        ? { ...formData, amount: finalAmount, frequency: 'monthly' }
+        : {
+            amount: parseFloat(finalAmount),
+            email: formData.email,
+            name: `${formData.firstName} ${formData.lastName}`.trim(),
+            isRecurring: false,
+          };
 
-        const result = await response.json();
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-        if (response.ok && result.url) {
-          // Redirect to Stripe Checkout
-          window.location.href = result.url;
-        } else {
-          throw new Error(result.message || 'Failed to create subscription');
-        }
+      const result = await response.json();
+
+      if (response.ok && result.url) {
+        window.location.href = result.url;
       } else {
-        // Handle one-time donations through existing flow
-        const response = await fetch('/api/public/donate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...formData,
-            amount: finalAmount,
-            frequency: 'one_time'
-          }),
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          setSuccess(true);
-          alert(result.message || `Thank you for your donation of $${finalAmount}! Your submission has been received and will be processed.`);
-          // Reset form
-          setFormData({
-            firstName: '',
-            lastName: '',
-            email: '',
-            phone: '',
-            dedication: '',
-            isAnonymous: false,
-            mailingList: true
-          });
-          setAmount('50');
-          setCustomAmount('');
-        } else {
-          throw new Error(result.message || 'Failed to process donation');
-        }
+        throw new Error(result.message || 'Failed to initiate checkout');
       }
     } catch (error) {
       console.error('Donation submission error:', error);
@@ -176,6 +150,24 @@ export default function Donate() {
           </div>
         </div>
       </header>
+
+      {/* Stripe redirect feedback */}
+      {stripeSuccess && (
+        <div className="bg-green-50 border-b border-green-200">
+          <div className="container mx-auto px-4 py-4 flex items-center gap-3 text-green-800">
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            <p className="font-medium">Thank you for your donation! Your payment was processed successfully. You'll receive a receipt by email.</p>
+          </div>
+        </div>
+      )}
+      {stripeCanceled && (
+        <div className="bg-yellow-50 border-b border-yellow-200">
+          <div className="container mx-auto px-4 py-4 flex items-center gap-3 text-yellow-800">
+            <XCircle className="w-5 h-5 flex-shrink-0" />
+            <p className="font-medium">Your donation was canceled. No payment was made. You can try again below.</p>
+          </div>
+        </div>
+      )}
 
       {/* Donation Form */}
       <section className="container mx-auto px-4 py-12">
@@ -211,7 +203,7 @@ export default function Donate() {
                 <CardContent className="p-4 text-center">
                   <Heart className="w-8 h-8 mx-auto mb-2 text-purple-600" />
                   <p className="font-bold text-2xl text-purple-800">$2,500</p>
-                  <p className="text-sm text-purple-700">Sponsors a resident's full support</p>
+                  <p className="text-sm text-purple-700">Sponsors a client's full support</p>
                 </CardContent>
               </Card>
             </div>
@@ -442,7 +434,7 @@ export default function Donate() {
                   <h3 className="font-bold text-gray-900 mb-3">💡 Why Monthly Donations?</h3>
                   <ul className="space-y-2 text-sm text-gray-700">
                     <li>• Predictable funding helps us plan long-term programs</li>
-                    <li>• Lower processing fees = more of your gift goes to residents</li>
+                    <li>• Lower processing fees = more of your gift goes to clients</li>
                     <li>• Sustained support creates lasting transformation</li>
                     <li>• Cancel anytime with one click</li>
                   </ul>
