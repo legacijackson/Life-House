@@ -122,9 +122,11 @@ export default function Dashboard() {
                 </Button>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="w-5 h-5" />
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500">
-                    3
-                  </Badge>
+                  {notifications.length > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500">
+                      {notifications.length}
+                    </Badge>
+                  )}
                 </Button>
               </div>
             </div>
