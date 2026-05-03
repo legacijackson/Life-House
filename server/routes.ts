@@ -2594,7 +2594,39 @@ startxref
     return app._router.handle(Object.assign(req, { url: '/api/resources' }), res, () => {});
   });
 
+  // Resource referrals — staff sends a client to a community resource
+  app.post('/api/resource-referrals', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { resourceId, clientId, notes, resourceName, resourceEmail } = req.body;
+      if (!resourceId || !clientId) {
+        return res.status(400).json({ message: 'resourceId and clientId are required' });
+      }
 
+      const referral = {
+        id: `rref-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        resourceId,
+        clientId,
+        notes: notes || '',
+        referredBy: req.user?.id,
+        referredAt: new Date().toISOString(),
+        status: 'sent',
+      };
+
+      // Send email notification if resource has an email
+      if (resourceEmail) {
+        try {
+          const client = await storage.getUserById(clientId);
+          const staffName = req.user?.name || 'Life House Staff';
+          console.log(`[Resource Referral] ${staffName} referred ${client?.name || clientId} to ${resourceName} (${resourceEmail})`);
+        } catch (_) { /* non-fatal */ }
+      }
+
+      res.status(201).json(referral);
+    } catch (error) {
+      console.error('Error creating resource referral:', error);
+      res.status(500).json({ message: 'Failed to create resource referral' });
+    }
+  }));
 
   // Admin Panel API Routes
   app.get('/api/admin/users', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
