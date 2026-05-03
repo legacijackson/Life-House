@@ -57,6 +57,7 @@ import {
   partners,
   programs,
   programEnrollments,
+  housingWaitlist,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -1108,7 +1109,7 @@ startxref
         .from(users)
         .leftJoin(residentProfiles, eq(users.id, residentProfiles.userId))
         .leftJoin(programEnrollments, eq(users.id, programEnrollments.residentId))
-        .where(eq(users.role, 'Resident'))
+        .where(or(eq(users.role, 'Resident'), eq(users.role, 'Client')))
         .orderBy(users.name);
       res.json(rows.map(r => ({
         ...r,
@@ -1257,6 +1258,139 @@ startxref
     } catch (error) {
       console.error('Admin config update error:', error);
       res.status(500).json({ message: 'Failed to update admin configuration' });
+    }
+  }));
+
+  // Assign housing & convert Client → Resident
+  app.post('/api/clients/:id/assign-housing', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { propertyId, roomAssignment, bedAssignment, moveInDate, notes } = req.body;
+      const clientId = req.params.id;
+
+      // Update user's clientProfile
+      const now = new Date();
+      await db.update(clientProfiles)
+        .set({
+          housingStatus: 'assigned',
+          programStatus: 'active_resident',
+          housingAssignedAt: now,
+          convertedToResidentAt: now,
+          updatedAt: now,
+        })
+        .where(eq(clientProfiles.userId, clientId));
+
+      // Update or create residentProfile with housing info
+      const [existingProfile] = await db.select().from(residentProfiles)
+        .where(eq(residentProfiles.userId, clientId)).limit(1);
+
+      if (existingProfile) {
+        await db.update(residentProfiles)
+          .set({
+            propertyAssignment: propertyId,
+            roomAssignment: roomAssignment || bedAssignment,
+            moveInDate: moveInDate ? new Date(moveInDate) : now,
+            updatedAt: now,
+          })
+          .where(eq(residentProfiles.userId, clientId));
+      } else {
+        await db.insert(residentProfiles).values({
+          userId: clientId,
+          propertyAssignment: propertyId,
+          roomAssignment: roomAssignment || bedAssignment,
+          moveInDate: moveInDate ? new Date(moveInDate) : now,
+        });
+      }
+
+      // Update user role to Resident
+      await db.update(users)
+        .set({ role: 'Resident', updatedAt: now })
+        .where(eq(users.id, clientId));
+
+      // Notify the client
+      await createNotification({
+        userId: clientId,
+        type: 'housing_assigned',
+        title: 'Housing Assigned!',
+        body: `You have been assigned housing. Welcome to Life House! Your move-in date is ${moveInDate ? new Date(moveInDate).toLocaleDateString() : 'TBD'}.`,
+        priority: 'high',
+      });
+
+      // Remove from waitlist if present
+      await db.update(housingWaitlist)
+        .set({ status: 'assigned', reviewedAt: now, reviewedBy: req.user.id })
+        .where(eq(housingWaitlist.participantId, clientId));
+
+      res.json({ success: true, message: 'Housing assigned and client converted to resident' });
+    } catch (error) {
+      console.error('Assign housing error:', error);
+      res.status(500).json({ message: 'Failed to assign housing' });
+    }
+  }));
+
+  // Request housing (client action)
+  app.post('/api/clients/:id/request-housing', authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { housingNeedReason, preferredLocation, accommodationNeeds } = req.body;
+      const clientId = req.params.id;
+
+      // Only allow client themselves or staff
+      if (req.user.id !== clientId && !['CaseManager', 'Admin'].includes(req.user.role) && !req.user.isAdmin) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      const now = new Date();
+
+      // Update housing status
+      await db.update(clientProfiles)
+        .set({ housingStatus: 'requested', housingRequestedAt: now, updatedAt: now })
+        .where(eq(clientProfiles.userId, clientId));
+
+      // Add to waitlist
+      await db.insert(housingWaitlist).values({
+        participantId: clientId,
+        housingNeedReason,
+        preferredLocation,
+        accommodationNeeds,
+        requestDate: now,
+        status: 'pending',
+      });
+
+      // Notify admins
+      await notifyAdmins({
+        type: 'housing_requested',
+        title: 'New Housing Request',
+        body: `A client has requested housing placement.`,
+        priority: 'normal',
+      });
+
+      res.json({ success: true, message: 'Housing request submitted' });
+    } catch (error) {
+      console.error('Request housing error:', error);
+      res.status(500).json({ message: 'Failed to submit housing request' });
+    }
+  }));
+
+  // Get housing waitlist
+  app.get('/api/housing/waitlist', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const list = await db.select({
+        id: housingWaitlist.id,
+        participantId: housingWaitlist.participantId,
+        name: users.name,
+        email: users.email,
+        requestDate: housingWaitlist.requestDate,
+        priorityLevel: housingWaitlist.priorityLevel,
+        housingNeedReason: housingWaitlist.housingNeedReason,
+        status: housingWaitlist.status,
+      })
+      .from(housingWaitlist)
+      .leftJoin(users, eq(housingWaitlist.participantId, users.id))
+      .where(eq(housingWaitlist.status, 'pending'))
+      .orderBy(housingWaitlist.requestDate);
+      res.json(list);
+    } catch (error) {
+      console.error('Waitlist error:', error);
+      res.status(500).json({ message: 'Failed to fetch waitlist' });
     }
   }));
 
@@ -2736,6 +2870,21 @@ startxref
           createdAt: new Date(),
           updatedAt: new Date()
         });
+        await db.insert(clientProfiles).values({
+          userId: newUser.id,
+          programStatus: 'active_resident',
+          housingStatus: 'assigned',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      } else if (role === 'Client') {
+        await db.insert(clientProfiles).values({
+          userId: newUser.id,
+          programStatus: 'active_client',
+          housingStatus: 'not_needed',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
       } else {
         // Create employee profile for all non-resident roles
         await db.insert(employeeProfiles).values({
@@ -2770,7 +2919,7 @@ startxref
         // Delete old profile
         if (currentUser.role === 'Resident') {
           await db.delete(residentProfiles).where(eq(residentProfiles.userId, userId));
-        } else {
+        } else if (currentUser.role !== 'Client') {
           await db.delete(employeeProfiles).where(eq(employeeProfiles.userId, userId));
         }
 
@@ -2781,6 +2930,28 @@ startxref
             createdAt: new Date(),
             updatedAt: new Date()
           });
+          // Ensure clientProfiles record exists for residents too
+          const [existingCp] = await db.select().from(clientProfiles).where(eq(clientProfiles.userId, userId)).limit(1);
+          if (!existingCp) {
+            await db.insert(clientProfiles).values({
+              userId: userId,
+              programStatus: 'active_resident',
+              housingStatus: 'assigned',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
+        } else if (updates.role === 'Client') {
+          const [existingCp] = await db.select().from(clientProfiles).where(eq(clientProfiles.userId, userId)).limit(1);
+          if (!existingCp) {
+            await db.insert(clientProfiles).values({
+              userId: userId,
+              programStatus: 'active_client',
+              housingStatus: 'not_needed',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
         } else {
           await db.insert(employeeProfiles).values({
             userId: userId,

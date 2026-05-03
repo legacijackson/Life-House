@@ -2811,7 +2811,8 @@ export default function AdminPanel() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Resident">Client</SelectItem>
+                  <SelectItem value="Client">Client</SelectItem>
+                  <SelectItem value="Resident">Resident (with Housing)</SelectItem>
                   <SelectItem value="CaseManager">Case Manager</SelectItem>
                   <SelectItem value="Intake">Intake</SelectItem>
                   <SelectItem value="Referrer">Referrer</SelectItem>
@@ -2894,7 +2895,8 @@ export default function AdminPanel() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Resident">Client</SelectItem>
+                  <SelectItem value="Client">Client</SelectItem>
+                  <SelectItem value="Resident">Resident (with Housing)</SelectItem>
                   <SelectItem value="CaseManager">Case Manager</SelectItem>
                   <SelectItem value="Intake">Intake</SelectItem>
                   <SelectItem value="Referrer">Referrer</SelectItem>

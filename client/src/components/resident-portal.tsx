@@ -9,12 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Home, 
-  DollarSign, 
-  Target, 
-  Wrench, 
-  Search, 
+import {
+  Home,
+  DollarSign,
+  Target,
+  Wrench,
+  Search,
   MapPin,
   Phone,
   Clock,
@@ -24,6 +24,11 @@ import {
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+
+interface ClientProfileData {
+  housingStatus: 'not_needed' | 'requested' | 'pending_assignment' | 'assigned' | 'exited' | null;
+  programStatus: string | null;
+}
 
 
 interface ResidentDashboardData {
@@ -76,6 +81,38 @@ export function ResidentPortal() {
   // Dashboard data query
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery<ResidentDashboardData>({
     queryKey: ['/api/resident/dashboard'],
+  });
+
+  // Client profile query (for housing status gating)
+  const { data: clientProfile } = useQuery<ClientProfileData>({
+    queryKey: ['/api/resident/profile'],
+    select: (data: any) => ({
+      housingStatus: data?.housingStatus ?? null,
+      programStatus: data?.programStatus ?? null,
+    }),
+  });
+
+  const housingStatus = clientProfile?.housingStatus;
+  const housingAssigned = housingStatus === 'assigned';
+  const housingRequested = housingStatus === 'requested' || housingStatus === 'pending_assignment';
+
+  // Request housing mutation
+  const requestHousingMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', `/api/clients/${data.userId}/request-housing`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/resident/profile'] });
+      toast({
+        title: "Housing request submitted",
+        description: "Your request has been submitted and staff will follow up with you soon."
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error submitting request",
+        description: "Please try again or contact staff directly.",
+        variant: "destructive"
+      });
+    }
   });
 
   // Maintenance tickets query
@@ -168,8 +205,46 @@ export function ResidentPortal() {
           <p className="text-gray-600">Welcome back! Here's your current status and resources.</p>
         </div>
 
+        {/* Housing status banners for non-housed clients */}
+        {!housingAssigned && housingStatus === 'not_needed' && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <Home className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900">Housing Available</h3>
+                  <p className="text-sm text-blue-700 mt-1">You are currently enrolled as a client without housing. If you need housing assistance, you can submit a request to be placed on the housing waitlist.</p>
+                  <Button
+                    size="sm"
+                    className="mt-3 bg-blue-600 hover:bg-blue-700"
+                    onClick={() => requestHousingMutation.mutate({})}
+                    disabled={requestHousingMutation.isPending}
+                  >
+                    {requestHousingMutation.isPending ? 'Submitting...' : 'Request Housing'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!housingAssigned && housingRequested && (
+          <Card className="mb-6 border-yellow-200 bg-yellow-50">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <Clock className="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-yellow-900">Housing Request Pending</h3>
+                  <p className="text-sm text-yellow-700 mt-1">Your housing request has been submitted and is under review. Staff will contact you when a placement is available.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Dashboard Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {housingAssigned && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Bed Status</CardTitle>
@@ -182,6 +257,7 @@ export function ResidentPortal() {
               <Badge className="mt-2 bg-green-100 text-green-800">Confirmed</Badge>
             </CardContent>
           </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -213,8 +289,8 @@ export function ResidentPortal() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Maintenance Requests */}
-          <Card>
+          {/* Maintenance Requests - only shown when housing is assigned */}
+          {housingAssigned && <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center">
@@ -322,7 +398,7 @@ export function ResidentPortal() {
                 )}
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
           {/* Resource Navigator */}
           <Card>

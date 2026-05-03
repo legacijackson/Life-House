@@ -74,7 +74,7 @@ export function Sidebar() {
     
     // Special case for Client Portal - only clients and admins can access
     if (portalName === "Client Portal") {
-      if (currentUserRole !== "Resident" && currentUserRole !== "Admin") {
+      if (!["Resident", "Client", "Admin"].includes(currentUserRole)) {
         toast({
           title: "Access Denied",
           description: "You need Client access to view the Client Portal.",
@@ -334,7 +334,7 @@ export function Sidebar() {
               const getRequiredRoles = (itemName: string) => {
                 switch (itemName) {
                   case "Client Portal":
-                    return ["Resident", "Admin"];
+                    return ["Resident", "Client", "Admin"];
                   case "Staff Dashboard":
                     return ["CaseManager", "Intake", "Admin"];
                   case "Admin Panel":

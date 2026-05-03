@@ -276,6 +276,9 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
         // If case manager has admin privileges, show admin navigation
         navigation = isAdmin ? adminNavigation : staffNavigation;
         break;
+      case 'Client':
+        navigation = residentNavigation;
+        break;
       case 'Resident':
         navigation = residentNavigation;
         break;
@@ -340,7 +343,7 @@ export function UniversalSidebar({ children }: UniversalSidebarProps) {
                 <p className="text-xs text-gray-500">
                   {(user as any)?.isAdmin ? 'Admin' :
                    (user as any)?.role === 'CaseManager' || (user as any)?.role === 'Intake' ? 'Staff' :
-                   (user as any)?.role === 'Resident' ? 'Client' : 'Guest'}
+                   (user as any)?.role === 'Resident' || (user as any)?.role === 'Client' ? 'Client' : 'Guest'}
                 </p>
                 {(user as any)?.isAdmin && (
                   <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Admin Access</span>

@@ -19,6 +19,7 @@ import { z } from "zod";
 
 // Enums
 export const roleEnum = pgEnum("role", [
+  "Client",
   "Resident",
   "CaseManager",
   "Intake",
@@ -55,6 +56,14 @@ export const applicationStatusEnum = pgEnum("application_status", ["new", "under
 export const sessionStatusEnum = pgEnum("session_status", ["planned", "completed", "cancelled"]);
 export const notificationStatusEnum = pgEnum("notification_status", ["unread", "read", "archived"]);
 export const notificationPriorityEnum = pgEnum("notification_priority", ["low", "normal", "high", "urgent"]);
+
+export const programStatusEnum = pgEnum("program_status", [
+  "inquiry", "applicant", "active_client", "active_resident",
+  "discharged", "inactive", "waitlist"
+]);
+export const housingStatusEnum = pgEnum("housing_status", [
+  "not_needed", "requested", "pending_assignment", "assigned", "exited"
+]);
 
 // Session storage table (required for auth)
 export const sessions = pgTable(
@@ -1346,12 +1355,36 @@ export const clientProfiles = pgTable('client_profiles', {
   releaseConditions: jsonb('release_conditions'),
   dietaryRestrictions: text('dietary_restrictions'),
   bicCardStatus: text('bic_card_status'),
+  programStatus: programStatusEnum("program_status").default("active_client"),
+  housingStatus: housingStatusEnum("housing_status").default("not_needed"),
+  housingRequestedAt: timestamp("housing_requested_at"),
+  housingAssignedAt: timestamp("housing_assigned_at"),
+  convertedToResidentAt: timestamp("converted_to_resident_at"),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (table) => [
   index('client_profiles_user_idx').on(table.userId),
   index('client_profiles_type_idx').on(table.clientType),
   index('client_profiles_cm_idx').on(table.assignedCaseManagerId),
+]);
+
+export const housingWaitlist = pgTable('housing_waitlist', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  participantId: varchar('participant_id').references(() => users.id).notNull(),
+  requestDate: timestamp('request_date').defaultNow(),
+  priorityLevel: text('priority_level').default('standard'), // urgent | high | standard | low
+  housingNeedReason: text('housing_need_reason'),
+  preferredLocation: text('preferred_location'),
+  accommodationNeeds: text('accommodation_needs'),
+  status: text('status').default('pending'), // pending | reviewing | approved | assigned | withdrawn
+  reviewedBy: varchar('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('housing_waitlist_participant_idx').on(table.participantId),
+  index('housing_waitlist_status_idx').on(table.status),
 ]);
 
 // ── EVENTS ────────────────────────────────────────────────────────────────────
@@ -1880,3 +1913,5 @@ export const youtubeWatchEvents = pgTable('youtube_watch_events', {
 
 export const insertYoutubeWatchEventSchema = createInsertSchema(youtubeWatchEvents).omit({ id: true, createdAt: true });
 export type YoutubeWatchEvent = typeof youtubeWatchEvents.$inferSelect;
+
+export type HousingWaitlist = typeof housingWaitlist.$inferSelect;

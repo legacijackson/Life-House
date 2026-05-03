@@ -136,7 +136,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
     
     // Special case for Client Portal - only clients and admins can access
     if (portalName === "Client Portal") {
-      if (userRole !== "Resident" && userRole !== "Admin") {
+      if (!["Resident", "Client", "Admin"].includes(userRole)) {
         toast({
           title: "Access Denied",
           description: "You need Client access to view the Client Portal.",
@@ -295,7 +295,7 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
               const getRequiredRoles = (itemName: string) => {
                 switch (itemName) {
                   case "Client Portal":
-                    return ["Resident", "Admin"];
+                    return ["Resident", "Client", "Admin"];
                   case "Staff Dashboard":
                     return ["CaseManager", "Intake", "Admin"];
                   case "Admin Panel":

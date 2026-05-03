@@ -56,6 +56,7 @@ interface PortalLoginModalProps {
 const getPortalRoute = (role: string) => {
   const routes: Record<string, string> = {
     Resident: "/app/resident-portal",
+    Client: "/app/resident-portal",
     CaseManager: "/app/staff-dashboard",
     Admin: "/app/admin-panel",
     Partner: "/app/partner-portal",
@@ -76,7 +77,7 @@ const getPortalRouteByName = (portalName: string) => {
 // Validate if user role can access target portal
 const validatePortalAccess = (userRole: string, targetPortal: string) => {
   const accessRules: Record<string, string[]> = {
-    "Client Portal": ["Resident", "Admin"],
+    "Client Portal": ["Resident", "Client", "Admin"],
     "Staff Dashboard": ["CaseManager", "Intake", "Admin"],
     "Admin Panel": ["Admin"],
   };
