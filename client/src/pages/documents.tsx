@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { FileIcon, UploadIcon, DownloadIcon, TrashIcon, FileTextIcon, ImageIcon, PenToolIcon, EditIcon } from 'lucide-react';
+import { FileIcon, UploadIcon, DownloadIcon, TrashIcon, FileTextIcon, ImageIcon, PenToolIcon, EditIcon, Send, FileSignature } from 'lucide-react';
 import { format } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
 import { SignatureCanvas } from '@/components/signature-canvas';
@@ -57,7 +57,12 @@ export default function DocumentsPage() {
   const [ownerType, setOwnerType] = useState('org');
   const [ownerId, setOwnerId] = useState('default');
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  
+  const [faxDoc, setFaxDoc] = useState<Document | null>(null);
+  const [faxTo, setFaxTo] = useState('');
+  const [signDoc, setSignDoc] = useState<Document | null>(null);
+  const [signEmail, setSignEmail] = useState('');
+  const [signName, setSignName] = useState('');
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -114,6 +119,35 @@ export default function DocumentsPage() {
         variant: "destructive",
       });
     },
+  });
+
+  const sendFaxMutation = useMutation({
+    mutationFn: async ({ doc, to }: { doc: Document; to: string }) => {
+      const mediaUrl = `/api/documents/${doc.id}/download`;
+      return apiRequest('POST', '/api/fax/send', { to, mediaUrl, docId: doc.id });
+    },
+    onSuccess: () => {
+      setFaxDoc(null);
+      setFaxTo('');
+      toast({ title: 'Fax queued', description: 'The document has been queued for faxing.' });
+    },
+    onError: (err: any) => toast({ title: 'Fax failed', description: err.message, variant: 'destructive' }),
+  });
+
+  const sendSignMutation = useMutation({
+    mutationFn: async ({ doc, email, name }: { doc: Document; email: string; name: string }) => {
+      return apiRequest('POST', '/api/docuseal/submissions', {
+        templateType: 'medical_release',
+        submitters: [{ email, name, send_email: true }],
+      });
+    },
+    onSuccess: () => {
+      setSignDoc(null);
+      setSignEmail('');
+      setSignName('');
+      toast({ title: 'Signature request sent', description: 'The signer will receive an email.' });
+    },
+    onError: (err: any) => toast({ title: 'eSign failed', description: err.message, variant: 'destructive' }),
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -335,6 +369,80 @@ export default function DocumentsPage() {
             onSave={handleSignatureSave}
           />
 
+          {/* Fax Send Dialog */}
+          <Dialog open={!!faxDoc} onOpenChange={(o) => { if (!o) { setFaxDoc(null); setFaxTo(''); } }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Send via Fax</DialogTitle>
+                <DialogDescription>
+                  Enter the destination fax number to send "{faxDoc?.title}"
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="fax-to">Fax Number</Label>
+                  <Input
+                    id="fax-to"
+                    value={faxTo}
+                    onChange={(e) => setFaxTo(e.target.value)}
+                    placeholder="+15550001234"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setFaxDoc(null); setFaxTo(''); }}>Cancel</Button>
+                <Button
+                  disabled={!faxTo.trim() || sendFaxMutation.isPending}
+                  onClick={() => faxDoc && sendFaxMutation.mutate({ doc: faxDoc, to: faxTo.trim() })}
+                >
+                  {sendFaxMutation.isPending ? 'Sending…' : 'Send Fax'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* eSign Request Dialog */}
+          <Dialog open={!!signDoc} onOpenChange={(o) => { if (!o) { setSignDoc(null); setSignEmail(''); setSignName(''); } }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Request eSignature</DialogTitle>
+                <DialogDescription>
+                  Send a signature request for "{signDoc?.title}"
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="sign-name">Signer Name</Label>
+                  <Input
+                    id="sign-name"
+                    value={signName}
+                    onChange={(e) => setSignName(e.target.value)}
+                    placeholder="Full name"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="sign-email">Signer Email</Label>
+                  <Input
+                    id="sign-email"
+                    type="email"
+                    value={signEmail}
+                    onChange={(e) => setSignEmail(e.target.value)}
+                    placeholder="signer@example.com"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setSignDoc(null); setSignEmail(''); setSignName(''); }}>Cancel</Button>
+                <Button
+                  disabled={!signEmail.trim() || !signName.trim() || sendSignMutation.isPending}
+                  onClick={() => signDoc && sendSignMutation.mutate({ doc: signDoc, email: signEmail.trim(), name: signName.trim() })}
+                >
+                  {sendSignMutation.isPending ? 'Sending…' : 'Send Request'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -385,6 +493,22 @@ export default function DocumentsPage() {
                         title="Add Signature"
                       >
                         <PenToolIcon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFaxDoc(doc)}
+                        title="Send via Fax"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSignDoc(doc)}
+                        title="Request eSignature"
+                      >
+                        <FileSignature className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
