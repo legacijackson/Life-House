@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -37,15 +37,6 @@ interface PropertyLocation {
   radius: number; // in meters
 }
 
-// Property locations are fetched from the database via API
-// Each property has latitude, longitude, and default 100m radius for geofence validation
-
-// Mock property locations - in production, this would come from the database
-const propertyLocations: Record<string, PropertyLocation> = {
-  'oak-avenue': { latitude: 37.7749, longitude: -122.4194, radius: 100 }, // San Francisco
-  'pine-street': { latitude: 37.7849, longitude: -122.4094, radius: 100 },
-  'maple-grove': { latitude: 37.7649, longitude: -122.4294, radius: 100 },
-};
 
 export function GeofenceCheckinModal({
   isOpen,
@@ -62,6 +53,23 @@ export function GeofenceCheckinModal({
   const [isWithinGeofence, setIsWithinGeofence] = useState<boolean | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
   const [showOverride, setShowOverride] = useState(false);
+  const propertyLocRef = useRef<PropertyLocation | null>(null);
+
+  useEffect(() => {
+    if (!propertyId) return;
+    fetch(`/api/properties/${propertyId}`)
+      .then((r) => r.json())
+      .then((p: any) => {
+        if (p.latitude && p.longitude) {
+          propertyLocRef.current = {
+            latitude: parseFloat(p.latitude),
+            longitude: parseFloat(p.longitude),
+            radius: p.geofenceRadius ?? 100,
+          };
+        }
+      })
+      .catch(() => {});
+  }, [propertyId]);
 
   // Calculate distance between two coordinates (Haversine formula)
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -92,20 +100,19 @@ export function GeofenceCheckinModal({
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setCurrentLocation(position.coords);
-        
-        // Get property location (using mock data for demo)
-        const propertyLoc = propertyLocations[propertyId] || propertyLocations['oak-avenue'];
-        
-        // Calculate distance
-        const dist = calculateDistance(
-          position.coords.latitude,
-          position.coords.longitude,
-          propertyLoc.latitude,
-          propertyLoc.longitude
-        );
-        
-        setDistance(Math.round(dist));
-        setIsWithinGeofence(dist <= propertyLoc.radius);
+        const propertyLoc = propertyLocRef.current;
+        if (propertyLoc) {
+          const dist = calculateDistance(
+            position.coords.latitude,
+            position.coords.longitude,
+            propertyLoc.latitude,
+            propertyLoc.longitude
+          );
+          setDistance(Math.round(dist));
+          setIsWithinGeofence(dist <= propertyLoc.radius);
+        } else {
+          setIsWithinGeofence(null);
+        }
         setIsLoading(false);
       },
       (error) => {
