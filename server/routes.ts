@@ -50,6 +50,7 @@ import {
   properties as propertiesTable,
   faxes,
   auditLog,
+  appSettings,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -3064,46 +3065,24 @@ startxref
   // System Settings Management
   app.get('/api/admin/settings', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const settings = [
-        {
-          id: '1',
-          key: 'SLACK_WEBHOOK_URL',
-          value: process.env.SLACK_WEBHOOK_URL || '',
-          description: 'Slack webhook for notifications',
-          category: 'integrations',
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: '2',
-          key: 'S3_BUCKET_NAME',
-          value: process.env.S3_BUCKET_NAME || '',
-          description: 'AWS S3 bucket for file storage',
-          category: 'integrations',
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: '3',
-          key: 'MAX_RESIDENTS_PER_PROPERTY',
-          value: '50',
-          description: 'Maximum residents allowed per property',
-          category: 'general',
-          updatedAt: new Date().toISOString()
-        }
-      ];
-      res.json(settings);
+      const rows = await db.select().from(appSettings).orderBy(asc(appSettings.key));
+      res.json(rows);
     } catch (error) {
       console.error('Error fetching settings:', error);
       res.status(500).json({ message: 'Failed to fetch settings' });
     }
   }));
 
-  app.patch('/api/admin/settings/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/admin/settings/:key', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { id } = req.params;
+      const { key } = req.params;
       const { value } = req.body;
-
-      // TODO: Update setting in database
-      res.json({ id, value, updatedAt: new Date().toISOString() });
+      const [row] = await db
+        .insert(appSettings)
+        .values({ key, value, updatedBy: req.user.id })
+        .onConflictDoUpdate({ target: appSettings.key, set: { value, updatedBy: req.user.id, updatedAt: new Date() } })
+        .returning();
+      res.json(row);
     } catch (error) {
       console.error('Error updating setting:', error);
       res.status(500).json({ message: 'Failed to update setting' });
