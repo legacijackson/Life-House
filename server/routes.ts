@@ -2615,7 +2615,7 @@ startxref
       // Send email notification if resource has an email
       if (resourceEmail) {
         try {
-          const client = await storage.getUserById(clientId);
+          const client = await storage.getUser(clientId);
           const staffName = req.user?.name || 'Life House Staff';
           console.log(`[Resource Referral] ${staffName} referred ${client?.name || clientId} to ${resourceName} (${resourceEmail})`);
         } catch (_) { /* non-fatal */ }
