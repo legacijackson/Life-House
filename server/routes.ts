@@ -617,49 +617,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check-in sessions endpoint (CR-43)
-  app.get('/api/check-in/sessions', async (req: Request, res: Response) => {
+  app.get('/api/check-in/sessions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-      if (!token) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
+      const now = new Date();
+      const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(now); endOfDay.setHours(23, 59, 59, 999);
 
-      // Mock check-in sessions for development
-      const today = new Date();
-      const sessions = [
-        {
-          id: '1',
-          name: 'Morning Check-In',
-          type: 'daily',
-          startTime: '08:00 AM',
-          endTime: '09:00 AM',
-          location: {
-            name: 'Life House Main',
-            address: '123 Recovery St, Oakland, CA',
-            coordinates: { lat: 37.8044, lng: -122.2711 },
-            radius: 91
-          },
-          status: today.getHours() >= 8 && today.getHours() < 9 ? 'active' : 
-                  today.getHours() < 8 ? 'upcoming' : 'completed',
-          checkedIn: false
-        },
-        {
-          id: '2',
-          name: 'Job Readiness Group',
-          type: 'group',
-          startTime: '02:00 PM',
-          endTime: '03:30 PM',
-          location: {
-            name: 'Community Room',
-            address: '123 Recovery St, Oakland, CA',
-            coordinates: { lat: 37.8044, lng: -122.2711 },
-            radius: 91
-          },
-          status: today.getHours() >= 14 && today.getHours() < 15.5 ? 'active' : 
-                  today.getHours() < 14 ? 'upcoming' : 'completed',
-          checkedIn: false
+      const events = await db
+        .select()
+        .from(lhEvents)
+        .where(and(
+          gte(lhEvents.startTime, startOfDay),
+          lt(lhEvents.startTime, endOfDay),
+        ))
+        .orderBy(asc(lhEvents.startTime));
+
+      const sessions = events.map((e) => {
+        const start = e.startTime ? new Date(e.startTime) : null;
+        const end = e.endTime ? new Date(e.endTime) : null;
+        let status = 'upcoming';
+        if (start && end) {
+          if (now >= start && now <= end) status = 'active';
+          else if (now > end) status = 'completed';
         }
-      ];
+        return {
+          id: e.id,
+          name: e.title,
+          type: e.eventType,
+          startTime: start ? start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '',
+          endTime: end ? end.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '',
+          location: e.location ? { name: e.location } : null,
+          status,
+          checkedIn: false,
+        };
+      });
 
       res.json(sessions);
     } catch (error) {
@@ -1980,23 +1971,31 @@ startxref
         });
       }
 
-      // Create check-in record
-      const checkIn = {
-        id: Date.now().toString(),
-        userId,
-        propertyId,
-        timestamp: new Date().toISOString(),
-        latitude,
-        longitude,
-        distance: Math.round(distance)
-      };
+      // Find the active event for today to associate with this check-in
+      const now = new Date();
+      const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(now); endOfDay.setHours(23, 59, 59, 999);
+      const [activeEvent] = await db
+        .select({ id: lhEvents.id })
+        .from(lhEvents)
+        .where(and(gte(lhEvents.startTime, startOfDay), lt(lhEvents.endTime ?? lhEvents.startTime, endOfDay)))
+        .orderBy(asc(lhEvents.startTime))
+        .limit(1);
 
-      // TODO: Save check-in to database
-      console.log('Check-in successful:', checkIn);
+      const [attendance] = await db.insert(eventAttendance).values({
+        eventId: activeEvent?.id ?? null,
+        clientId: userId,
+        status: 'present',
+        loggedBy: userId,
+        loggedAt: now,
+        geoLat: String(latitude),
+        geoLng: String(longitude),
+        geoVerified: true,
+      }).returning();
 
       res.status(201).json({
         success: true,
-        checkIn,
+        checkIn: { id: attendance.id, userId, propertyId, timestamp: now.toISOString(), latitude, longitude, distance: Math.round(distance) },
         message: 'Check-in successful'
       });
     } catch (error) {
@@ -2273,12 +2272,11 @@ startxref
   // Staff route
   app.get('/api/staff', async (req: Request, res: Response) => {
     try {
-      // Mock staff data since getStaff method doesn't exist yet
-      const staff = [
-        { id: '1', name: 'Sarah Martinez', role: 'CaseManager', email: 'sarah.martinez@example.com' },
-        { id: '2', name: 'Michael Johnson', role: 'Admin', email: 'michael.johnson@example.com' },
-        { id: '3', name: 'Lisa Chen', role: 'Intake', email: 'lisa.chen@example.com' }
-      ];
+      const staff = await db
+        .select({ id: users.id, name: users.name, role: users.role, email: users.email })
+        .from(users)
+        .where(sql`${users.role} != 'Resident'`)
+        .orderBy(asc(users.name));
       res.json(staff);
     } catch (error) {
       console.error('Error fetching staff:', error);
