@@ -71,6 +71,7 @@ import { callCallLogScript, callLCPReferralScript, callIntakeScript } from "./se
 import { pushMaintenanceExpense } from "./services/finance";
 import { sendFaxViaTelnyx, getFaxStatus } from "./services/fax";
 import { createSubmission, getSubmission, getEmbedUrl, leaseTemplateId, carePlanTemplateId, medicalReleaseTemplateId } from "./services/docuseal";
+import { uploadToSpaces, testSpacesConnection, getPresignedDownloadUrl, deleteFromSpaces } from "./services/spaces";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -193,16 +194,8 @@ const upload = multer({
   }
 });
 
-// Configure multer for document uploads
-const documentStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/documents')
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  }
-});
+// Configure multer for document uploads — memory storage so we can stream to Spaces
+const documentStorage = multer.memoryStorage();
 
 const uploadCsv = multer({
   storage: multer.memoryStorage(),
@@ -217,7 +210,7 @@ const uploadCsv = multer({
 });
 
 const uploadDocument = multer({
-  storage: documentStorage,
+  storage: documentStorage, // memoryStorage — files go to Spaces, not disk
   limits: {
     fileSize: 25 * 1024 * 1024, // 25MB limit
   },
@@ -1425,37 +1418,9 @@ startxref
       const { type } = req.params;
 
       if (type === 's3') {
-        // Test S3/DigitalOcean Spaces connection
-        const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-        const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-        const bucketName = process.env.S3_BUCKET_NAME;
-        const region = process.env.S3_REGION;
-        const endpointUrl = process.env.S3_ENDPOINT_URL;
-
-        if (!accessKeyId || !secretAccessKey || !bucketName) {
-          return res.json({
-            success: false,
-            message: 'S3 credentials not configured. Please add AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and S3_BUCKET_NAME to your secrets.'
-          });
-        }
-
-        try {
-          // Import AWS SDK (commented out since not installed)
-          // const { S3Client, HeadBucketCommand } = await import('@aws-sdk/client-s3');
-          
-          // For now, return a mock response for testing
-          res.json({
-            success: false,
-            message: 'S3 testing is not available - AWS SDK not installed. Install @aws-sdk/client-s3 to enable this feature.'
-          });
-          return;
-        } catch (s3Error: any) {
-          console.error('S3 connection test failed:', s3Error);
-          res.json({
-            success: false,
-            message: `S3 connection failed: ${s3Error.message || 'Unknown error'}`
-          });
-        }
+        // Test DigitalOcean Spaces connection
+        const result = await testSpacesConnection();
+        return res.json(result);
       } else if (type === 'slack') {
         // Test Slack webhook
         const webhookUrl = process.env.SLACK_WEBHOOK_URL;
@@ -2400,24 +2365,32 @@ startxref
   });
 
   // Avatar upload
-  app.post('/api/users/:id/avatar', async (req: Request, res: Response) => {
+  app.post('/api/users/:id/avatar', requireAuth, upload.single('avatar'), authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      // Mock avatar upload - in production, use proper file upload
-      const avatarUrl = `/api/avatars/${id}.jpg`;
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-      // TODO: Implement avatar upload to S3 bucket
-      console.log('Uploading avatar:', avatarUrl);
+      let avatarUrl = '';
+      try {
+        const { url } = await uploadToSpaces({
+          buffer: req.file.buffer,
+          originalName: req.file.originalname,
+          mimeType: req.file.mimetype,
+          folder: 'avatars',
+        });
+        avatarUrl = url;
+      } catch (spacesErr: any) {
+        console.warn('Spaces avatar upload skipped (not configured):', spacesErr.message);
+        avatarUrl = `/uploads/avatars/${id}`;
+      }
 
-      // Remove unsupported avatar field for now
-      console.log('Avatar upload not implemented yet:', avatarUrl);
-
-      res.json({ avatar: avatarUrl });
+      await db.update(users).set({ profileImageUrl: avatarUrl, updatedAt: new Date() }).where(eq(users.id, id));
+      res.json({ avatarUrl });
     } catch (error) {
       console.error('Error uploading avatar:', error);
       res.status(500).json({ error: 'Failed to upload avatar' });
     }
-  });
+  }));
 
   // Document upload
   app.post('/api/documents', requireAuth, uploadDocument.single('file'), authRoute(async (req: AuthenticatedRequest, res: Response) => {
@@ -2432,6 +2405,21 @@ startxref
         return res.status(400).json({ error: 'Missing required fields: ownerType, ownerId, title' });
       }
 
+      // Upload to DigitalOcean Spaces (falls back gracefully if not configured)
+      let storagePath = '';
+      try {
+        const { key } = await uploadToSpaces({
+          buffer: req.file.buffer,
+          originalName: req.file.originalname,
+          mimeType: req.file.mimetype,
+          folder: `documents/${ownerType}`,
+        });
+        storagePath = key;
+      } catch (spacesErr: any) {
+        console.warn('Spaces upload skipped (not configured):', spacesErr.message);
+        storagePath = `local/${req.file.originalname}`;
+      }
+
       // Create document record in database
       const document = await storage.createDocument({
         ownerType,
@@ -2439,8 +2427,8 @@ startxref
         title,
         mime: req.file.mimetype,
         size: req.file.size,
-        storagePath: req.file.path,
-        checksum: null // TODO: Calculate file checksum
+        storagePath,
+        checksum: null,
       });
 
       res.status(201).json({
@@ -2488,22 +2476,30 @@ startxref
   }));
 
   // Download document
-  app.get('/api/documents/:id/download', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/documents/:id/download', requireAuth, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const document = await storage.getDocument(id);
-      
+
       if (!document) {
         return res.status(404).json({ error: 'Document not found' });
       }
 
-      // Send file
+      // If stored in Spaces, redirect to presigned URL; otherwise serve local file
+      if (document.storagePath && !document.storagePath.startsWith('local/') && !document.storagePath.startsWith('/')) {
+        try {
+          const presignedUrl = await getPresignedDownloadUrl(document.storagePath);
+          return res.redirect(302, presignedUrl);
+        } catch {
+          // fall through to local file
+        }
+      }
       res.download(document.storagePath, document.title);
     } catch (error) {
       console.error('Error downloading document:', error);
       res.status(500).json({ error: 'Failed to download document' });
     }
-  }));
+  });
 
   // Delete document
   app.delete('/api/documents/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
@@ -2515,12 +2511,12 @@ startxref
         return res.status(404).json({ error: 'Document not found' });
       }
 
-      // Delete file from disk
-      const fs = await import('fs/promises');
-      try {
-        await fs.unlink(document.storagePath);
-      } catch (error) {
-        console.error('Error deleting file from disk:', error);
+      // Delete from Spaces or local disk
+      if (document.storagePath && !document.storagePath.startsWith('local/') && !document.storagePath.startsWith('/')) {
+        try { await deleteFromSpaces(document.storagePath); } catch { /* ignore if not in Spaces */ }
+      } else if (document.storagePath) {
+        const fs = await import('fs/promises');
+        try { await fs.unlink(document.storagePath); } catch { /* ignore missing file */ }
       }
 
       // Delete document record
@@ -3116,13 +3112,30 @@ startxref
     try {
       const section = req.body.section || 'gallery';
       const alt = req.body.alt || (req.file?.originalname ?? 'Homepage photo');
+
+      let storagePath = '';
+      if (req.file) {
+        try {
+          const { key } = await uploadToSpaces({
+            buffer: req.file.buffer,
+            originalName: req.file.originalname,
+            mimeType: req.file.mimetype,
+            folder: 'homepage',
+          });
+          storagePath = key;
+        } catch (spacesErr: any) {
+          console.warn('Spaces upload skipped:', spacesErr.message);
+          storagePath = req.file.originalname;
+        }
+      }
+
       const doc = await storage.createDocument({
         ownerType: 'homepage',
         ownerId: section,
         title: alt,
         mime: req.file?.mimetype ?? 'image/jpeg',
         size: req.file?.size ?? null,
-        storagePath: req.file?.path ?? '',
+        storagePath,
         checksum: null,
       });
       res.json({

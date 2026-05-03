@@ -581,6 +581,7 @@ export default function Landing() {
               <div className="space-y-2 text-sm text-green-100">
                 <p>(855) 4-LIFEUP</p>
                 <p>(855-454-3387)</p>
+                <a href="mailto:lifeup@lifehousereentry.com" className="hover:text-white">lifeup@lifehousereentry.com</a>
                 <p>8399 Folsom Blvd, Ste 1</p>
                 <p>Sacramento, CA 95826</p>
               </div>

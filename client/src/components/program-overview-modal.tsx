@@ -206,7 +206,7 @@ export function ProgramOverviewModal({ isOpen, onClose }: ProgramOverviewModalPr
                     </div>
                     <div className="flex items-center space-x-3">
                       <Mail className="w-4 h-4 text-green-600" />
-                      <span className="text-sm">info@lifehousereentry.org</span>
+                      <a href="mailto:lifeup@lifehousereentry.com" className="text-sm text-green-700 hover:underline">lifeup@lifehousereentry.com</a>
                     </div>
                     <div className="flex items-start space-x-3">
                       <MapPin className="w-4 h-4 text-green-600 mt-0.5" />
