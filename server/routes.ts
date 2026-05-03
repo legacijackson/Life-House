@@ -3502,30 +3502,39 @@ Resident is ready to begin programming and case management services.`,
   });
 
   // Onboard a new case manager / staff member
-  app.post('/api/admin/onboard-case-manager', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { name, email, role, phone, title } = req.body;
-      if (!name || !email || !role) {
-        return res.status(400).json({ message: 'name, email, and role are required' });
+  app.post('/api/admin/onboard-case-manager',
+    requireAuth,
+    uploadDocument.fields([
+      { name: 'resume', maxCount: 1 }, { name: 'license', maxCount: 1 },
+      { name: 'idFront', maxCount: 1 }, { name: 'idBack', maxCount: 1 },
+      { name: 'w4', maxCount: 1 }, { name: 'i9', maxCount: 1 },
+      { name: 'directDeposit', maxCount: 1 },
+    ]),
+    roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const raw = req.body.data ? JSON.parse(req.body.data) : req.body;
+        const { personalInfo, jobInfo } = raw;
+        const name = [personalInfo?.firstName, personalInfo?.lastName].filter(Boolean).join(' ') || raw.name;
+        const email = personalInfo?.email || raw.email;
+        const role = jobInfo?.role || raw.role || 'CaseManager';
+        if (!name || !email) {
+          return res.status(400).json({ message: 'name and email are required' });
+        }
+        const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+        if (existing) {
+          return res.status(409).json({ message: 'A user with this email already exists' });
+        }
+        const [newUser] = await db.insert(users).values({
+          name, email, role: role as any,
+          phone: personalInfo?.phone || raw.phone || null,
+          isActive: true,
+        }).returning();
+        res.json({ success: true, user: newUser, message: 'Staff member onboarded successfully' });
+      } catch (error) {
+        console.error('Error onboarding case manager:', error);
+        res.status(500).json({ message: 'Failed to onboard staff member' });
       }
-      // Check if user already exists
-      const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      if (existing) {
-        return res.status(409).json({ message: 'A user with this email already exists' });
-      }
-      const [newUser] = await db.insert(users).values({
-        name,
-        email,
-        role: role as any,
-        phone: phone ?? null,
-        isActive: true,
-      }).returning();
-      res.json({ success: true, user: newUser, message: 'Staff member onboarded successfully' });
-    } catch (error) {
-      console.error('Error onboarding case manager:', error);
-      res.status(500).json({ message: 'Failed to onboard staff member' });
-    }
-  }));
+    }));
 
   // Update user profile
 app.patch("/api/users/:id", requireAuth, async (req, res) => {
