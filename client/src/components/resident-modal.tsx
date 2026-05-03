@@ -10,10 +10,14 @@ interface Resident {
   id: string;
   name: string;
   email: string;
-  stage: number;
-  lastContact: string;
-  status: string;
-  profile?: any; // Will contain onboarding data
+  stage?: number | null;
+  lastContact?: string | null;
+  status?: string | null;
+  moveInDate?: string | null;
+  createdAt?: string;
+  propertyAssignment?: string | null;
+  employmentStatus?: string | null;
+  profile?: any;
 }
 
 interface ResidentModalProps {
@@ -71,8 +75,8 @@ export function ResidentModal({ resident, onClose }: ResidentModalProps) {
                     </span>
                   </div>
                   <h4 className="text-lg font-semibold text-gray-900">{resident.name}</h4>
-                  <Badge className={getStageColor(resident.stage)}>
-                    Stage {resident.stage} - Housing Stabilization
+                  <Badge className={getStageColor(resident.stage ?? 1)}>
+                    Stage {resident.stage ?? 1} - Housing Stabilization
                   </Badge>
                 </div>
 

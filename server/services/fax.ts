@@ -1,6 +1,4 @@
-import axios from "axios";
-import FormData from "form-data";
-import fs from "fs";
+import fetch from "node-fetch";
 
 function env(key: string) {
   return process.env[key] ?? "";
@@ -32,29 +30,17 @@ export async function sendFaxViaTelnyx(opts: {
   const from = opts.from ?? defaultFrom;
   if (!from) throw new Error("TELNYX_FAX_NUMBER not configured and no from number supplied");
 
-  const payload: Record<string, string> = {
-    to: opts.to,
-    from,
-  };
+  const payload: Record<string, string> = { to: opts.to, from };
+  if (opts.mediaUrl) payload.media_url = opts.mediaUrl;
+  else if (opts.mediaPath) payload.media_url = opts.mediaPath;
+  if (opts.connectionId) payload.connection_id = opts.connectionId;
 
-  if (opts.mediaUrl) {
-    payload.media_url = opts.mediaUrl;
-  } else if (opts.mediaPath) {
-    // For local files, upload is handled separately; use media_url in production
-    payload.media_url = opts.mediaPath;
-  }
-
-  if (opts.connectionId) {
-    payload.connection_id = opts.connectionId;
-  }
-
-  const { data } = await axios.post("https://api.telnyx.com/v2/faxes", payload, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
+  const res = await fetch("https://api.telnyx.com/v2/faxes", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
-
+  const data: any = await res.json();
   const fax = data?.data ?? {};
   return {
     id: fax.id ?? "",
@@ -69,10 +55,10 @@ export async function getFaxStatus(faxId: string): Promise<FaxResult> {
   const apiKey = env("TELNYX_API_KEY");
   if (!apiKey) throw new Error("TELNYX_API_KEY not configured");
 
-  const { data } = await axios.get(`https://api.telnyx.com/v2/faxes/${faxId}`, {
+  const res = await fetch(`https://api.telnyx.com/v2/faxes/${faxId}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
-
+  const data: any = await res.json();
   const fax = data?.data ?? {};
   return {
     id: fax.id ?? faxId,

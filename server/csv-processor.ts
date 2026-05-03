@@ -196,7 +196,7 @@ ${JSON.stringify(rows, null, 2)}`
     } catch (error) {
       console.error('[CSVProcessor] Error processing batch:', error);
       // If OpenAI fails, use fallback processing
-      if (error.status === 429 || error.code === 'insufficient_quota') {
+      if ((error as any).status === 429 || (error as any).code === 'insufficient_quota') {
         console.log('[CSVProcessor] OpenAI quota exceeded, using fallback processing');
         return this.fallbackProcessBatch(rows, fileName);
       }

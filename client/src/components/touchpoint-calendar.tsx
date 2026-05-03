@@ -50,7 +50,7 @@ export function TouchpointCalendar({ residentId }: TouchpointCalendarProps) {
     queryFn: () => apiRequest(`/api/events${residentId ? `?residentId=${residentId}` : ''}`).then((r) => r.json()),
   });
 
-  const { data: residents } = useQuery({
+  const { data: residents = [] } = useQuery<any[]>({
     queryKey: ['/api/residents'],
   });
 
@@ -136,7 +136,6 @@ export function TouchpointCalendar({ residentId }: TouchpointCalendarProps) {
         select={handleDateSelect}
         eventClick={handleEventClick}
         height="auto"
-        className="bg-white rounded-lg border"
       />
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

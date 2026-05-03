@@ -85,11 +85,11 @@ export function AdminPanel() {
   });
 
   // Test connection mutation
-  const testConnectionMutation = useMutation({
-    mutationFn: (type: 'slack' | 's3') => 
+  const testConnectionMutation = useMutation<{ success: boolean; message: string }, Error, 'slack' | 's3'>({
+    mutationFn: (type: 'slack' | 's3') =>
       apiRequest(`/api/admin/test-connection/${type}`, {
         method: 'POST',
-      }),
+      }).then((r) => r.json()),
     onSuccess: (data: { success: boolean; message: string }, variables) => {
       setTestingConnection(null);
       if (data.success) {

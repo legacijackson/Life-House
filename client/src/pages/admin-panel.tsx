@@ -669,24 +669,24 @@ function KitIntegration() {
   const queryClient = useQueryClient();
 
   // Fetch Kit status
-  const { data: kitStatus, isLoading: statusLoading } = useQuery({
+  const { data: kitStatus, isLoading: statusLoading } = useQuery<any>({
     queryKey: ['/api/kit/status'],
   });
 
   // Fetch Kit forms
-  const { data: kitForms = [], isLoading: formsLoading } = useQuery({
+  const { data: kitForms = [], isLoading: formsLoading } = useQuery<any[]>({
     queryKey: ['/api/kit/forms'],
     enabled: activeView === 'forms'
   });
 
   // Fetch Kit subscribers
-  const { data: kitSubscribers = [], isLoading: subscribersLoading } = useQuery({
+  const { data: kitSubscribers = [], isLoading: subscribersLoading } = useQuery<any[]>({
     queryKey: ['/api/kit/subscribers'],
     enabled: activeView === 'subscribers'
   });
 
   // Fetch Kit tags
-  const { data: kitTags = [], isLoading: tagsLoading } = useQuery({
+  const { data: kitTags = [], isLoading: tagsLoading } = useQuery<any[]>({
     queryKey: ['/api/kit/tags'],
     enabled: activeView === 'subscribers'
   });
@@ -3166,10 +3166,10 @@ export default function AdminPanel() {
       <CaseManagerOnboarding
         isOpen={isStaffOnboardingOpen}
         onClose={() => setIsStaffOnboardingOpen(false)}
-        onComplete={(data) => {
+        onComplete={() => {
           toast({
             title: "Staff onboarding completed",
-            description: `${data.personalInfo.firstName} ${data.personalInfo.lastName} has been successfully onboarded.`
+            description: "New staff member has been successfully onboarded.",
           });
           setIsStaffOnboardingOpen(false);
           queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });

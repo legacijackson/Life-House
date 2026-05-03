@@ -222,7 +222,7 @@ export function GeofenceCheckinModal({
                     <Navigation className="w-4 h-4 text-blue-600" />
                     <span className="font-medium">Your Location</span>
                   </div>
-                  <Badge variant={isWithinGeofence ? "success" : "destructive"}>
+                  <Badge variant={isWithinGeofence ? "secondary" : "destructive"}>
                     {isWithinGeofence ? 'Within Range' : 'Out of Range'}
                   </Badge>
                 </div>

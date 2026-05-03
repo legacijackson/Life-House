@@ -42,15 +42,15 @@ export function AttendanceModal({ open, onClose }: AttendanceModalProps) {
     },
   });
 
-  const { data: residents } = useQuery({
+  const { data: residents = [] } = useQuery<any[]>({
     queryKey: ['/api/residents'],
   });
 
-  const { data: programs } = useQuery({
+  const { data: programs = [] } = useQuery<any[]>({
     queryKey: ['/api/programs'],
   });
 
-  const { data: staff } = useQuery({
+  const { data: staff = [] } = useQuery<any[]>({
     queryKey: ['/api/staff'],
   });
 

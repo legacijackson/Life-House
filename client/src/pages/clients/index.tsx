@@ -62,6 +62,8 @@ interface Client {
     dietaryRestrictions?: string;
     bicCardStatus?: string;
     patientAccount?: string;
+    emergencyFlag?: boolean;
+    idDocumentUrl?: string;
   };
 }
 

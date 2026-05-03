@@ -1,4 +1,4 @@
-import axios from "axios";
+import fetch from "node-fetch";
 
 function env(key: string) {
   return process.env[key] ?? "";
@@ -35,9 +35,10 @@ export async function createSubmission(opts: {
   submitters: DocuSealSubmitter[];
   sendEmail?: boolean;
 }): Promise<CreateSubmissionResult> {
-  const { data } = await axios.post(
-    `${BASE()}/api/submissions`,
-    {
+  const res = await fetch(`${BASE()}/api/submissions`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
       template_id: opts.templateId,
       submitters: opts.submitters.map((s) => ({
         email: s.email,
@@ -47,18 +48,17 @@ export async function createSubmission(opts: {
         fields: s.fields,
         send_email: s.send_email ?? opts.sendEmail ?? false,
       })),
-    },
-    { headers: headers() },
-  );
-  return data;
+    }),
+  });
+  return res.json() as Promise<CreateSubmissionResult>;
 }
 
 // Fetch submission status
 export async function getSubmission(submissionId: number) {
-  const { data } = await axios.get(`${BASE()}/api/submissions/${submissionId}`, {
+  const res = await fetch(`${BASE()}/api/submissions/${submissionId}`, {
     headers: headers(),
   });
-  return data;
+  return res.json();
 }
 
 // Get an embedded signing URL for a specific submitter slug

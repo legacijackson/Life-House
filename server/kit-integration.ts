@@ -46,7 +46,7 @@ class KitService {
     }
   }
 
-  private async makeRequest(endpoint: string, options: any = {}) {
+  private async makeRequest(endpoint: string, options: any = {}): Promise<any> {
     if (!this.apiKey) {
       throw new Error('Kit API key not configured');
     }
@@ -82,7 +82,7 @@ class KitService {
       const data = await this.makeRequest(`/subscribers/${id}`);
       return data.subscriber || null;
     } catch (error) {
-      if (error.message.includes('404')) {
+      if (((error as any).message || "").includes('404')) {
         return null;
       }
       throw error;
@@ -167,7 +167,7 @@ class KitService {
       const data = await this.makeRequest(`/forms/${id}`);
       return data.form || null;
     } catch (error) {
-      if (error.message.includes('404')) {
+      if (((error as any).message || "").includes('404')) {
         return null;
       }
       throw error;
@@ -310,7 +310,7 @@ class KitService {
           email: donor.email,
           firstName: donor.firstName,
           lastName: donor.lastName,
-          donorType: donor.donorType,
+          donorType: donor.donorType ?? undefined,
           tags: donor.tags || [],
           customFields: {
             total_donated: donor.totalDonated,
@@ -320,7 +320,7 @@ class KitService {
         });
         synced++;
       } catch (error) {
-        errors.push({ donor: donor.email, error: error.message });
+        errors.push({ donor: donor.email, error: (error as any).message });
       }
     }
 
@@ -344,7 +344,7 @@ class KitService {
           await this.syncKitContactToCRM(subscriber);
           synced++;
         } catch (error) {
-          errors.push({ subscriber: subscriber.email_address, error: error.message });
+          errors.push({ subscriber: subscriber.email_address, error: (error as any).message });
         }
       }
 

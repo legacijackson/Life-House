@@ -90,7 +90,7 @@ function CallLogFormModal({ open, onClose, prefill }: {
     email: prefill?.email ?? "",
     reasonForCall: prefill?.reasonForCall ?? "",
     callNotes: prefill?.callNotes ?? "",
-    ...prefill,
+    ...(prefill as Record<string, string> | undefined),
   });
   const { toast } = useToast();
   const qc = useQueryClient();

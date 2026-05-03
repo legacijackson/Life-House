@@ -20,12 +20,12 @@ export function PartnerPortal() {
   const [, setLocation] = useLocation();
   
   // Fetch partner organization data
-  const { data: partnerData } = useQuery({
+  const { data: partnerData } = useQuery<any>({
     queryKey: ["/api/partner/profile"],
   });
 
   // Fetch referrals submitted by this partner
-  const { data: referrals } = useQuery({
+  const { data: referrals = [] } = useQuery<any[]>({
     queryKey: ["/api/partner/referrals"],
   });
 
@@ -58,7 +58,7 @@ export function PartnerPortal() {
       case "in_review":
         return "default";
       case "accepted":
-        return "success";
+        return "secondary";
       case "declined":
         return "destructive";
       default:

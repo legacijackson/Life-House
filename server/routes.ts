@@ -56,6 +56,7 @@ import {
   referrals,
   partners,
   programs,
+  programEnrollments,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -636,16 +637,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Partner portal endpoints
-  app.get('/api/partner/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/partner/profile', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [partner] = await db.select().from(partners).where(eq(partners.email, req.user.email)).limit(1);
       res.json(partner ?? null);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.get('/api/partner/referrals', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/partner/referrals', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rows = await db.select().from(referrals)
         .where(eq(referrals.referrerEmail, req.user.email))
@@ -654,10 +655,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // Check-in sessions endpoint (CR-43)
-  app.get('/api/check-in/sessions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/check-in/sessions', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const now = new Date();
       const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
@@ -697,7 +698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Check-in sessions error:', error);
       res.status(500).json({ message: 'Failed to fetch check-in sessions' });
     }
-  });
+  }));
 
   // Geofence check-in endpoint (CR-43)
 
@@ -909,7 +910,7 @@ startxref
 
 
   // Benefits summary for reports
-  app.get('/api/reports/benefits-summary', requireAuth, async (_req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/reports/benefits-summary', requireAuth, authRoute(async (_req: AuthenticatedRequest, res: Response) => {
     try {
       const rows = await db.select({
         benefitType: clientBenefits.benefitType,
@@ -927,7 +928,7 @@ startxref
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // Staff Dashboard Routes
   app.get('/api/staff/dashboard', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
@@ -968,11 +969,30 @@ startxref
         .limit(5);
 
       const recentActivity = await db
-        .select({ id: auditLog.id, action: auditLog.action, createdAt: auditLog.createdAt, resourceType: auditLog.resourceType })
+        .select({ id: auditLog.id, action: auditLog.action, createdAt: auditLog.ts, resourceType: auditLog.entity })
         .from(auditLog)
-        .where(eq(auditLog.userId, caseManagerId))
-        .orderBy(desc(auditLog.createdAt))
+        .where(eq(auditLog.actorId, caseManagerId))
+        .orderBy(desc(auditLog.ts))
         .limit(5);
+
+      const [completedEventsCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventAttendance)
+        .where(eq(eventAttendance.status, 'present'));
+
+      const [totalEventsCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventAttendance)
+        .where(inArray(eventAttendance.status, ['present', 'absent', 'excused']));
+
+      const [completedGoalsCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(clientGoals)
+        .where(eq(clientGoals.status, 'completed'));
+
+      const [totalGoalsCount] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(clientGoals);
 
       const dashboardData = {
         totalResidents: residentCount?.count ?? 0,
@@ -980,7 +1000,11 @@ startxref
         pendingIntakes: pendingIntakeCount?.count ?? 0,
         overdueNotes: overdueNotesList.length,
         maintenanceTickets: maintenanceCount?.count ?? 0,
-        completionRate: 0,
+        completionRate: (() => {
+          const totalAssigned = (totalEventsCount?.count ?? 0) + (totalGoalsCount?.count ?? 0);
+          const totalCompleted = (completedEventsCount?.count ?? 0) + (completedGoalsCount?.count ?? 0);
+          return totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
+        })(),
         recentActivity,
         overdueNotesList,
         notifications: [],
@@ -1077,12 +1101,13 @@ startxref
           id: users.id,
           name: users.name,
           email: users.email,
-          stage: users.stage,
-          caseManagerId: users.caseManagerId,
-          employmentStatus: users.employmentStatus,
-          moveInDate: users.moveInDate,
+          stage: programEnrollments.stage,
+          employmentStatus: residentProfiles.employmentStatus,
+          moveInDate: residentProfiles.moveInDate,
         })
         .from(users)
+        .leftJoin(residentProfiles, eq(users.id, residentProfiles.userId))
+        .leftJoin(programEnrollments, eq(users.id, programEnrollments.residentId))
         .where(eq(users.role, 'Resident'))
         .orderBy(users.name);
       res.json(rows.map(r => ({
@@ -1387,7 +1412,7 @@ startxref
 
       // Get onboarding phases
       const phases = await db.select().from(onboardingPhases).where(eq(onboardingPhases.clientId, userId));
-      const completedPhases = phases.filter((p) => p.isCompleted).length;
+      const completedPhases = phases.filter((p) => p.completedAt !== null).length;
       const totalPhases = phases.length;
 
       // Get upcoming events for this resident
@@ -2066,7 +2091,7 @@ startxref
   });
 
   // AI Chat endpoint (public access for widget)
-  app.post('/api/ai/draft-note', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/ai/draft-note', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { residentId, noteType, bulletPoints } = req.body;
       if (!residentId || !noteType || !Array.isArray(bulletPoints)) {
@@ -2079,7 +2104,7 @@ startxref
       console.error('AI draft note error:', error);
       res.status(500).json({ message: 'Failed to draft note', error: error.message });
     }
-  });
+  }));
 
   app.post('/api/ai/chat', async (req: Request, res: Response) => {
     try {
@@ -2190,7 +2215,7 @@ startxref
   });
 
   // Get user by ID
-  app.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/users/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
@@ -2198,7 +2223,7 @@ startxref
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // User profile update
   app.patch('/api/users/:id', async (req: Request, res: Response) => {
@@ -2359,12 +2384,12 @@ startxref
   }));
 
   // Update case note content
-  app.patch('/api/notes/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/notes/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { content, summary, title, details } = req.body;
       const updates: any = { updatedAt: new Date() };
-      if (content !== undefined) updates.summary = content; // map 'content' alias
+      if (content !== undefined) updates.summary = content;
       if (summary !== undefined) updates.summary = summary;
       if (title !== undefined) updates.title = title;
       if (details !== undefined) updates.details = details;
@@ -2374,10 +2399,10 @@ startxref
       console.error('Error updating note:', error);
       res.status(500).json({ error: 'Failed to update note' });
     }
-  });
+  }));
 
   // Soft delete case notes (archive them)
-  app.delete('/api/notes/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.delete('/api/notes/:id', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       await db.update(staffCaseNotes).set({ status: 'archived' }).where(eq(staffCaseNotes.id, id));
@@ -2386,7 +2411,7 @@ startxref
       console.error('Error deleting note:', error);
       res.status(500).json({ error: 'Failed to delete note' });
     }
-  });
+  }));
 
   // Support/FAQ system routes
   app.get('/api/support', authRoute(async (req: AuthenticatedRequest, res: Response) => {
@@ -2900,7 +2925,7 @@ startxref
     }
   }));
 
-  app.post('/api/admin/homepage-photos', roleRoute(['Admin'], uploadDocument.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/admin/homepage-photos', uploadDocument.single('file'), roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const section = req.body.section || 'gallery';
       const alt = req.body.alt || (req.file?.originalname ?? 'Homepage photo');
@@ -3218,7 +3243,7 @@ Resident is ready to begin programming and case management services.`,
     }));
 
   // Profile completion endpoint
-  app.post('/api/auth/complete-profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/auth/complete-profile', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user!.id;
       const { firstName, lastName, phone, dateOfBirth } = req.body;
@@ -3239,7 +3264,7 @@ Resident is ready to begin programming and case management services.`,
       console.error('Error completing profile:', error);
       res.status(500).json({ message: 'Failed to complete profile' });
     }
-  });
+  }));
 
   // Onboard a new case manager / staff member
   app.post('/api/admin/onboard-case-manager',
@@ -3267,7 +3292,6 @@ Resident is ready to begin programming and case management services.`,
         const [newUser] = await db.insert(users).values({
           name, email, role: role as any,
           phone: personalInfo?.phone || raw.phone || null,
-          isActive: true,
         }).returning();
         res.json({ success: true, user: newUser, message: 'Staff member onboarded successfully' });
       } catch (error) {
@@ -4171,7 +4195,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
 
   // ── Clients ──────────────────────────────────────────────────────────────
 
-  app.get('/api/clients', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/clients', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { type } = req.query as Record<string, string>;
       let query = db.select().from(users);
@@ -4194,9 +4218,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.get('/api/clients/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/clients/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [user] = await db.select().from(users).where(eq(users.id, req.params.id));
       if (!user) return res.status(404).json({ message: "Client not found" });
@@ -4205,65 +4229,65 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.get('/api/clients/:id/emergency-contacts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/clients/:id/emergency-contacts', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const rows = await db.select().from(clientEmergencyContacts).where(eq(clientEmergencyContacts.clientId, req.params.id));
     res.json(rows);
-  });
+  }));
 
-  app.post('/api/clients/:id/emergency-contacts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/clients/:id/emergency-contacts', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const [row] = await db.insert(clientEmergencyContacts).values({ ...req.body, clientId: req.params.id }).returning();
     res.json(row);
-  });
+  }));
 
-  app.get('/api/clients/:id/health-providers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/clients/:id/health-providers', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const rows = await db.select().from(clientHealthProviders).where(eq(clientHealthProviders.clientId, req.params.id));
     res.json(rows);
-  });
+  }));
 
-  app.post('/api/clients/:id/health-providers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/clients/:id/health-providers', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const [row] = await db.insert(clientHealthProviders).values({ ...req.body, clientId: req.params.id }).returning();
     res.json(row);
-  });
+  }));
 
-  app.get('/api/clients/:id/benefits', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/clients/:id/benefits', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const rows = await db.select().from(clientBenefits).where(eq(clientBenefits.clientId, req.params.id));
     res.json(rows);
-  });
+  }));
 
-  app.post('/api/clients/:id/benefits', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/clients/:id/benefits', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const [row] = await db.insert(clientBenefits).values({ ...req.body, clientId: req.params.id }).returning();
     res.json(row);
-  });
+  }));
 
-  app.get('/api/clients/:id/warnings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/clients/:id/warnings', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const rows = await db.select().from(clientWarnings).where(eq(clientWarnings.clientId, req.params.id));
     res.json(rows);
-  });
+  }));
 
-  app.post('/api/clients/:id/warnings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/clients/:id/warnings', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const [row] = await db.insert(clientWarnings).values({
       ...req.body,
       clientId: req.params.id,
       issuedBy: req.user.id,
     }).returning();
     res.json(row);
-  });
+  }));
 
-  app.get('/api/clients/:id/goals', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/clients/:id/goals', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const rows = await db.select().from(clientGoals).where(eq(clientGoals.clientId, req.params.id));
     res.json(rows);
-  });
+  }));
 
-  app.post('/api/clients/:id/goals', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/clients/:id/goals', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const [row] = await db.insert(clientGoals).values({
       ...req.body,
       clientId: req.params.id,
       caseManagerId: req.user.id,
     }).returning();
     res.json(row);
-  });
+  }));
 
   // PATCH client profile fields (prescriptions, dietary restrictions, notes, etc.)
   app.patch('/api/clients/:id/profile', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
@@ -4287,66 +4311,66 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) { res.status(500).json({ message: err.message }); }
   }));
 
-  app.patch('/api/clients/:id/goals/:goalId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/clients/:id/goals/:goalId', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.update(clientGoals).set({ ...req.body })
         .where(and(eq(clientGoals.id, req.params.goalId), eq(clientGoals.clientId, req.params.id)))
         .returning();
       res.json(row);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.delete('/api/clients/:id/goals/:goalId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.delete('/api/clients/:id/goals/:goalId', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       await db.delete(clientGoals)
         .where(and(eq(clientGoals.id, req.params.goalId), eq(clientGoals.clientId, req.params.id)));
       res.json({ ok: true });
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.patch('/api/clients/:id/benefits/:benefitId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/clients/:id/benefits/:benefitId', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.update(clientBenefits).set({ ...req.body })
         .where(and(eq(clientBenefits.id, req.params.benefitId), eq(clientBenefits.clientId, req.params.id)))
         .returning();
       res.json(row);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.delete('/api/clients/:id/benefits/:benefitId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.delete('/api/clients/:id/benefits/:benefitId', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       await db.delete(clientBenefits)
         .where(and(eq(clientBenefits.id, req.params.benefitId), eq(clientBenefits.clientId, req.params.id)));
       res.json({ ok: true });
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.delete('/api/clients/:id/emergency-contacts/:contactId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.delete('/api/clients/:id/emergency-contacts/:contactId', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       await db.delete(clientEmergencyContacts)
         .where(and(eq(clientEmergencyContacts.id, req.params.contactId), eq(clientEmergencyContacts.clientId, req.params.id)));
       res.json({ ok: true });
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.delete('/api/clients/:id/health-providers/:providerId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.delete('/api/clients/:id/health-providers/:providerId', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       await db.delete(clientHealthProviders)
         .where(and(eq(clientHealthProviders.id, req.params.providerId), eq(clientHealthProviders.clientId, req.params.id)));
       res.json({ ok: true });
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
   // ── Care Plans ────────────────────────────────────────────────────────────
 
-  app.get('/api/clients/:id/care-plans', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/clients/:id/care-plans', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rows = await db.select().from(carePlans)
         .where(eq(carePlans.clientId, req.params.id))
         .orderBy(desc(carePlans.createdAt));
       res.json(rows);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
   app.post('/api/clients/:id/care-plans', roleRoute(['Admin', 'CaseManager', 'Staff'], async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -4357,7 +4381,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
         status: 'draft',
         version: 1,
       }).returning();
-      createNotification(req.params.id, 'care_plan_created', 'Care plan created', `A new care plan "${row.title}" has been created.`).catch(console.error);
+      createNotification({ userId: req.params.id, type: 'care_plan_created', title: 'Care plan created', body: `A new care plan "${row.title}" has been created.` }).catch(console.error);
       res.status(201).json(row);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
   }));
@@ -4381,16 +4405,16 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
 
   // ── Call Log ──────────────────────────────────────────────────────────────
 
-  app.get('/api/call-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/call-log', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rows = await db.select().from(callLog).orderBy(desc(callLog.createdAt));
       res.json(rows);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/call-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/call-log', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.insert(callLog).values({
         ...req.body,
@@ -4422,9 +4446,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.patch('/api/call-log/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/call-log/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.update(callLog)
         .set({ ...req.body, updatedAt: new Date() })
@@ -4434,29 +4458,29 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Intake Applications ───────────────────────────────────────────────────
 
-  app.get('/api/intake-applications', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/intake-applications', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rows = await db.select().from(intakeApplications).orderBy(desc(intakeApplications.createdAt));
       res.json(rows);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/intake-applications', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/intake-applications', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.insert(intakeApplications).values(req.body).returning();
       res.json(row);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.patch('/api/intake-applications/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/intake-applications/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (req.body.status === "denied" && !req.body.denialReason) {
         return res.status(400).json({ message: "Denial reason is required when denying an application" });
@@ -4469,11 +4493,11 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Staff Case Notes ──────────────────────────────────────────────────────
 
-  app.get('/api/staff-case-notes', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/staff-case-notes', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { clientId, status, type } = req.query as Record<string, string>;
       let query = db.select().from(staffCaseNotes);
@@ -4496,9 +4520,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/staff-case-notes', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/staff-case-notes', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const dueAt = req.body.eventId
         ? null
@@ -4520,9 +4544,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.patch('/api/staff-case-notes/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/staff-case-notes/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [existing] = await db.select().from(staffCaseNotes).where(eq(staffCaseNotes.id, req.params.id));
       if (!existing) return res.status(404).json({ message: "Note not found" });
@@ -4540,20 +4564,20 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Events ────────────────────────────────────────────────────────────────
 
-  app.get('/api/lh-events', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/lh-events', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rows = await db.select().from(lhEvents).orderBy(desc(lhEvents.startTime));
       res.json(rows);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/lh-events', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/lh-events', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.insert(lhEvents).values({
         ...req.body,
@@ -4587,11 +4611,11 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Event Attendance ──────────────────────────────────────────────────────
 
-  app.get('/api/event-attendance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/event-attendance', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { eventId, clientId } = req.query as Record<string, string>;
       const conditions: any[] = [];
@@ -4605,9 +4629,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/event-attendance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/event-attendance', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.insert(eventAttendance)
         .values({ ...req.body, loggedBy: req.user.id, loggedAt: new Date() })
@@ -4616,9 +4640,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.patch('/api/event-attendance/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/event-attendance/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.update(eventAttendance)
         .set({ ...req.body, loggedBy: req.user.id, loggedAt: new Date() })
@@ -4628,20 +4652,20 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Maintenance Tickets ───────────────────────────────────────────────────
 
-  app.get('/api/maintenance-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/maintenance-tickets', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rows = await db.select().from(maintenanceTickets).orderBy(desc(maintenanceTickets.createdAt));
       res.json(rows);
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/maintenance-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/maintenance-tickets', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Auto-flag hazardous keywords
       const hazardKeywords = [
@@ -4662,7 +4686,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       if (row.priority === "high" || row.priority === "urgent" || isHazardous) {
         notifyAdmins({
           type: "maintenance_urgent",
-          title: `${isHazardous ? "⚠️ HAZARD" : row.priority.toUpperCase()} Maintenance Ticket`,
+          title: `${isHazardous ? "⚠️ HAZARD" : (row.priority ?? 'normal').toUpperCase()} Maintenance Ticket`,
           body: row.title,
           priority: isHazardous ? "urgent" : (row.priority as any),
           linkType: "maintenance_ticket",
@@ -4674,9 +4698,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.patch('/api/maintenance-tickets/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/maintenance-tickets/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.update(maintenanceTickets)
         .set({ ...req.body, updatedAt: new Date() })
@@ -4699,11 +4723,11 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Authorization Requests ────────────────────────────────────────────────
 
-  app.get('/api/authorization-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/authorization-requests', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { clientId } = req.query as Record<string, string>;
       const rows = clientId
@@ -4713,9 +4737,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/authorization-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/authorization-requests', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.insert(authorizationRequests).values({
         ...req.body,
@@ -4739,7 +4763,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   app.patch('/api/authorization-requests/:id', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -4789,7 +4813,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
 
   // ── Onboarding ────────────────────────────────────────────────────────────
 
-  app.get('/api/onboarding/phases', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/onboarding/phases', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { clientId } = req.query as Record<string, string>;
       if (!clientId) return res.json([]);
@@ -4798,9 +4822,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/onboarding/field-save', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/onboarding/field-save', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { clientId, phaseKey, fields } = req.body;
 
@@ -4851,9 +4875,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/onboarding/complete-phase', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/onboarding/complete-phase', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { clientId, phaseKey } = req.body;
       const now = new Date();
@@ -4903,19 +4927,14 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
           .catch(console.error);
       }
       if (phaseKey === 'P13') {
-        await notifyAdmins(
-          'Client Completed Program',
-          `Client ${clientId} has completed Phase 13 (Exit Planning).`,
-          'program_complete',
-          clientId,
-        );
+        await notifyAdmins({ type: 'program_complete', title: 'Client Completed Program', body: `Client ${clientId} has completed Phase 13 (Exit Planning).` });
       }
 
       res.json({ ok: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Life Design Form (public client-facing) ───────────────────────────────
 
@@ -4977,12 +4996,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       }).onConflictDoNothing();
 
       // Notify the case manager and admins
-      await notifyAdmins(
-        '30-Day Life Design Form Submitted',
-        `Client ${record.clientId} has submitted their 30-Day Life Design form.`,
-        'life_design_submitted',
-        record.clientId ?? undefined,
-      );
+      await notifyAdmins({ type: 'life_design_submitted', title: '30-Day Life Design Form Submitted', body: `Client ${record.clientId} has submitted their 30-Day Life Design form.` });
 
       res.json({ message: 'Thank you! Your Life Design form has been submitted.' });
     } catch (err: any) {
@@ -4992,7 +5006,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
 
   // ── Notifications ─────────────────────────────────────────────────────────
 
-  app.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/notifications', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { unreadOnly } = req.query as Record<string, string>;
       const conditions: any[] = [eq(notifications.userId, req.user!.id as any)];
@@ -5003,25 +5017,25 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
         .limit(50);
       res.json(rows);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.patch('/api/notifications/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/notifications/:id/read', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       await db.update(notifications).set({ status: 'read', readAt: new Date() })
         .where(and(eq(notifications.id, req.params.id), eq(notifications.userId, req.user!.id as any)));
       res.json({ ok: true });
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.patch('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/notifications/mark-all-read', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       await db.update(notifications).set({ status: 'read', readAt: new Date() })
         .where(and(eq(notifications.userId, req.user!.id as any), eq(notifications.status, 'unread')));
       res.json({ ok: true });
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
-  app.delete('/api/notifications/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.delete('/api/notifications/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       await db.delete(notifications).where(and(
         eq(notifications.id, req.params.id),
@@ -5029,14 +5043,14 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       ));
       res.json({ ok: true });
     } catch (err: any) { res.status(500).json({ message: err.message }); }
-  });
+  }));
 
   // GET pending attendance requests (uses eventAttendance with pending/excused status)
   app.get('/api/staff/attendance-requests', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rows = await db.select().from(eventAttendance)
         .where(eq(eventAttendance.status, 'excused'))
-        .orderBy(desc(eventAttendance.createdAt))
+        .orderBy(desc(eventAttendance.loggedAt))
         .limit(50);
       res.json(rows);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
@@ -5057,7 +5071,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
 
   // ── Touchpoints ───────────────────────────────────────────────────────────
 
-  app.get('/api/touchpoints', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/touchpoints', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { clientId } = req.query as Record<string, string>;
       const conditions: any[] = [];
@@ -5071,9 +5085,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.post('/api/touchpoints', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/touchpoints', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const [row] = await db.insert(touchpoints).values({
         ...req.body,
@@ -5084,9 +5098,9 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.patch('/api/touchpoints/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/touchpoints/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const updates: any = { ...req.body };
       if (updates.scheduledAt) updates.scheduledAt = new Date(updates.scheduledAt);
@@ -5097,16 +5111,16 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
-  app.delete('/api/touchpoints/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.delete('/api/touchpoints/:id', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     try {
       await db.delete(touchpoints).where(eq(touchpoints.id, req.params.id));
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }
-  });
+  }));
 
   // ── Finance Integration Endpoints ─────────────────────────────────────────
 
@@ -5276,12 +5290,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       }).where(eq(lcpInvites.token, req.params.token));
 
       // Notify staff
-      await notifyAdmins(
-        'LCP Referral Completed',
-        `LCP ${invite.lcpName ?? invite.lcpEmail} has completed the referral form for client ${invite.clientId}.`,
-        'lcp_complete',
-        invite.clientId
-      );
+      await notifyAdmins({ type: 'lcp_complete', title: 'LCP Referral Completed', body: `LCP ${invite.lcpName ?? invite.lcpEmail} has completed the referral form for client ${invite.clientId}.` });
 
       res.json({ message: 'Referral submitted successfully. Thank you!' });
     } catch (err: any) {
@@ -5483,10 +5492,10 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
     }
   }));
 
-  app.get('/api/docuseal/embed/:slug', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/docuseal/embed/:slug', authRoute(async (req: AuthenticatedRequest, res: Response) => {
     const url = getEmbedUrl(req.params.slug);
     res.json({ url });
-  });
+  }));
 
   // DocuSeal webhook
   app.post('/api/webhooks/docuseal', async (req: Request, res: Response) => {
