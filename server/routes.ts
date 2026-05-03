@@ -4395,6 +4395,7 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
         status: 'draft',
         version: 1,
       }).returning();
+      createNotification(req.params.id, 'care_plan_created', 'Care plan created', `A new care plan "${row.title}" has been created.`).catch(console.error);
       res.status(201).json(row);
     } catch (err: any) { res.status(500).json({ message: err.message }); }
   }));
@@ -4873,7 +4874,98 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
         .set({ onboardingPhase: phaseKey, updatedAt: now })
         .where(eq(clientProfiles.userId, clientId));
 
+      // Trigger Apps Script on key phases
+      if (phaseKey === 'P1') {
+        callIntakeScript({ clientId, phaseKey, completedBy: req.user.id, completedAt: now.toISOString() })
+          .catch(console.error);
+      }
+      if (phaseKey === 'P3') {
+        callIntakeScript({ action: 'housing_placed', clientId, phaseKey, completedBy: req.user.id })
+          .catch(console.error);
+      }
+      if (phaseKey === 'P13') {
+        await notifyAdmins(
+          'Client Completed Program',
+          `Client ${clientId} has completed Phase 13 (Exit Planning).`,
+          'program_complete',
+          clientId,
+        );
+      }
+
       res.json({ ok: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  // ── Life Design Form (public client-facing) ───────────────────────────────
+
+  app.get('/api/life-design/:token', async (req: Request, res: Response) => {
+    try {
+      const [record] = await db.select().from(fieldSaves).where(
+        and(
+          eq(fieldSaves.phaseKey, 'P6'),
+          eq(fieldSaves.fieldName, 'lifeDesignFormToken'),
+          eq(fieldSaves.fieldValue, req.params.token),
+        ),
+      );
+      if (!record) return res.status(404).json({ message: 'Form link not found or expired' });
+
+      // Check if already submitted
+      const [submitted] = await db.select().from(fieldSaves).where(
+        and(
+          eq(fieldSaves.clientId, record.clientId!),
+          eq(fieldSaves.phaseKey, 'P6'),
+          eq(fieldSaves.fieldName, 'lifeDesignSubmittedAt'),
+        ),
+      );
+      if (submitted) return res.status(410).json({ message: 'already_submitted' });
+
+      const [client] = await db.select({ name: users.name, id: users.id })
+        .from(users).where(eq(users.id, record.clientId!));
+      res.json({ clientName: client?.name ?? 'Client', clientId: record.clientId });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post('/api/life-design/:token/submit', async (req: Request, res: Response) => {
+    try {
+      const [record] = await db.select().from(fieldSaves).where(
+        and(
+          eq(fieldSaves.phaseKey, 'P6'),
+          eq(fieldSaves.fieldName, 'lifeDesignFormToken'),
+          eq(fieldSaves.fieldValue, req.params.token),
+        ),
+      );
+      if (!record) return res.status(404).json({ message: 'Form link not found' });
+
+      // Save the submission
+      await db.insert(fieldSaves).values({
+        clientId: record.clientId,
+        phaseKey: 'P6',
+        fieldName: 'lifeDesignFormResponse',
+        fieldValue: JSON.stringify({ ...req.body, submittedAt: new Date().toISOString() }),
+        savedBy: record.clientId,
+      }).onConflictDoNothing();
+
+      await db.insert(fieldSaves).values({
+        clientId: record.clientId,
+        phaseKey: 'P6',
+        fieldName: 'lifeDesignSubmittedAt',
+        fieldValue: new Date().toISOString(),
+        savedBy: record.clientId,
+      }).onConflictDoNothing();
+
+      // Notify the case manager and admins
+      await notifyAdmins(
+        '30-Day Life Design Form Submitted',
+        `Client ${record.clientId} has submitted their 30-Day Life Design form.`,
+        'life_design_submitted',
+        record.clientId ?? undefined,
+      );
+
+      res.json({ message: 'Thank you! Your Life Design form has been submitted.' });
     } catch (err: any) {
       res.status(500).json({ message: err.message });
     }

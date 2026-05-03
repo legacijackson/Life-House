@@ -368,9 +368,24 @@ function ReportView({ reportId, days }: { reportId: ReportId; days: number }) {
           <h2 className="text-lg font-semibold text-gray-900">{template.name}</h2>
           <p className="text-xs text-gray-500">{template.description}</p>
         </div>
-        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleExport}>
-          <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleExport}>
+            <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={() => {
+              const title = document.title;
+              document.title = `${template.name} — Life House`;
+              window.print();
+              document.title = title;
+            }}
+          >
+            <Download className="h-3.5 w-3.5 mr-1" /> Print / PDF
+          </Button>
+        </div>
       </div>
 
       <Card>
