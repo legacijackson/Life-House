@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useCurrentUser } from "@/lib/rbac";
 import { toast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -60,8 +60,8 @@ export default function ProfilePage() {
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: (user as any)?.name || '',
-      email: (user as any)?.email || '',
+      name: '',
+      email: '',
       phone: '',
       address: '',
       city: '',
@@ -73,18 +73,26 @@ export default function ProfilePage() {
     },
   });
 
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        name: (user as any).name || '',
+        email: (user as any).email || '',
+        phone: (user as any).phone || '',
+        address: (user as any).address || '',
+        city: (user as any).city || '',
+        state: (user as any).state || '',
+        zipCode: (user as any).zipCode || '',
+        dateOfBirth: (user as any).dateOfBirth || '',
+        emergencyContact: (user as any).emergencyContact || '',
+        emergencyPhone: (user as any).emergencyPhone || '',
+      });
+    }
+  }, [user, form]);
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      const response = await fetch(`/api/users/${(user as any)?.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || 'mock-token-1'}`,
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update profile');
-      return response.json();
+      return apiRequest('PATCH', `/api/users/${(user as any)?.id}`, data);
     },
     onSuccess: () => {
       toast({

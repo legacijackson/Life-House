@@ -46,6 +46,8 @@ import {
   lcpInvites,
   youtubeWatchEvents,
   notifications,
+  rooms,
+  properties as propertiesTable,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -1716,6 +1718,56 @@ startxref
     } catch (error) {
       console.error('Create property error:', error);
       res.status(500).json({ message: 'Failed to create property' });
+    }
+  }));
+
+  // Property Rooms
+  app.get('/api/properties/:id/rooms', roleRoute(['CaseManager', 'Admin', 'Intake'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const propertyRooms = await db.select().from(rooms).where(eq(rooms.propertyId, id));
+      res.json(propertyRooms);
+    } catch (error) {
+      console.error('Get rooms error:', error);
+      res.status(500).json({ message: 'Failed to fetch rooms' });
+    }
+  }));
+
+  app.post('/api/properties/:id/rooms', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { roomNumber, beds } = req.body;
+      if (!roomNumber) return res.status(400).json({ message: 'roomNumber is required' });
+      const [created] = await db.insert(rooms).values({ propertyId: id, roomNumber, beds: beds ?? 1, occupants: [] }).returning();
+      res.status(201).json(created);
+    } catch (error) {
+      console.error('Create room error:', error);
+      res.status(500).json({ message: 'Failed to create room' });
+    }
+  }));
+
+  app.patch('/api/properties/:id/rooms/:roomId/assign', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { roomId } = req.params;
+      const { clientId, remove } = req.body;
+      const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
+      if (!room) return res.status(404).json({ message: 'Room not found' });
+      let occupants = (room.occupants as string[]) || [];
+      if (remove) {
+        occupants = occupants.filter((o) => o !== clientId);
+      } else if (!occupants.includes(clientId)) {
+        occupants.push(clientId);
+      }
+      const [updated] = await db.update(rooms).set({ occupants, updatedAt: new Date() }).where(eq(rooms.id, roomId)).returning();
+      // sync bedsAvailable on the property
+      const allRooms = await db.select().from(rooms).where(eq(rooms.propertyId, room.propertyId));
+      const totalOccupied = allRooms.reduce((s, r) => s + ((r.occupants as string[])?.length ?? 0), 0);
+      const totalBeds = allRooms.reduce((s, r) => s + (r.beds ?? 0), 0);
+      await db.update(propertiesTable).set({ bedsAvailable: totalBeds - totalOccupied }).where(eq(propertiesTable.id, room.propertyId));
+      res.json(updated);
+    } catch (error) {
+      console.error('Assign bed error:', error);
+      res.status(500).json({ message: 'Failed to assign bed' });
     }
   }));
 

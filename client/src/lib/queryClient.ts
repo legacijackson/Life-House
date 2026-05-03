@@ -7,35 +7,52 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Supports two calling conventions:
+//   apiRequest(url, options?)
+//   apiRequest(method, url, body?)  ← legacy pattern used throughout the codebase
 export async function apiRequest(
-  url: string,
-  options?: {
-    method?: string;
-    body?: unknown | FormData;
-    headers?: Record<string, string>;
-  }
+  methodOrUrl: string,
+  urlOrOptions?: string | { method?: string; body?: unknown | FormData; headers?: Record<string, string> },
+  bodyArg?: unknown
 ): Promise<Response> {
+  let resolvedUrl: string;
+  let resolvedMethod: string;
+  let resolvedBody: unknown | FormData | undefined;
+  let resolvedHeaders: Record<string, string> | undefined;
+
+  const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+  if (HTTP_METHODS.includes(methodOrUrl.toUpperCase()) && typeof urlOrOptions === "string") {
+    // Legacy: apiRequest("POST", "/api/foo", body)
+    resolvedMethod = methodOrUrl.toUpperCase();
+    resolvedUrl = urlOrOptions;
+    resolvedBody = bodyArg;
+  } else {
+    // Modern: apiRequest("/api/foo", { method, body, headers })
+    resolvedUrl = methodOrUrl;
+    const opts = urlOrOptions as { method?: string; body?: unknown | FormData; headers?: Record<string, string> } | undefined;
+    resolvedMethod = opts?.method?.toUpperCase() ?? "GET";
+    resolvedBody = opts?.body;
+    resolvedHeaders = opts?.headers;
+  }
+
   const token = localStorage.getItem("authToken");
-  const headers: Record<string, string> = {
-    ...options?.headers,
-  };
-  
-  // Only add Content-Type for JSON, not for FormData
-  if (options?.body && !(options.body instanceof FormData)) {
+  const headers: Record<string, string> = { ...resolvedHeaders };
+
+  if (resolvedBody && !(resolvedBody instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
-  
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    method: options?.method || "GET",
+  const res = await fetch(resolvedUrl, {
+    method: resolvedMethod,
     headers,
-    body: options?.body instanceof FormData 
-      ? options.body 
-      : options?.body 
-        ? JSON.stringify(options.body) 
+    body: resolvedBody instanceof FormData
+      ? resolvedBody
+      : resolvedBody
+        ? JSON.stringify(resolvedBody)
         : undefined,
     credentials: "include",
   });
