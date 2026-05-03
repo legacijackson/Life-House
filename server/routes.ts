@@ -957,6 +957,23 @@ startxref
         .orderBy(staffCaseNotes.followUpDate)
         .limit(5);
 
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 7);
+      const upcomingEvents = await db
+        .select({ id: lhEvents.id, title: lhEvents.title, eventType: lhEvents.eventType, startTime: lhEvents.startTime, location: lhEvents.location })
+        .from(lhEvents)
+        .where(and(gte(lhEvents.startTime, now), lt(lhEvents.startTime, tomorrow)))
+        .orderBy(asc(lhEvents.startTime))
+        .limit(5);
+
+      const recentActivity = await db
+        .select({ id: auditLog.id, action: auditLog.action, createdAt: auditLog.createdAt, resourceType: auditLog.resourceType })
+        .from(auditLog)
+        .where(eq(auditLog.userId, caseManagerId))
+        .orderBy(desc(auditLog.createdAt))
+        .limit(5);
+
       const dashboardData = {
         totalResidents: residentCount?.count ?? 0,
         activeResidents: residentCount?.count ?? 0,
@@ -964,11 +981,16 @@ startxref
         overdueNotes: overdueNotesList.length,
         maintenanceTickets: maintenanceCount?.count ?? 0,
         completionRate: 0,
-        recentActivity: [],
+        recentActivity,
         overdueNotesList,
         notifications: [],
         messages: [],
-        upcomingEvents: []
+        upcomingEvents: upcomingEvents.map(e => ({
+          id: e.id,
+          type: e.eventType,
+          title: e.title,
+          datetime: e.startTime ? new Date(e.startTime).toLocaleString() : '',
+        })),
       };
       res.json(dashboardData);
     } catch (error) {
