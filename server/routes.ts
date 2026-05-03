@@ -5534,11 +5534,35 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
   // Telnyx webhook for incoming/outgoing fax events
   app.post('/api/webhooks/telnyx/fax', async (req: Request, res: Response) => {
     try {
-      const event = req.body;
-      console.log('Telnyx fax webhook:', JSON.stringify(event).slice(0, 200));
-      // TODO: handle fax.sent, fax.failed, fax.received events
+      const payload = req.body?.data ?? req.body;
+      const eventType: string = payload?.event_type ?? '';
+      const faxData = payload?.payload ?? {};
+      const telnyxFaxId: string = faxData?.fax_id ?? faxData?.id ?? '';
+
+      if (telnyxFaxId) {
+        const updates: Partial<{ status: string; error: string; sentAt: Date; receivedAt: Date; pages: number }> = {};
+
+        if (eventType === 'fax.sent') {
+          updates.status = 'sent';
+          updates.sentAt = new Date();
+          if (faxData.page_count) updates.pages = faxData.page_count;
+        } else if (eventType === 'fax.failed') {
+          updates.status = 'failed';
+          updates.error = faxData.failure_reason ?? 'Unknown error';
+        } else if (eventType === 'fax.received') {
+          updates.status = 'received';
+          updates.receivedAt = new Date();
+          if (faxData.page_count) updates.pages = faxData.page_count;
+        }
+
+        if (Object.keys(updates).length) {
+          await db.update(faxes).set(updates).where(eq(faxes.telnyxFaxId, telnyxFaxId));
+        }
+      }
+
       res.json({ received: true });
     } catch (err: any) {
+      console.error('Telnyx fax webhook error:', err.message);
       res.status(500).json({ message: err.message });
     }
   });
@@ -5584,13 +5608,53 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
   app.post('/api/webhooks/docuseal', async (req: Request, res: Response) => {
     try {
       const payload = req.body;
-      console.log('DocuSeal webhook:', payload?.event_type, JSON.stringify(payload?.data).slice(0, 100));
-      if (payload?.event_type === 'submission.completed') {
-        // TODO: mark related authorization request or document as signed
-        console.log('DocuSeal submission completed:', payload.data?.id);
+      const eventType: string = payload?.event_type ?? '';
+      const submissionData = payload?.data ?? {};
+
+      if (eventType === 'submission.completed' && submissionData?.id) {
+        // Find the first submitter email and name to look up users
+        const submitter = submissionData?.submitters?.[0];
+        if (submitter?.email) {
+          // Notify the client and case manager
+          const [signerUser] = await db
+            .select({ id: users.id, name: users.name })
+            .from(users)
+            .where(eq(users.email, submitter.email))
+            .limit(1);
+
+          if (signerUser) {
+            await createNotification({
+              userId: signerUser.id,
+              type: 'general',
+              title: 'Document signed',
+              body: `Your signature on "${submissionData.template?.name ?? 'document'}" has been received.`,
+            });
+          }
+        }
+      } else if (eventType === 'submission.created' && submissionData?.id) {
+        const submitter = submissionData?.submitters?.[0];
+        if (submitter?.email) {
+          const [signerUser] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, submitter.email))
+            .limit(1);
+          if (signerUser) {
+            await createNotification({
+              userId: signerUser.id,
+              type: 'general',
+              title: 'Signature requested',
+              body: `Please sign: "${submissionData.template?.name ?? 'document'}"`,
+              linkId: submitter.slug,
+              linkType: 'docuseal_submission',
+            });
+          }
+        }
       }
+
       res.json({ received: true });
     } catch (err: any) {
+      console.error('DocuSeal webhook error:', err.message);
       res.status(500).json({ message: err.message });
     }
   });
