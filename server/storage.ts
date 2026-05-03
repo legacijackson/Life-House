@@ -786,11 +786,22 @@ Notes: ${residentData.eligibilityNotes || 'None'}`
       .from(staffCaseNotes)
       .where(sql`${staffCaseNotes.status} != 'archived'`);
 
+    const [totalResources] = await db
+      .select({ count: count() })
+      .from(resources)
+      .where(eq(resources.status, 'active'));
+
+    const [totalReferrals] = await db
+      .select({ count: count() })
+      .from(referrals);
+
     return {
       activeResidents: Number(activeResidents?.count ?? 0),
       pendingNotes: Number(pendingNotes?.count ?? 0),
       openTickets: Number(openTickets?.count ?? 0),
       totalCaseNotes: Number(totalCaseNotes?.count ?? 0),
+      totalResources: Number(totalResources?.count ?? 0),
+      totalReferrals: Number(totalReferrals?.count ?? 0),
       avgStage: 0,
     };
   }

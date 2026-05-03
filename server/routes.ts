@@ -2426,6 +2426,17 @@ startxref
     }
   });
 
+  // Get user by ID
+  app.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      res.json(user);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // User profile update
   app.patch('/api/users/:id', async (req: Request, res: Response) => {
     try {

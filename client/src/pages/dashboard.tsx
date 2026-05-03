@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 import { StatsCards } from "@/components/stats-cards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,27 +8,51 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ResidentModal } from "@/components/resident-modal";
 import { useState } from "react";
-import { 
-  Eye, 
-  Edit, 
-  Calendar, 
-  Users, 
-  CheckSquare, 
-  Search, 
+import {
+  Eye,
+  Edit,
+  Calendar,
+  Users,
+  CheckSquare,
+  Search,
   Bell,
-  Plus
+  Plus,
+  AlertTriangle,
+  Info
 } from "lucide-react";
 
 interface Resident {
   id: string;
   name: string;
   email: string;
-  stage: number;
-  lastContact: string;
+  stage?: number;
+  lastContact?: string;
+  status?: string;
+  createdAt?: string;
+  moveInDate?: string | null;
+  propertyAssignment?: string | null;
+  employmentStatus?: string | null;
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  status: string;
+  createdAt: string;
+}
+
+interface CaseNote {
+  id: string;
+  title: string;
+  followUpDate?: string;
+  clientName?: string;
   status: string;
 }
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   
   const { data: residents = [] } = useQuery<Resident[]>({
@@ -54,6 +79,16 @@ export default function Dashboard() {
     email: string;
   }>({
     queryKey: ['/api/auth/user'],
+  });
+
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ['/api/notifications'],
+    queryFn: () => apiRequest('GET', '/api/notifications?unreadOnly=1').then((r) => r.json()),
+  });
+
+  const { data: overdueNotes = [] } = useQuery<CaseNote[]>({
+    queryKey: ['/api/staff-case-notes', 'overdue'],
+    queryFn: () => apiRequest('GET', '/api/staff-case-notes?status=overdue').then((r) => r.json()),
   });
 
   const getStageColor = (stage: number) => {
@@ -138,16 +173,22 @@ export default function Dashboard() {
                               </div>
                             </td>
                             <td className="py-3">
-                              <Badge className={getStageColor(resident.stage)}>
-                                Stage {resident.stage}
+                              <Badge className={getStageColor(resident.stage ?? 1)}>
+                                {resident.stage != null ? `Stage ${resident.stage}` : 'Active'}
                               </Badge>
                             </td>
                             <td className="py-3">
-                              <p className="text-sm text-gray-900">{resident.lastContact}</p>
+                              <p className="text-sm text-gray-900">
+                                {resident.moveInDate
+                                  ? new Date(resident.moveInDate).toLocaleDateString()
+                                  : resident.createdAt
+                                  ? new Date(resident.createdAt).toLocaleDateString()
+                                  : '—'}
+                              </p>
                             </td>
                             <td className="py-3">
-                              <Badge className={getStatusColor(resident.status)}>
-                                {resident.status}
+                              <Badge className={getStatusColor(resident.employmentStatus || 'Active')}>
+                                {resident.employmentStatus || 'Active'}
                               </Badge>
                             </td>
                             <td className="py-3">
@@ -228,73 +269,68 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Today's Tasks */}
+              {/* Overdue Notes / Tasks */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Today's Tasks</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Overdue Notes</CardTitle>
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/app/case-notes')}>
+                      View All
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <input 
-                      type="checkbox" 
-                      className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900">Complete intake checklist for Maria Garcia</p>
-                      <p className="text-xs text-gray-500">Due: 2:00 PM</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <input 
-                      type="checkbox" 
-                      className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900">Follow up with Robert Johnson - housing application</p>
-                      <p className="text-xs text-gray-500">Due: 4:00 PM</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3">
-                    <input 
-                      type="checkbox" 
-                      checked 
-                      className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-500 line-through">Submit weekly progress reports</p>
-                      <p className="text-xs text-gray-400">Completed</p>
-                    </div>
-                  </div>
+                  {overdueNotes.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-2">No overdue notes</p>
+                  ) : (
+                    overdueNotes.slice(0, 4).map((note) => (
+                      <div key={note.id} className="flex items-start space-x-3">
+                        <div className="mt-1 h-4 w-4 rounded-full bg-yellow-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 truncate">{note.title}</p>
+                          {note.clientName && (
+                            <p className="text-xs text-gray-500">{note.clientName}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Recent Alerts */}
+              {/* Notifications */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Alerts</CardTitle>
+                  <CardTitle>Notifications</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <div className="flex items-start space-x-2">
-                      <div className="w-4 h-4 text-yellow-600 mt-0.5">⚠️</div>
-                      <div>
-                        <p className="text-sm font-medium text-yellow-800">Maintenance Required</p>
-                        <p className="text-xs text-yellow-700">Unit 203B - Heating issue reported</p>
+                  {notifications.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-2">No new notifications</p>
+                  ) : (
+                    notifications.slice(0, 3).map((n) => (
+                      <div key={n.id} className={`border rounded-lg p-3 ${
+                        n.type === 'alert' || n.type === 'urgent'
+                          ? 'bg-yellow-50 border-yellow-200'
+                          : 'bg-blue-50 border-blue-200'
+                      }`}>
+                        <div className="flex items-start space-x-2">
+                          {n.type === 'alert' || n.type === 'urgent' ? (
+                            <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                          ) : (
+                            <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          )}
+                          <div>
+                            <p className={`text-sm font-medium ${
+                              n.type === 'alert' || n.type === 'urgent' ? 'text-yellow-800' : 'text-blue-800'
+                            }`}>{n.title}</p>
+                            <p className={`text-xs ${
+                              n.type === 'alert' || n.type === 'urgent' ? 'text-yellow-700' : 'text-blue-700'
+                            }`}>{n.message}</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-start space-x-2">
-                      <div className="w-4 h-4 text-blue-600 mt-0.5">ℹ️</div>
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">New Referral</p>
-                        <p className="text-xs text-blue-700">Intake review needed for James Wilson</p>
-                      </div>
-                    </div>
-                  </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>
