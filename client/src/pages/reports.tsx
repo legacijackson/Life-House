@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3, Download, RefreshCw, Users, FileText,
   Calendar, DollarSign, Wrench, Phone, CheckCircle2,
+  Home, TrendingUp,
 } from "lucide-react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -68,6 +69,27 @@ const REPORT_TEMPLATES = [
     description: "Touchpoint completion rates and upcoming deadlines per client.",
     icon: BarChart3,
     color: "bg-purple-100 text-purple-700",
+  },
+  {
+    id: "housing-pipeline",
+    name: "Housing Pipeline",
+    description: "Clients awaiting housing, waitlist status, and client-to-resident conversion metrics.",
+    icon: Home,
+    color: "bg-green-100 text-green-700",
+  },
+  {
+    id: "conversions",
+    name: "Client → Resident Conversions",
+    description: "Number of clients converted to residents, average days to conversion, and trends.",
+    icon: TrendingUp,
+    color: "bg-purple-100 text-purple-700",
+  },
+  {
+    id: "donor-summary",
+    name: "Donor & Donation Summary",
+    description: "Total raised, donor retention, recurring vs one-time, and designation breakdown.",
+    icon: DollarSign,
+    color: "bg-emerald-100 text-emerald-700",
   },
 ] as const;
 
@@ -406,6 +428,129 @@ function StopTouchpointsChart({ since }: { since: string }) {
   );
 }
 
+// ── Housing Pipeline Report ───────────────────────────────────────────────────
+
+function HousingPipelineChart({ reportData }: { reportData: any }) {
+  const stats = [
+    { label: "Active Clients", value: reportData?.totalActiveClients ?? reportData?.activeClients ?? "—" },
+    { label: "Housing Requested", value: reportData?.housingRequested ?? "—" },
+    { label: "Pending Assignment", value: reportData?.housingPendingAssignment ?? "—" },
+    { label: "Converted This Month", value: reportData?.convertedThisMonth ?? "—" },
+  ];
+
+  const hasData = stats.some((s) => s.value !== "—");
+
+  if (!hasData) {
+    return <p className="text-center text-gray-400 text-sm py-8">No housing pipeline data available.</p>;
+  }
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {stats.map((s) => (
+        <div key={s.label} className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-2xl font-bold text-gray-900">{String(s.value)}</p>
+          <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Conversions Report ────────────────────────────────────────────────────────
+
+function ConversionsChart({ reportData }: { reportData: any }) {
+  const monthly: any[] = reportData?.monthlyConversions ?? [];
+  const avgDays: number | null = reportData?.avgDaysToConversion ?? null;
+  const total: number | null = reportData?.totalConversions ?? null;
+
+  if (!monthly.length && avgDays === null) {
+    return <p className="text-center text-gray-400 text-sm py-8">No conversion data available.</p>;
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center p-4 bg-purple-50 rounded-lg">
+          <p className="text-2xl font-bold text-purple-700">{total ?? "—"}</p>
+          <p className="text-xs text-gray-500 mt-1">Total Conversions</p>
+        </div>
+        <div className="text-center p-4 bg-indigo-50 rounded-lg">
+          <p className="text-2xl font-bold text-indigo-700">{avgDays !== null ? `${avgDays}d` : "—"}</p>
+          <p className="text-xs text-gray-500 mt-1">Avg Days to Housing</p>
+        </div>
+      </div>
+      {monthly.length > 0 && (
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={monthly}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} />
+            <Tooltip />
+            <Line type="monotone" dataKey="count" stroke={COLORS[0]} strokeWidth={2} dot={{ r: 4 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+// ── Donor Summary Report ──────────────────────────────────────────────────────
+
+function DonorSummaryChart({ reportData }: { reportData: any }) {
+  const totalRaised: number = reportData?.totalRaised ?? 0;
+  const totalDonors: number = reportData?.totalDonors ?? 0;
+  const recurringDonors: number = reportData?.recurringDonors ?? 0;
+  const designations: any[] = reportData?.designations ?? [];
+
+  const hasData = totalRaised > 0 || totalDonors > 0 || designations.length > 0;
+
+  if (!hasData) {
+    return <p className="text-center text-gray-400 text-sm py-8">No donor data available.</p>;
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-4">
+        <div className="text-center p-4 bg-emerald-50 rounded-lg">
+          <p className="text-2xl font-bold text-emerald-700">
+            ${totalRaised.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">Total Raised</p>
+        </div>
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-2xl font-bold text-gray-900">{totalDonors}</p>
+          <p className="text-xs text-gray-500 mt-1">Total Donors</p>
+        </div>
+        <div className="text-center p-4 bg-indigo-50 rounded-lg">
+          <p className="text-2xl font-bold text-indigo-700">{recurringDonors}</p>
+          <p className="text-xs text-gray-500 mt-1">Recurring Donors</p>
+        </div>
+      </div>
+      {designations.length > 0 && (
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie
+              data={designations}
+              cx="50%"
+              cy="50%"
+              outerRadius={75}
+              dataKey="value"
+              nameKey="name"
+              label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}
+              labelLine={false}
+            >
+              {designations.map((_: any, i: number) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 // ── Report View ───────────────────────────────────────────────────────────────
 
 function ReportView({ reportId, days }: { reportId: ReportId; days: number }) {
@@ -447,6 +592,27 @@ function ReportView({ reportId, days }: { reportId: ReportId; days: number }) {
     enabled: reportId === "intake-funnel",
   });
 
+  const { data: housingPipelineData } = useQuery({
+    queryKey: ["/api/reports/generate", "housing-pipeline", days],
+    queryFn: () =>
+      apiRequest("GET", `/api/reports/generate?type=housing-pipeline&days=${days}`).then((r) => r.json()),
+    enabled: reportId === "housing-pipeline",
+  });
+
+  const { data: conversionsData } = useQuery({
+    queryKey: ["/api/reports/generate", "conversions", days],
+    queryFn: () =>
+      apiRequest("GET", `/api/reports/generate?type=conversions&days=${days}`).then((r) => r.json()),
+    enabled: reportId === "conversions",
+  });
+
+  const { data: donorSummaryData } = useQuery({
+    queryKey: ["/api/reports/generate", "donor-summary", days],
+    queryFn: () =>
+      apiRequest("GET", `/api/reports/generate?type=donor-summary&days=${days}`).then((r) => r.json()),
+    enabled: reportId === "donor-summary",
+  });
+
   const { toast } = useToast();
 
   function handleExport() {
@@ -458,6 +624,9 @@ function ReportView({ reportId, days }: { reportId: ReportId; days: number }) {
       maintenance: tickets as any[],
       "intake-funnel": [...(calls as any[]), ...(applications as any[])],
       "stop-touchpoints": clients as any[],
+      "housing-pipeline": housingPipelineData ? [housingPipelineData] : [],
+      conversions: conversionsData?.monthlyConversions ?? [],
+      "donor-summary": donorSummaryData ? [donorSummaryData] : [],
     };
     const rows = dataMap[reportId];
     if (!rows.length) {
@@ -506,6 +675,9 @@ function ReportView({ reportId, days }: { reportId: ReportId; days: number }) {
           {reportId === "intake-funnel" && <IntakeFunnelChart calls={calls as any[]} applications={applications as any[]} />}
           {reportId === "benefits" && <BenefitsStatusChart clients={clients as any[]} />}
           {reportId === "stop-touchpoints" && <StopTouchpointsChart since={since} />}
+          {reportId === "housing-pipeline" && <HousingPipelineChart reportData={housingPipelineData} />}
+          {reportId === "conversions" && <ConversionsChart reportData={conversionsData} />}
+          {reportId === "donor-summary" && <DonorSummaryChart reportData={donorSummaryData} />}
         </CardContent>
       </Card>
     </div>

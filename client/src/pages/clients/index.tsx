@@ -5,7 +5,7 @@ import {
   Users, Search, Phone, ExternalLink, FileText,
   Calendar, MapPin, Plus, ChevronRight, AlertTriangle,
   ClipboardList, Home, Wrench, History, X, Loader2,
-  Trash2, Pencil, CheckCircle2,
+  Trash2, Pencil, CheckCircle2, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,8 @@ interface Client {
   createdAt: string;
   profile?: {
     clientType?: string;
+    programStatus?: string;
+    housingStatus?: string;
     onboardingStatus?: string;
     onboardingPhase?: string;
     cin?: string;
@@ -68,6 +70,51 @@ interface Client {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+function ProgramStatusBadge({ client }: { client: Client }) {
+  const status = client.profile?.programStatus;
+  switch (status) {
+    case "active_resident":
+      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Resident</Badge>;
+    case "active_client":
+      return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Client</Badge>;
+    case "discharged":
+      return <Badge variant="outline" className="bg-gray-100 text-gray-500 border-gray-200">Discharged</Badge>;
+    case "inactive":
+      return <Badge variant="outline" className="bg-gray-100 text-gray-500 border-gray-200">Inactive</Badge>;
+    case "applicant":
+      return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Applicant</Badge>;
+    default:
+      return client.role === "Resident"
+        ? <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Resident</Badge>
+        : <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Client</Badge>;
+  }
+}
+
+function HousingStatusBadge({ housingStatus }: { housingStatus?: string }) {
+  switch (housingStatus) {
+    case "assigned":
+      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1"><Home className="h-3 w-3" />Housed</Badge>;
+    case "requested":
+    case "pending_assignment":
+      return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1"><Clock className="h-3 w-3" />Housing Pending</Badge>;
+    case "not_needed":
+      return null;
+    case "exited":
+      return <Badge variant="outline" className="bg-gray-100 text-gray-500 border-gray-200">Exited Housing</Badge>;
+    default:
+      return null;
+  }
+}
+
+function StatusBadges({ client }: { client: Client }) {
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      <ProgramStatusBadge client={client} />
+      <HousingStatusBadge housingStatus={client.profile?.housingStatus} />
+    </div>
+  );
+}
 
 function clientTypeBadge(type?: string) {
   switch (type) {
@@ -111,7 +158,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
                 <p className="text-xs text-gray-500">"{client.profile.preferredName}"</p>
               )}
             </div>
-            {clientTypeBadge(type)}
+            <StatusBadges client={client} />
           </div>
           <div className="mt-1 space-y-0.5 text-sm text-gray-600">
             {(client.profile?.phonePrimary ?? client.phone) && (
@@ -174,6 +221,132 @@ function MiniModal({ title, open, onClose, children }: { title: string; open: bo
   );
 }
 
+// ── Assign Housing Modal ──────────────────────────────────────────────────────
+
+function AssignHousingModal({ client, onClose }: { client: Client; onClose: () => void }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [form, setForm] = useState({
+    propertyId: "",
+    roomAssignment: "",
+    bedAssignment: "",
+    moveInDate: today,
+    notes: "",
+  });
+
+  const checklistItems = [
+    "ID documents on file",
+    "Lease agreement signed",
+    "House rules acknowledged",
+    "Emergency contact collected",
+    "Move-in inspection completed",
+  ];
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+
+  const assignHousingMutation = useMutation({
+    mutationFn: (data: any) =>
+      apiRequest("POST", `/api/clients/${client.id}/assign-housing`, data).then((r) => r.json()),
+    onSuccess: () => {
+      toast({ title: "Housing assigned", description: `${client.name} has been converted to a Resident.` });
+      qc.invalidateQueries({ queryKey: ["/api/clients"] });
+      onClose();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to assign housing.", variant: "destructive" });
+    },
+  });
+
+  function handleSubmit() {
+    assignHousingMutation.mutate(form);
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Assign Housing — {client.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-2">
+          <div>
+            <Label className="text-xs">Property / Location</Label>
+            <Input
+              className="h-8 text-sm mt-1"
+              placeholder="e.g. Life House Main — 8399 Folsom Blvd"
+              value={form.propertyId}
+              onChange={(e) => setForm((f) => ({ ...f, propertyId: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Room / Unit</Label>
+            <Input
+              className="h-8 text-sm mt-1"
+              placeholder="e.g. Room 3B"
+              value={form.roomAssignment}
+              onChange={(e) => setForm((f) => ({ ...f, roomAssignment: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Bed / Unit ID</Label>
+            <Input
+              className="h-8 text-sm mt-1"
+              placeholder="e.g. Bed 2"
+              value={form.bedAssignment}
+              onChange={(e) => setForm((f) => ({ ...f, bedAssignment: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Move-in Date</Label>
+            <Input
+              type="date"
+              className="h-8 text-sm mt-1"
+              value={form.moveInDate}
+              onChange={(e) => setForm((f) => ({ ...f, moveInDate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Notes (optional)</Label>
+            <Textarea
+              className="text-sm mt-1"
+              rows={3}
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+            />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-gray-700 mb-2">Pre-Housing Checklist</p>
+            <div className="space-y-2">
+              {checklistItems.map((item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id={`chk-${item}`}
+                    checked={!!checklist[item]}
+                    onChange={(e) => setChecklist((c) => ({ ...c, [item]: e.target.checked }))}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor={`chk-${item}`} className="text-xs cursor-pointer font-normal">{item}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Button
+            className="w-full"
+            onClick={handleSubmit}
+            disabled={assignHousingMutation.isPending}
+          >
+            {assignHousingMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Assign Housing & Convert to Resident
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Profile Drawer ────────────────────────────────────────────────────────────
 
 function ClientProfileDrawer({ client, onClose }: { client: Client; onClose: () => void }) {
@@ -186,6 +359,7 @@ function ClientProfileDrawer({ client, onClose }: { client: Client; onClose: () 
   const [addBenefit, setAddBenefit] = useState(false);
   const [addProvider, setAddProvider] = useState(false);
   const [addGoal, setAddGoal] = useState(false);
+  const [assignHousingOpen, setAssignHousingOpen] = useState(false);
   const [carePlanMode, setCarePlanMode] = useState<"list" | "create" | "edit">("list");
   const [editingPlan, setEditingPlan] = useState<any>(null);
 
@@ -394,10 +568,21 @@ function ClientProfileDrawer({ client, onClose }: { client: Client; onClose: () 
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {client.profile?.programStatus !== "active_resident" && client.profile?.programStatus !== "discharged" && (
+            <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => setAssignHousingOpen(true)}>
+              <Home className="h-3.5 w-3.5 mr-1.5" /> Assign Housing
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+
+      {assignHousingOpen && (
+        <AssignHousingModal client={client} onClose={() => setAssignHousingOpen(false)} />
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="flex-1 overflow-hidden flex flex-col">
@@ -970,6 +1155,7 @@ export default function ClientsPage() {
   const [filter, setFilter] = useState("all");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [waitlistAssignClient, setWaitlistAssignClient] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
 
   const { data: clients = [], isLoading } = useQuery<Client[]>({
@@ -977,6 +1163,13 @@ export default function ClientsPage() {
     queryFn: () =>
       apiRequest("GET", `/api/clients?type=${filter}`).then((r) => r.json()),
   });
+
+  const { data: waitlist = [], isLoading: waitlistLoading } = useQuery<any[]>({
+    queryKey: ["/api/housing/waitlist"],
+    queryFn: () => apiRequest("GET", "/api/housing/waitlist").then((r) => r.json()),
+  });
+
+  const waitlistCount = (waitlist as any[]).length;
 
   const filtered = (clients as Client[]).filter((c) => {
     if (!search) return true;
@@ -1010,49 +1203,127 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Search + Filters */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search by name, CIN, phone…"
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Clients</SelectItem>
-            <SelectItem value="resident">Residents</SelectItem>
-            <SelectItem value="non-resident">Non-Residents</SelectItem>
-            <SelectItem value="onboarding">Onboarding</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <Tabs defaultValue="clients">
+        <TabsList className="mb-4">
+          <TabsTrigger value="clients">All Clients</TabsTrigger>
+          <TabsTrigger value="waitlist">
+            Housing Waitlist
+            {waitlistCount > 0 && (
+              <Badge className="ml-2 bg-amber-100 text-amber-700">{waitlistCount}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Client Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-28 rounded-lg bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <Users className="mx-auto h-12 w-12 mb-3 opacity-40" />
-          <p>No clients found.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((c) => (
-            <ClientCard key={c.id} client={c} onClick={() => openClient(c)} />
-          ))}
-        </div>
-      )}
+        <TabsContent value="clients">
+          {/* Search + Filters */}
+          <div className="flex items-center gap-3 mb-5">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search by name, CIN, phone…"
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                <SelectItem value="resident">Residents</SelectItem>
+                <SelectItem value="non-resident">Non-Residents</SelectItem>
+                <SelectItem value="onboarding">Onboarding</SelectItem>
+                <SelectItem value="active_client">Active Clients</SelectItem>
+                <SelectItem value="active_resident">Active Residents</SelectItem>
+                <SelectItem value="housing_pending">Housing Pending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Client Grid */}
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-28 rounded-lg bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <Users className="mx-auto h-12 w-12 mb-3 opacity-40" />
+              <p>No clients found.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((c) => (
+                <ClientCard key={c.id} client={c} onClick={() => openClient(c)} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="waitlist">
+          {waitlistLoading ? (
+            <div className="space-y-2">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-14 rounded-lg bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : (waitlist as any[]).length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <Home className="mx-auto h-12 w-12 mb-3 opacity-40" />
+              <p>No pending housing requests</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs text-gray-500">
+                    <th className="pb-2 pr-4 font-medium">Name</th>
+                    <th className="pb-2 pr-4 font-medium">Email</th>
+                    <th className="pb-2 pr-4 font-medium">Request Date</th>
+                    <th className="pb-2 pr-4 font-medium">Priority</th>
+                    <th className="pb-2 pr-4 font-medium">Reason</th>
+                    <th className="pb-2 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(waitlist as any[]).map((entry: any) => (
+                    <tr key={entry.id} className="border-b last:border-0 hover:bg-gray-50">
+                      <td className="py-3 pr-4 font-medium text-gray-900">{entry.name ?? entry.clientName ?? "—"}</td>
+                      <td className="py-3 pr-4 text-gray-600">{entry.email ?? "—"}</td>
+                      <td className="py-3 pr-4 text-gray-600">
+                        {entry.requestDate || entry.createdAt
+                          ? new Date(entry.requestDate ?? entry.createdAt).toLocaleDateString()
+                          : "—"}
+                      </td>
+                      <td className="py-3 pr-4">
+                        {entry.priority ? (
+                          <Badge variant="outline" className="text-xs">{entry.priority}</Badge>
+                        ) : "—"}
+                      </td>
+                      <td className="py-3 pr-4 text-gray-600 max-w-xs truncate">
+                        {entry.reason ? entry.reason.slice(0, 60) + (entry.reason.length > 60 ? "…" : "") : "—"}
+                      </td>
+                      <td className="py-3">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => setWaitlistAssignClient({ id: entry.clientId ?? entry.id, name: entry.name ?? entry.clientName ?? "Client" })}
+                        >
+                          Review & Assign
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Profile Drawer */}
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -1065,6 +1336,14 @@ export default function ClientsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Waitlist Assign Housing Modal */}
+      {waitlistAssignClient && (
+        <AssignHousingModal
+          client={{ id: waitlistAssignClient.id, name: waitlistAssignClient.name, role: "Client" } as Client}
+          onClose={() => setWaitlistAssignClient(null)}
+        />
+      )}
     </div>
   );
 }

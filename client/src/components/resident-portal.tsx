@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ClientProfileData {
   housingStatus: 'not_needed' | 'requested' | 'pending_assignment' | 'assigned' | 'exited' | null;
@@ -74,9 +75,16 @@ interface Resource {
 export function ResidentPortal() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [housingRequestOpen, setHousingRequestOpen] = useState(false);
+  const [housingForm, setHousingForm] = useState({
+    housingNeedReason: '',
+    preferredLocation: '',
+    accommodationNeeds: '',
+  });
 
   // Dashboard data query
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery<ResidentDashboardData>({
@@ -98,7 +106,8 @@ export function ResidentPortal() {
 
   // Request housing mutation
   const requestHousingMutation = useMutation({
-    mutationFn: (data: any) => apiRequest('POST', `/api/clients/${data.userId}/request-housing`, data),
+    mutationFn: (data: { housingNeedReason: string; preferredLocation: string; accommodationNeeds: string }) =>
+      apiRequest('POST', `/api/clients/${(user as any)?.id}/request-housing`, data).then(r => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/resident/profile'] });
       toast({
@@ -217,10 +226,9 @@ export function ResidentPortal() {
                   <Button
                     size="sm"
                     className="mt-3 bg-blue-600 hover:bg-blue-700"
-                    onClick={() => requestHousingMutation.mutate({})}
-                    disabled={requestHousingMutation.isPending}
+                    onClick={() => setHousingRequestOpen(true)}
                   >
-                    {requestHousingMutation.isPending ? 'Submitting...' : 'Request Housing'}
+                    Request Housing
                   </Button>
                 </div>
               </div>
@@ -538,6 +546,63 @@ export function ResidentPortal() {
           </Card>
         </div>
         </div>
+
+        <Dialog open={housingRequestOpen} onOpenChange={setHousingRequestOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Request Housing Placement</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <p className="text-sm text-gray-600">
+                Submit a housing request to be placed on the Life House waitlist. Staff will review your request and contact you.
+              </p>
+              <div>
+                <Label htmlFor="housingNeedReason">Why do you need housing? *</Label>
+                <Textarea
+                  id="housingNeedReason"
+                  className="mt-1"
+                  rows={3}
+                  placeholder="Briefly describe your current housing situation and need..."
+                  value={housingForm.housingNeedReason}
+                  onChange={(e) => setHousingForm(p => ({ ...p, housingNeedReason: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="preferredLocation">Preferred Location (optional)</Label>
+                <Input
+                  id="preferredLocation"
+                  className="mt-1"
+                  placeholder="e.g. Sacramento area, near public transit..."
+                  value={housingForm.preferredLocation}
+                  onChange={(e) => setHousingForm(p => ({ ...p, preferredLocation: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="accommodationNeeds">Special Accommodation Needs (optional)</Label>
+                <Input
+                  id="accommodationNeeds"
+                  className="mt-1"
+                  placeholder="e.g. wheelchair access, no stairs..."
+                  value={housingForm.accommodationNeeds}
+                  onChange={(e) => setHousingForm(p => ({ ...p, accommodationNeeds: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  disabled={!housingForm.housingNeedReason || requestHousingMutation.isPending}
+                  onClick={() => {
+                    requestHousingMutation.mutate(housingForm);
+                    setHousingRequestOpen(false);
+                  }}
+                >
+                  {requestHousingMutation.isPending ? 'Submitting...' : 'Submit Request'}
+                </Button>
+                <Button variant="outline" onClick={() => setHousingRequestOpen(false)}>Cancel</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
   );
 }

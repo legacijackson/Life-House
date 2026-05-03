@@ -3407,15 +3407,26 @@ Resident is ready to begin programming and case management services.`,
         for (const [fieldName, fileArray] of Object.entries(files)) {
           if (fileArray && fileArray.length > 0) {
             const file = fileArray[0];
-            // In a real implementation, you would upload to cloud storage
-            // For now, we'll just record the document metadata
+            // Upload to DigitalOcean Spaces
+            let storagePath = '';
+            try {
+              const { key } = await uploadToSpaces({
+                buffer: file.buffer,
+                originalName: file.originalname,
+                mimeType: file.mimetype,
+                folder: `documents/resident`,
+              });
+              storagePath = key;
+            } catch {
+              storagePath = `local/${file.originalname}`;
+            }
             const document = await storage.createDocument({
               title: `${fieldName}: ${file.originalname}`,
               mime: file.mimetype,
               size: file.size,
               ownerType: 'resident',
               ownerId: newResident.id,
-              storagePath: file.path || `/uploads/${newResident.id}/${file.originalname}`,
+              storagePath,
               checksum: null
             });
             documentIds.push(document.id);
