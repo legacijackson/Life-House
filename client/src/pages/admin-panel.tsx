@@ -1020,6 +1020,120 @@ function KitIntegration() {
   );
 }
 
+// Bed Management Component
+function BedManagement() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: clients = [] } = useQuery<any[]>({
+    queryKey: ['/api/clients'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      const r = await fetch('/api/clients', { headers: { Authorization: `Bearer ${token}` } });
+      return r.json();
+    },
+  });
+
+  const assignBed = useMutation({
+    mutationFn: ({ clientId, bed }: { clientId: string; bed: string }) =>
+      fetch(`/api/clients/${clientId}/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken') || localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ bedAssignment: bed }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      toast({ title: 'Bed assignment updated' });
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+    },
+  });
+
+  // Build bed map: bedId → client
+  const bedMap: Record<string, any> = {};
+  (clients as any[]).forEach((c) => {
+    if (c.profile?.bedAssignment) {
+      bedMap[c.profile.bedAssignment] = c;
+    }
+  });
+
+  // Generate 20 beds: 1A-1E, 2A-2E, 3A-3E, 4A-4E
+  const beds: string[] = [];
+  for (let room = 1; room <= 4; room++) {
+    for (const bunk of ['A', 'B', 'C', 'D', 'E']) {
+      beds.push(`${room}${bunk}`);
+    }
+  }
+
+  const unassigned = (clients as any[]).filter((c) => !c.profile?.bedAssignment);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Bed Assignment</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-5 gap-2 mb-6">
+          {beds.map((bed) => {
+            const occupant = bedMap[bed];
+            return (
+              <div
+                key={bed}
+                className={`p-2 rounded-lg border text-center text-xs ${
+                  occupant ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <div className="font-bold text-gray-700 mb-0.5">{bed}</div>
+                {occupant ? (
+                  <>
+                    <div className="text-indigo-700 font-medium truncate">{occupant.name?.split(' ')[0]}</div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-5 text-xs px-1 mt-0.5 text-red-500 hover:text-red-700"
+                      onClick={() => assignBed.mutate({ clientId: occupant.id, bed: '' })}
+                    >
+                      ✕
+                    </Button>
+                  </>
+                ) : (
+                  <div className="text-gray-400">Empty</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {unassigned.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-gray-600 mb-2">Unassigned Clients ({unassigned.length})</p>
+            <div className="space-y-2">
+              {(unassigned as any[]).map((c: any) => (
+                <div key={c.id} className="flex items-center justify-between gap-2 p-2 border rounded-lg">
+                  <span className="text-sm font-medium text-gray-800">{c.name}</span>
+                  <Select
+                    onValueChange={(bed) => assignBed.mutate({ clientId: c.id, bed })}
+                  >
+                    <SelectTrigger className="h-7 text-xs w-28">
+                      <SelectValue placeholder="Assign bed…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {beds.filter((b) => !bedMap[b]).map((b) => (
+                        <SelectItem key={b} value={b}>{b}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // CRM Management Component
 function CrmManagement() {
   const [activeView, setActiveView] = useState<'prospects' | 'activities'>('prospects');
@@ -1981,6 +2095,7 @@ export default function AdminPanel() {
               )}
             </CardContent>
           </Card>
+          <BedManagement />
         </TabsContent>
 
         {/* Donors Tab */}
@@ -2110,6 +2225,60 @@ export default function AdminPanel() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Finance Portal */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-green-600" />
+                Finance Portal
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-gray-600">Access the Life House accounting and finance application.</p>
+              <div className="flex gap-2">
+                <Button onClick={() => navigate('/app/finance')}>
+                  Open Finance Portal
+                </Button>
+                <Button variant="outline" asChild>
+                  <a href="https://lifehouseaccounting.replit.app" target="_blank" rel="noopener noreferrer">
+                    Open in New Tab ↗
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Integration Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-indigo-500" />
+                Integration Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                {[
+                  { label: 'Google Drive Client Folder ID', env: 'GOOGLE_CLIENTS_FOLDER_ID' },
+                  { label: 'Google Chat Webhook URL', env: 'GOOGLE_CHAT_WEBHOOK' },
+                  { label: 'Apps Script — Call Log URL', env: 'APPS_SCRIPT_CALL_LOG_URL' },
+                  { label: 'Apps Script — Intake URL', env: 'APPS_SCRIPT_INTAKE_URL' },
+                  { label: 'Apps Script — LCP Referral URL', env: 'APPS_SCRIPT_LCP_REFERRAL_URL' },
+                  { label: 'FreedomVoice Account Number', env: 'FREEDOMVOICE_ACCOUNT_NUMBER' },
+                  { label: 'Finance App URL', env: 'FINANCE_APP_URL' },
+                ].map(({ label, env }) => (
+                  <div key={env} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                    <span className="text-gray-700 font-medium">{label}</span>
+                    <code className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{env}</code>
+                  </div>
+                ))}
+                <p className="text-xs text-gray-400 mt-2">
+                  Configure these in Replit Secrets / environment variables.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
