@@ -201,6 +201,18 @@ const documentStorage = multer.diskStorage({
   }
 });
 
+const uploadCsv = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  },
+});
+
 const uploadDocument = multer({
   storage: documentStorage,
   limits: {
@@ -2106,6 +2118,65 @@ startxref
       console.error('Error creating resource:', error);
       res.status(500).json({ message: 'Failed to create resource' });
     }
+  }));
+
+  // Bulk resource upload via CSV
+  app.post('/api/resources/upload-csv', requireAuth, uploadCsv.array('csvFiles', 10), roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: 'No CSV files provided' });
+    }
+    const validCategories = ['housing','food','id_docs','healthcare','sud_mh_referral','employment','training','legal','transport','family','money','emergency','education'];
+    const results: { fileName: string; status: 'success' | 'error'; resourcesProcessed?: number; error?: string }[] = [];
+    let totalProcessed = 0;
+    for (const file of files) {
+      try {
+        const text = file.buffer.toString('utf-8');
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) { results.push({ fileName: file.originalname, status: 'error', error: 'File has no data rows' }); continue; }
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+        let count = 0;
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+          if (cols.length < 2) continue;
+          const row: Record<string, string> = {};
+          headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
+          const name = row['name'] || row['resource name'] || row['organization'];
+          const rawCategory = (row['category'] || 'housing').toLowerCase().replace(/\s+/g, '_');
+          const category = validCategories.includes(rawCategory) ? rawCategory : 'housing';
+          if (!name) continue;
+          await db.insert(resources).values({
+            name,
+            category: category as any,
+            description: row['description'] || row['services'] || '',
+            eligibility: row['eligibility'] || '',
+            phone: row['phone'] || row['contact phone'] || '',
+            address: row['address'] || '',
+            website: row['website'] || row['url'] || '',
+            contact: { phone: row['phone'] || '', email: row['email'] || '' },
+            status: 'active',
+            tags: row['tags'] ? row['tags'].split(';').map((t: string) => t.trim()) : [],
+          }).onConflictDoNothing();
+          count++;
+        }
+        totalProcessed += count;
+        results.push({ fileName: file.originalname, status: 'success', resourcesProcessed: count });
+      } catch (err: any) {
+        results.push({ fileName: file.originalname, status: 'error', error: err.message });
+      }
+    }
+    const successful = results.filter(r => r.status === 'success').length;
+    res.json({
+      success: successful > 0,
+      message: `Processed ${files.length} file(s): ${successful} successful, ${files.length - successful} failed. ${totalProcessed} resources added.`,
+      results,
+      summary: {
+        filesUploaded: files.length,
+        filesSuccessful: successful,
+        filesWithErrors: files.length - successful,
+        totalResourcesProcessed: totalProcessed,
+      },
+    });
   }));
 
   // Donation checkout with Stripe
