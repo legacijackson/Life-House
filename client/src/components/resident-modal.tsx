@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Resident {
   id: string;
@@ -23,27 +24,15 @@ interface ResidentModalProps {
 export function ResidentModal({ resident, onClose }: ResidentModalProps) {
   const { data: residentDetails } = useQuery<any>({
     queryKey: ['/api/residents', resident.id],
+    queryFn: () => apiRequest('GET', `/api/residents/${resident.id}`).then((r) => r.json()),
     enabled: !!resident.id,
   });
 
-  const mockCaseNotes = [
-    {
-      id: "1",
-      title: "Housing Application Update",
-      date: "January 18, 2025",
-      author: "Sarah Martinez",
-      type: "Progress",
-      content: "John completed his housing application today. All required documents submitted including pay stubs and references. Application forwarded to Riverside Housing Authority. Expected response within 30 days."
-    },
-    {
-      id: "2", 
-      title: "Employment Workshop Attendance",
-      date: "January 16, 2025",
-      author: "Sarah Martinez",
-      type: "Workshop",
-      content: "Attended resume building workshop. Showed strong engagement and completed updated resume. Connected with job placement coordinator for interview skills session next week."
-    }
-  ];
+  const { data: caseNotes = [] } = useQuery<any[]>({
+    queryKey: ['/api/staff-case-notes', resident.id],
+    queryFn: () => apiRequest('GET', `/api/staff-case-notes?clientId=${resident.id}`).then((r) => r.json()),
+    enabled: !!resident.id,
+  });
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
@@ -148,19 +137,24 @@ export function ResidentModal({ resident, onClose }: ResidentModalProps) {
               </TabsList>
 
               <TabsContent value="notes" className="space-y-4 mt-4">
-                {mockCaseNotes.map((note) => (
+                {caseNotes.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-4">No case notes yet.</p>
+                )}
+                {(caseNotes as any[]).map((note: any) => (
                   <Card key={note.id}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <h5 className="text-sm font-medium text-gray-900">{note.title}</h5>
-                          <p className="text-xs text-gray-500">{note.date} - {note.author}</p>
+                          <p className="text-xs text-gray-500">
+                            {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}
+                          </p>
                         </div>
-                        <Badge className={getTypeColor(note.type)}>
-                          {note.type}
+                        <Badge className={getTypeColor(note.noteType)}>
+                          {note.noteType}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-700">{note.content}</p>
+                      <p className="text-sm text-gray-700">{note.summary}</p>
                     </CardContent>
                   </Card>
                 ))}
