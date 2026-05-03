@@ -1,500 +1,466 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  BarChart3, Download, RefreshCw, Users, FileText,
+  Calendar, DollarSign, Wrench, Phone, CheckCircle2,
+} from "lucide-react";
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
+} from "recharts";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { 
-  FileText, 
-  Download, 
-  Calendar as CalendarIcon,
-  BarChart,
-  Users,
-  Home,
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  RefreshCw,
-  X
-} from 'lucide-react';
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { toast } from "react-hot-toast";
-import { useAuth } from "@/hooks/use-auth";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-interface ReportType {
-  id: string;
-  name: string;
-  description: string;
-  icon: typeof FileText;
-  category: string;
-  frequency: string;
-  lastGenerated?: string;
-  status?: 'ready' | 'generating' | 'error';
+// ── Chart colours ─────────────────────────────────────────────────────────────
+const COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#10b981"];
+
+// ── Report template definitions ───────────────────────────────────────────────
+const REPORT_TEMPLATES = [
+  {
+    id: "enrollment",
+    name: "Client Enrollment Summary",
+    description: "New enrollments, discharges, and current census by client type.",
+    icon: Users,
+    color: "bg-indigo-100 text-indigo-700",
+  },
+  {
+    id: "case-note-compliance",
+    name: "Case Note Compliance",
+    description: "On-time, overdue, and extremely-late notes per staff member.",
+    icon: FileText,
+    color: "bg-amber-100 text-amber-700",
+  },
+  {
+    id: "attendance",
+    name: "Attendance Summary",
+    description: "Present/absent/late rates per event type and per client.",
+    icon: Calendar,
+    color: "bg-green-100 text-green-700",
+  },
+  {
+    id: "benefits",
+    name: "Benefits Status Summary",
+    description: "Medi-Cal, CalFresh, SSI, GA enrollment and pending statuses.",
+    icon: CheckCircle2,
+    color: "bg-teal-100 text-teal-700",
+  },
+  {
+    id: "maintenance",
+    name: "Maintenance Summary",
+    description: "Open, in-progress, and resolved tickets by category and priority.",
+    icon: Wrench,
+    color: "bg-orange-100 text-orange-700",
+  },
+  {
+    id: "intake-funnel",
+    name: "Intake & Referral Funnel",
+    description: "Call log volume, lead conversion rate, and application outcomes.",
+    icon: Phone,
+    color: "bg-blue-100 text-blue-700",
+  },
+  {
+    id: "stop-touchpoints",
+    name: "STOP Touchpoint Summary",
+    description: "Touchpoint completion rates and upcoming deadlines per client.",
+    icon: BarChart3,
+    color: "bg-purple-100 text-purple-700",
+  },
+] as const;
+
+type ReportId = typeof REPORT_TEMPLATES[number]["id"];
+
+// ── Date range options ────────────────────────────────────────────────────────
+const DATE_RANGES = [
+  { label: "Last 7 days", days: 7 },
+  { label: "Last 30 days", days: 30 },
+  { label: "Last 90 days", days: 90 },
+  { label: "This year", days: 365 },
+];
+
+// ── CSV export ────────────────────────────────────────────────────────────────
+function exportCsv(rows: Record<string, unknown>[], filename: string) {
+  if (!rows.length) return;
+  const keys = Object.keys(rows[0]);
+  const csv = [
+    keys.join(","),
+    ...rows.map((r) => keys.map((k) => JSON.stringify(r[k] ?? "")).join(",")),
+  ].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
 }
 
-// Fetch report templates from database
-const useReportTemplates = () => {
-  return useQuery({
-    queryKey: ['reportTemplates'],
-    queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/reports/templates', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error('Failed to fetch report templates');
-      return response.json();
-    },
-  });
-};
+// ── Chart components per report ───────────────────────────────────────────────
 
-// Fetch generated reports
-const useReports = () => {
-  return useQuery({
-    queryKey: ['reports'],
-    queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/reports', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error('Failed to fetch reports');
-      return response.json();
-    },
-  });
-};
-
-// Generate report mutation
-const useGenerateReport = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ reportType, parameters, name }: { reportType: string; parameters: any; name: string }) => {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/reports/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          reportType,
-          parameters,
-          name
-        }),
-      });
-      if (!response.ok) throw new Error('Failed to generate report');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
-      toast.success('Report generated successfully!');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to generate report');
-    },
-  });
-};
-
-export default function Reports() {
-  const [selectedReportType, setSelectedReportType] = useState<string>('');
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date()
-  });
-  const [selectedCategory, setSelectedCategory] = useState('all');
-
-  const { data: reportTemplates = [], isLoading: templatesLoading } = useReportTemplates();
-  const { data: generatedReports = [], isLoading: reportsLoading } = useReports();
-  const generateReportMutation = useGenerateReport();
-
-  const handleGenerateReport = async () => {
-    if (!selectedReportType) {
-      toast.error("Please select a report type");
-      return;
-    }
-
-    if (!dateRange.from || !dateRange.to) {
-      toast.error("Please select a date range");
-      return;
-    }
-
-    const selectedTemplate = reportTemplates.find(t => t.type === selectedReportType);
-    if (!selectedTemplate) {
-      toast.error("Invalid report type selected");
-      return;
-    }
-
-    const parameters = {
-      startDate: dateRange.from.toISOString(),
-      endDate: dateRange.to.toISOString(),
-      category: selectedCategory !== 'all' ? selectedCategory : undefined
-    };
-
-    const reportName = `${selectedTemplate.name} - ${format(dateRange.from, 'MMM dd')} to ${format(dateRange.to, 'MMM dd, yyyy')}`;
-
-    await generateReportMutation.mutateAsync({
-      reportType: selectedReportType,
-      parameters,
-      name: reportName
-    });
-  };
-
-  const [showReportFrame, setShowReportFrame] = useState(false);
-  const [currentReportUrl, setCurrentReportUrl] = useState('');
-
-  const handleViewReport = async (reportId: string, reportName: string) => {
-    try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/reports/${reportId}/view`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error('Failed to load report');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      setCurrentReportUrl(url);
-      setShowReportFrame(true);
-    } catch (error) {
-      toast.error('Failed to load report');
-    }
-  };
-
-  const handleDownloadReport = async (reportId: string, reportName: string) => {
-    try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/reports/${reportId}/download`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) throw new Error('Failed to download report');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${reportName}.pdf`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      toast.error('Failed to download report');
-    }
-  };
-
-  const filteredTemplates = reportTemplates.filter(template => 
-    selectedCategory === 'all' || template.category === selectedCategory
+function EnrollmentChart({ clients }: { clients: any[] }) {
+  const byType = [
+    { name: "Resident", count: clients.filter((c) => !c.profile?.clientType || c.profile?.clientType === "resident").length },
+    { name: "Non-Resident", count: clients.filter((c) => c.profile?.clientType === "non-resident").length },
+    { name: "Onboarding", count: clients.filter((c) => c.profile?.clientType === "onboarding").length },
+  ];
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-4">
+        {byType.map((b) => (
+          <div key={b.name} className="text-center p-4 bg-gray-50 rounded-lg">
+            <p className="text-2xl font-bold text-gray-900">{b.count}</p>
+            <p className="text-sm text-gray-500">{b.name}</p>
+          </div>
+        ))}
+      </div>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={byType}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} />
+          <Tooltip />
+          <Bar dataKey="count" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
+}
 
-  const iconMap = {
-    'stop-touchpoint': CheckCircle,
-    'resident-progress': TrendingUp,
-    'housing-occupancy': Home,
-    'attendance-compliance': Users,
-    'financial-summary': BarChart
-  };
+function CaseNoteComplianceChart({ notes }: { notes: any[] }) {
+  const byStatus = [
+    { name: "Submitted", value: notes.filter((n) => n.status === "submitted").length },
+    { name: "Draft", value: notes.filter((n) => n.status === "draft").length },
+    { name: "Overdue", value: notes.filter((n) => n.status === "overdue").length },
+    { name: "Extremely Late", value: notes.filter((n) => n.status === "extremely-late").length },
+  ].filter((x) => x.value > 0);
+
+  const total = notes.length;
+  const onTime = notes.filter((n) => n.status === "submitted").length;
+  const rate = total > 0 ? Math.round((onTime / total) * 100) : 0;
 
   return (
-    <div className="flex-1 overflow-hidden">
-      
-      <main className="flex-1 overflow-y-auto">
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-                <p className="text-sm text-gray-600">Generate compliance and outcome reports</p>
-              </div>
-              <Button 
-                onClick={handleGenerateReport}
-                disabled={!selectedReportType || generateReportMutation.isPending}
-                className="gap-2"
-              >
-                {generateReportMutation.isPending ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4" />
-                    Generate Report
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <div className="p-6">
-          {/* Report Configuration */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Report Configuration</CardTitle>
-              <CardDescription>Select report type and date range</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Report Type
-                  </label>
-                  <Select value={selectedReportType} onValueChange={setSelectedReportType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a report type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredTemplates.map(template => (
-                        <SelectItem key={template.type} value={template.type}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Start Date
-                  </label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !dateRange.from && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateRange.from ? format(dateRange.from, "PPP") : "Select date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={dateRange.from}
-                        onSelect={(date) => setDateRange({ ...dateRange, from: date })}
-                        disabled={(date) => date > new Date()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
-                    End Date
-                  </label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !dateRange.to && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateRange.to ? format(dateRange.to, "PPP") : "Select date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={dateRange.to}
-                        onSelect={(date) => setDateRange({ ...dateRange, to: date })}
-                        disabled={(date) => date > new Date() || (dateRange.from ? date < dateRange.from : false)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Report Types */}
-          <Tabs defaultValue="all" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="all" onClick={() => setSelectedCategory('all')}>
-                All Reports
-              </TabsTrigger>
-              <TabsTrigger value="compliance" onClick={() => setSelectedCategory('compliance')}>
-                Compliance
-              </TabsTrigger>
-              <TabsTrigger value="outcomes" onClick={() => setSelectedCategory('outcomes')}>
-                Outcomes
-              </TabsTrigger>
-              <TabsTrigger value="operations" onClick={() => setSelectedCategory('operations')}>
-                Operations
-              </TabsTrigger>
-              <TabsTrigger value="financial" onClick={() => setSelectedCategory('financial')}>
-                Financial
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={selectedCategory} className="space-y-4">
-              <div className="grid gap-4">
-                {templatesLoading ? (
-                  <div className="text-center py-8">Loading report templates...</div>
-                ) : (
-                  filteredTemplates.map(template => {
-                    const IconComponent = iconMap[template.type as keyof typeof iconMap] || FileText;
-                    return (
-                      <Card 
-                        key={template.id}
-                        className={cn(
-                          "cursor-pointer transition-all hover:shadow-md",
-                          selectedReportType === template.type && "ring-2 ring-primary"
-                        )}
-                        onClick={() => setSelectedReportType(template.type)}
-                      >
-                        <CardHeader className="pb-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-primary/10 rounded-lg">
-                                <IconComponent className="h-5 w-5 text-primary" />
-                              </div>
-                              <div>
-                                <CardTitle className="text-lg">{template.name}</CardTitle>
-                                <CardDescription className="mt-1">
-                                  {template.description}
-                                </CardDescription>
-                              </div>
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                              <Badge variant="outline">{template.frequency}</Badge>
-                              {template.isActive && (
-                                <Badge className="bg-green-100 text-green-800">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Ready
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="flex items-center text-sm text-gray-500">
-                            <Clock className="h-4 w-4 mr-1" />
-                            Template updated: {new Date(template.updatedAt).toLocaleDateString()}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          {/* Recent Reports */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Recent Reports</CardTitle>
-              <CardDescription>Previously generated reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {reportsLoading ? (
-                  <div className="text-center py-4">Loading reports...</div>
-                ) : generatedReports.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500">
-                    No reports generated yet. Create your first report above.
-                  </div>
-                ) : (
-                  generatedReports.slice(0, 10).map((report: any) => (
-                    <div key={report.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium text-sm">{report.name}</p>
-                          <p className="text-xs text-gray-500">
-                            Generated on {new Date(report.generatedAt).toLocaleDateString()}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge 
-                              variant={report.status === 'completed' ? 'default' : 
-                                      report.status === 'generating' ? 'secondary' : 'destructive'}
-                              className="text-xs"
-                            >
-                              {report.status}
-                            </Badge>
-                            {report.fileSize && (
-                              <span className="text-xs text-gray-400">
-                                {(report.fileSize / 1024).toFixed(1)} KB
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          disabled={report.status !== 'completed'}
-                          onClick={() => handleViewReport(report.id, report.name)}
-                        >
-                          View
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          disabled={report.status !== 'completed'}
-                          onClick={() => handleDownloadReport(report.id, report.name)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-3xl font-bold text-gray-900">{rate}%</p>
+          <p className="text-sm text-gray-500">On-Time Compliance</p>
         </div>
-      </main>
-
-      {/* Report Viewer Modal */}
-      {showReportFrame && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">Report Viewer</h3>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => {
-                  setShowReportFrame(false);
-                  window.URL.revokeObjectURL(currentReportUrl);
-                  setCurrentReportUrl('');
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex-1 p-4">
-              <iframe 
-                src={currentReportUrl} 
-                className="w-full h-full border rounded"
-                title="Report Viewer"
-              />
-            </div>
-          </div>
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-3xl font-bold text-gray-900">{total}</p>
+          <p className="text-sm text-gray-500">Total Notes</p>
         </div>
+      </div>
+      {byStatus.length > 0 ? (
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart>
+            <Pie data={byStatus} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+              {byStatus.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="text-center text-gray-400 text-sm py-8">No case note data yet.</p>
       )}
+    </div>
+  );
+}
+
+function AttendanceSummaryChart({ attendance }: { attendance: any[] }) {
+  const byStatus = [
+    { name: "Present", value: attendance.filter((a) => a.status === "present").length },
+    { name: "Absent", value: attendance.filter((a) => a.status === "absent").length },
+    { name: "Late", value: attendance.filter((a) => a.status === "late").length },
+    { name: "Excused", value: attendance.filter((a) => a.status === "excused").length },
+  ].filter((x) => x.value > 0);
+
+  const total = attendance.length;
+  const presentRate = total > 0 ? Math.round((attendance.filter((a) => a.status === "present").length / total) * 100) : 0;
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-3xl font-bold text-green-600">{presentRate}%</p>
+          <p className="text-sm text-gray-500">Attendance Rate</p>
+        </div>
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-3xl font-bold text-gray-900">{total}</p>
+          <p className="text-sm text-gray-500">Total Records</p>
+        </div>
+      </div>
+      {byStatus.length > 0 ? (
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={byStatus}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {byStatus.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="text-center text-gray-400 text-sm py-8">No attendance data yet.</p>
+      )}
+    </div>
+  );
+}
+
+function MaintenanceSummaryChart({ tickets }: { tickets: any[] }) {
+  const byStatus = [
+    { name: "Open", count: tickets.filter((t) => t.status === "open").length },
+    { name: "In Progress", count: tickets.filter((t) => t.status === "in-progress").length },
+    { name: "Resolved", count: tickets.filter((t) => t.status === "resolved").length },
+  ];
+  const byPriority = [
+    { name: "Low", count: tickets.filter((t) => t.priority === "low").length },
+    { name: "Medium", count: tickets.filter((t) => t.priority === "medium").length },
+    { name: "High", count: tickets.filter((t) => t.priority === "high").length },
+    { name: "Urgent", count: tickets.filter((t) => t.priority === "urgent").length },
+  ].filter((x) => x.count > 0);
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-4">
+        {byStatus.map((s) => (
+          <div key={s.name} className="text-center p-4 bg-gray-50 rounded-lg">
+            <p className="text-2xl font-bold text-gray-900">{s.count}</p>
+            <p className="text-sm text-gray-500">{s.name}</p>
+          </div>
+        ))}
+      </div>
+      {byPriority.length > 0 && (
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={byPriority}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip />
+            <Bar dataKey="count" fill={COLORS[4]} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+function IntakeFunnelChart({ calls, applications }: { calls: any[]; applications: any[] }) {
+  const funnel = [
+    { stage: "Calls Received", count: calls.length },
+    { stage: "Leads Captured", count: calls.filter((c) => c.contactType === "Lead").length },
+    { stage: "Applications", count: applications.length },
+    { stage: "Approved", count: applications.filter((a) => a.status === "approved").length },
+    { stage: "Onboarding", count: applications.filter((a) => a.status === "onboarding").length },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        {funnel.map((stage, i) => {
+          const pct = funnel[0].count > 0 ? Math.round((stage.count / funnel[0].count) * 100) : 0;
+          return (
+            <div key={stage.stage}>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-700">{stage.stage}</span>
+                <span className="font-semibold text-gray-900">{stage.count}</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-3">
+                <div
+                  className="h-3 rounded-full"
+                  style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function GenericPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="text-center py-12">
+      <BarChart3 className="mx-auto h-10 w-10 text-gray-300 mb-3" />
+      <p className="text-sm text-gray-400">
+        {label} data will populate once the database is seeded.
+      </p>
+    </div>
+  );
+}
+
+// ── Report View ───────────────────────────────────────────────────────────────
+
+function ReportView({ reportId, days }: { reportId: ReportId; days: number }) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ["/api/clients"],
+    queryFn: () => apiRequest("GET", "/api/clients").then((r) => r.json()),
+    enabled: reportId === "enrollment" || reportId === "stop-touchpoints",
+  });
+
+  const { data: caseNotes = [] } = useQuery({
+    queryKey: ["/api/staff-case-notes"],
+    queryFn: () => apiRequest("GET", "/api/staff-case-notes").then((r) => r.json()),
+    enabled: reportId === "case-note-compliance",
+  });
+
+  const { data: attendance = [] } = useQuery({
+    queryKey: ["/api/event-attendance"],
+    queryFn: () => apiRequest("GET", "/api/event-attendance").then((r) => r.json()),
+    enabled: reportId === "attendance",
+  });
+
+  const { data: tickets = [] } = useQuery({
+    queryKey: ["/api/maintenance-tickets"],
+    queryFn: () => apiRequest("GET", "/api/maintenance-tickets").then((r) => r.json()),
+    enabled: reportId === "maintenance",
+  });
+
+  const { data: calls = [] } = useQuery({
+    queryKey: ["/api/call-log"],
+    queryFn: () => apiRequest("GET", "/api/call-log").then((r) => r.json()),
+    enabled: reportId === "intake-funnel",
+  });
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ["/api/intake-applications"],
+    queryFn: () => apiRequest("GET", "/api/intake-applications").then((r) => r.json()),
+    enabled: reportId === "intake-funnel",
+  });
+
+  const { toast } = useToast();
+
+  function handleExport() {
+    const dataMap: Record<ReportId, any[]> = {
+      enrollment: clients as any[],
+      "case-note-compliance": caseNotes as any[],
+      attendance: attendance as any[],
+      benefits: [],
+      maintenance: tickets as any[],
+      "intake-funnel": [...(calls as any[]), ...(applications as any[])],
+      "stop-touchpoints": clients as any[],
+    };
+    const rows = dataMap[reportId];
+    if (!rows.length) {
+      toast({ title: "No data to export yet", variant: "destructive" });
+      return;
+    }
+    exportCsv(rows, `${reportId}-report.csv`);
+    toast({ title: "CSV downloaded" });
+  }
+
+  const template = REPORT_TEMPLATES.find((t) => t.id === reportId)!;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">{template.name}</h2>
+          <p className="text-xs text-gray-500">{template.description}</p>
+        </div>
+        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleExport}>
+          <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-5">
+          {reportId === "enrollment" && <EnrollmentChart clients={clients as any[]} />}
+          {reportId === "case-note-compliance" && <CaseNoteComplianceChart notes={caseNotes as any[]} />}
+          {reportId === "attendance" && <AttendanceSummaryChart attendance={attendance as any[]} />}
+          {reportId === "maintenance" && <MaintenanceSummaryChart tickets={tickets as any[]} />}
+          {reportId === "intake-funnel" && <IntakeFunnelChart calls={calls as any[]} applications={applications as any[]} />}
+          {(reportId === "benefits" || reportId === "stop-touchpoints") && (
+            <GenericPlaceholder label={template.name} />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
+export default function Reports() {
+  const [selectedReport, setSelectedReport] = useState<ReportId | null>(null);
+  const [days, setDays] = useState(30);
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-indigo-600" />
+            Reports
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">Analytics and compliance reporting</p>
+        </div>
+        <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
+          <SelectTrigger className="w-40 h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DATE_RANGES.map((r) => (
+              <SelectItem key={r.days} value={String(r.days)}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Template selector */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Report Templates</p>
+          {REPORT_TEMPLATES.map((t) => {
+            const Icon = t.icon;
+            const isActive = selectedReport === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setSelectedReport(t.id)}
+                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                  isActive
+                    ? "border-indigo-300 bg-indigo-50"
+                    : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${t.color}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-medium truncate ${isActive ? "text-indigo-700" : "text-gray-800"}`}>
+                      {t.name}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Report display */}
+        <div className="lg:col-span-2">
+          {selectedReport ? (
+            <ReportView reportId={selectedReport} days={days} />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
+              <BarChart3 className="h-12 w-12 mb-3 opacity-40" />
+              <p className="text-sm">Select a report template to get started.</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
