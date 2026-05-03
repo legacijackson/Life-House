@@ -59,7 +59,7 @@ export function HelpDesk({ isOpen: externalIsOpen, onClose }: HelpDeskProps = {}
   // Fetch contextual FAQs based on user role and current page
   const { data: faqs = [], isLoading: faqsLoading } = useQuery({
     queryKey: ['/api/support', (user as any)?.role, location],
-    queryFn: () => apiRequest('GET', `/api/support?page=${encodeURIComponent(location)}`),
+    queryFn: () => apiRequest('GET', `/api/support?page=${encodeURIComponent(location)}`).then((r) => r.json()),
     enabled: !!user && isOpen,
   });
 

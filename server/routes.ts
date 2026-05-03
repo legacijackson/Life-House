@@ -2209,6 +2209,21 @@ startxref
   });
 
   // AI Chat endpoint (public access for widget)
+  app.post('/api/ai/draft-note', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { residentId, noteType, bulletPoints } = req.body;
+      if (!residentId || !noteType || !Array.isArray(bulletPoints)) {
+        return res.status(400).json({ message: 'residentId, noteType, and bulletPoints are required' });
+      }
+      const { aiService } = await import('./ai');
+      const result = await aiService.draftNote(residentId, noteType, bulletPoints);
+      res.json(result);
+    } catch (error: any) {
+      console.error('AI draft note error:', error);
+      res.status(500).json({ message: 'Failed to draft note', error: error.message });
+    }
+  });
+
   app.post('/api/ai/chat', async (req: Request, res: Response) => {
     try {
       const { message, context } = req.body;
@@ -2497,6 +2512,24 @@ startxref
       res.status(500).json({ error: 'Failed to delete document' });
     }
   }));
+
+  // Update case note content
+  app.patch('/api/notes/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { content, summary, title, details } = req.body;
+      const updates: any = { updatedAt: new Date() };
+      if (content !== undefined) updates.summary = content; // map 'content' alias
+      if (summary !== undefined) updates.summary = summary;
+      if (title !== undefined) updates.title = title;
+      if (details !== undefined) updates.details = details;
+      const [row] = await db.update(staffCaseNotes).set(updates).where(eq(staffCaseNotes.id, id)).returning();
+      res.json(row);
+    } catch (error) {
+      console.error('Error updating note:', error);
+      res.status(500).json({ error: 'Failed to update note' });
+    }
+  });
 
   // Soft delete case notes (archive them)
   app.delete('/api/notes/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -3467,6 +3500,32 @@ Resident is ready to begin programming and case management services.`,
       res.status(500).json({ message: 'Failed to complete profile' });
     }
   });
+
+  // Onboard a new case manager / staff member
+  app.post('/api/admin/onboard-case-manager', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { name, email, role, phone, title } = req.body;
+      if (!name || !email || !role) {
+        return res.status(400).json({ message: 'name, email, and role are required' });
+      }
+      // Check if user already exists
+      const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (existing) {
+        return res.status(409).json({ message: 'A user with this email already exists' });
+      }
+      const [newUser] = await db.insert(users).values({
+        name,
+        email,
+        role: role as any,
+        phone: phone ?? null,
+        isActive: true,
+      }).returning();
+      res.json({ success: true, user: newUser, message: 'Staff member onboarded successfully' });
+    } catch (error) {
+      console.error('Error onboarding case manager:', error);
+      res.status(500).json({ message: 'Failed to onboard staff member' });
+    }
+  }));
 
   // Update user profile
 app.patch("/api/users/:id", requireAuth, async (req, res) => {

@@ -71,11 +71,15 @@ export function ReferResidentModal({
 
   const referMutation = useMutation({
     mutationFn: async (data: ReferralFormData) => {
-      return apiRequest('/api/referrals', 'POST', data);
+      return apiRequest('POST', '/api/resource-referrals', {
+        clientId: data.residentId,
+        resourceId: data.resourceId,
+        notes: data.notes,
+      });
     },
     onSuccess: () => {
       toast.success("Referral created successfully!");
-      queryClient.invalidateQueries({ queryKey: ['/api/referrals'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/resource-referrals'] });
       form.reset();
       setOpen(false);
       onSuccess?.();
