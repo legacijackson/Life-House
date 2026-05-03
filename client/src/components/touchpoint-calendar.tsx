@@ -47,7 +47,7 @@ export function TouchpointCalendar({ residentId }: TouchpointCalendarProps) {
 
   const { data: events } = useQuery({
     queryKey: ['/api/events', residentId],
-    queryFn: () => apiRequest(`/api/events${residentId ? `?residentId=${residentId}` : ''}`),
+    queryFn: () => apiRequest(`/api/events${residentId ? `?residentId=${residentId}` : ''}`).then((r) => r.json()),
   });
 
   const { data: residents } = useQuery({

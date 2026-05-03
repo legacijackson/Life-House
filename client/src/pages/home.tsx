@@ -69,10 +69,19 @@ export default function Home() {
     enabled: !isStaff,
   });
 
+  const userId = (user as any)?.id;
   const { data: phaseData } = useQuery<OnboardingPhase[]>({
-    queryKey: ["/api/onboarding/phases", (user as any)?.id],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !isStaff && !!(user as any)?.id,
+    queryKey: ["/api/onboarding/phases", userId],
+    queryFn: async () => {
+      const res = await fetch(`/api/onboarding/phases?clientId=${userId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken") || ""}` },
+        credentials: "include",
+      });
+      if (res.status === 401) return null;
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !isStaff && !!userId,
   });
 
   if (isStaff) {

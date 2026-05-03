@@ -11,17 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { 
+import {
   Users,
   Search,
   Filter,
@@ -29,9 +20,6 @@ import {
   Calendar,
   Phone,
   Mail,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   TrendingUp,
   FileText,
   Bed,
@@ -42,114 +30,18 @@ interface Resident {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  stage: number;
-  dateOfBirth?: string;
-  enrollmentDate: string;
-  releaseDate?: string;
-  justiceStatus: string;
-  currentProperty?: string;
-  currentRoom?: string;
-  caseManagerId: string;
-  lastAttendance?: string;
-  progressScore: number;
-  recentActivity: {
-    type: string;
-    date: string;
-    description: string;
-  }[];
+  phone?: string | null;
+  createdAt?: string;
+  moveInDate?: string | null;
+  propertyAssignment?: string | null;
+  roomAssignment?: string | null;
+  employmentStatus?: string | null;
+  // Extended fields from /api/residents/:id
+  stage?: number;
+  justiceStatus?: string;
+  enrollmentDate?: string;
+  progressScore?: number;
 }
-
-const mockResidents: Resident[] = [
-  {
-    id: '1',
-    name: 'Marcus Johnson',
-    email: 'marcus.j@email.com',
-    phone: '(555) 123-4567',
-    stage: 3,
-    enrollmentDate: '2024-01-15',
-    releaseDate: '2024-01-10',
-    justiceStatus: 'parole',
-    currentProperty: 'Main Street House',
-    currentRoom: 'Room 12A',
-    caseManagerId: 'current-user',
-    lastAttendance: '2024-01-25',
-    progressScore: 75,
-    recentActivity: [
-      { type: 'attendance', date: '2024-01-25', description: 'Life Skills Workshop' },
-      { type: 'case_note', date: '2024-01-23', description: 'Weekly check-in completed' },
-      { type: 'service', date: '2024-01-20', description: 'Job readiness training' }
-    ]
-  },
-  {
-    id: '2',
-    name: 'David Rodriguez',
-    email: 'david.r@email.com',
-    phone: '(555) 234-5678',
-    stage: 5,
-    enrollmentDate: '2023-11-20',
-    releaseDate: '2023-11-15',
-    justiceStatus: 'probation',
-    currentProperty: 'Oak Avenue House',
-    currentRoom: 'Room 8B',
-    caseManagerId: 'current-user',
-    lastAttendance: '2024-01-24',
-    progressScore: 88,
-    recentActivity: [
-      { type: 'milestone', date: '2024-01-24', description: 'Advanced to Stage 5' },
-      { type: 'employment', date: '2024-01-22', description: 'Started part-time job' },
-      { type: 'attendance', date: '2024-01-24', description: 'Housing navigation session' }
-    ]
-  }
-];
-
-interface CaseNote {
-  id: string;
-  residentId: string;
-  authorName: string;
-  authorRole: string;
-  date: string;
-  type: string;
-  content: string;
-  followUpRequired: boolean;
-  tags: string[];
-}
-
-const mockCaseNotes: CaseNote[] = [
-  {
-    id: '1',
-    residentId: '1',
-    authorName: 'Kairia Shariff',
-    authorRole: 'Case Manager',
-    date: '2024-01-23',
-    type: 'Progress Note',
-    content: 'Marcus continues to show excellent progress in Stage 3. He has been consistently attending all scheduled programs and group sessions. His engagement in life skills workshops has been particularly noteworthy. Discussed his goals for employment and we\'ve identified several job readiness programs that align with his interests.',
-    followUpRequired: false,
-    tags: ['Employment', 'Progress', 'Life Skills']
-  },
-  {
-    id: '2',
-    residentId: '1',
-    authorName: 'Julius Jackson',
-    authorRole: 'Program Director',
-    date: '2024-01-20',
-    type: 'Milestone Achievement',
-    content: 'Marcus successfully completed the financial literacy workshop series. He demonstrated strong understanding of budgeting concepts and has started creating his personal savings plan. Recommended for advancement to Stage 4 pending completion of job readiness training.',
-    followUpRequired: true,
-    tags: ['Financial Literacy', 'Milestone', 'Stage Advancement']
-  },
-  {
-    id: '3',
-    residentId: '2',
-    authorName: 'Brittney Jackson',
-    authorRole: 'Support Specialist',
-    date: '2024-01-24',
-    type: 'Check-In',
-    content: 'David had his weekly check-in today. He shared that his new part-time job is going well and he\'s adjusting to the schedule. We discussed strategies for time management and balancing work with program requirements. He expressed interest in additional vocational training opportunities.',
-    followUpRequired: false,
-    tags: ['Employment', 'Check-In', 'Time Management']
-  }
-];
 
 export default function Residents() {
   const [, navigate] = useLocation();
@@ -157,9 +49,6 @@ export default function Residents() {
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   const [showCaseNotesModal, setShowCaseNotesModal] = useState(false);
-  const [newCaseNote, setNewCaseNote] = useState('');
-  const [caseNoteType, setCaseNoteType] = useState('Progress Note');
-  const [followUpRequired, setFollowUpRequired] = useState(false);
   const { toast } = useToast();
 
   const { data: residents = [], isLoading } = useQuery<Resident[]>({
@@ -169,8 +58,8 @@ export default function Residents() {
 
   const filteredResidents = residents.filter((resident) => {
     const matchesSearch = resident.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         resident.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStage = stageFilter === 'all' || resident.stage.toString() === stageFilter;
+                         (resident.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStage = stageFilter === 'all' || (resident.stage ?? 1).toString() === stageFilter;
     return matchesSearch && matchesStage;
   });
 
@@ -285,27 +174,37 @@ export default function Residents() {
                           <p className="text-sm text-gray-500">{resident.email}</p>
                         </div>
                       </div>
-                      <Badge className={getStageColor(resident.stage)}>
-                        Stage {resident.stage}
-                      </Badge>
+                      {resident.stage != null && (
+                        <Badge className={getStageColor(resident.stage)}>
+                          Stage {resident.stage}
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Progress Score</span>
-                        <span className="font-medium">{resident.progressScore}%</span>
-                      </div>
-                      <Progress value={resident.progressScore} className="h-2" />
-                      
+                      {resident.progressScore != null && (
+                        <>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Progress Score</span>
+                            <span className="font-medium">{resident.progressScore}%</span>
+                          </div>
+                          <Progress value={resident.progressScore} className="h-2" />
+                        </>
+                      )}
+
                       <div className="flex items-center space-x-4 text-xs text-gray-500 mt-3">
-                        <div className="flex items-center">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {resident.currentProperty}
-                        </div>
-                        <div className="flex items-center">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {resident.lastAttendance && new Date(resident.lastAttendance).toLocaleDateString()}
-                        </div>
+                        {resident.propertyAssignment && (
+                          <div className="flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {resident.propertyAssignment}
+                          </div>
+                        )}
+                        {resident.moveInDate && (
+                          <div className="flex items-center">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {new Date(resident.moveInDate).toLocaleDateString()}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -335,12 +234,16 @@ export default function Residents() {
                         </div>
                         <div>
                           <h3 className="text-lg font-semibold">{selectedResident.name}</h3>
-                          <p className="text-sm text-gray-500">{getStageLabel(selectedResident.stage)}</p>
+                          {selectedResident.stage != null && (
+                            <p className="text-sm text-gray-500">{getStageLabel(selectedResident.stage)}</p>
+                          )}
                         </div>
                       </CardTitle>
-                      <Badge className={getStageColor(selectedResident.stage)}>
-                        Stage {selectedResident.stage}
-                      </Badge>
+                      {selectedResident.stage != null && (
+                        <Badge className={getStageColor(selectedResident.stage)}>
+                          Stage {selectedResident.stage}
+                        </Badge>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -360,24 +263,30 @@ export default function Residents() {
                                 <Mail className="w-4 h-4 mr-2 text-gray-400" />
                                 {selectedResident.email}
                               </div>
-                              <div className="flex items-center">
-                                <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                                {selectedResident.phone}
-                              </div>
+                              {selectedResident.phone && (
+                                <div className="flex items-center">
+                                  <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                                  {selectedResident.phone}
+                                </div>
+                              )}
                             </div>
                           </div>
                           
                           <div>
                             <h4 className="text-sm font-medium text-gray-700 mb-2">Housing</h4>
                             <div className="space-y-2 text-sm">
-                              <div className="flex items-center">
-                                <Bed className="w-4 h-4 mr-2 text-gray-400" />
-                                {selectedResident.currentProperty}
-                              </div>
-                              <div className="flex items-center">
-                                <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                                {selectedResident.currentRoom}
-                              </div>
+                              {selectedResident.propertyAssignment && (
+                                <div className="flex items-center">
+                                  <Bed className="w-4 h-4 mr-2 text-gray-400" />
+                                  {selectedResident.propertyAssignment}
+                                </div>
+                              )}
+                              {selectedResident.roomAssignment && (
+                                <div className="flex items-center">
+                                  <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                                  {selectedResident.roomAssignment}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -385,71 +294,54 @@ export default function Residents() {
                         <div>
                           <h4 className="text-sm font-medium text-gray-700 mb-2">Program Details</h4>
                           <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-600">Enrollment Date:</span>
-                              <span className="ml-2 font-medium">
-                                {new Date(selectedResident.enrollmentDate).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Justice Status:</span>
-                              <span className="ml-2 font-medium capitalize">
-                                {selectedResident.justiceStatus}
-                              </span>
-                            </div>
+                            {selectedResident.moveInDate && (
+                              <div>
+                                <span className="text-gray-600">Move-In Date:</span>
+                                <span className="ml-2 font-medium">
+                                  {new Date(selectedResident.moveInDate).toLocaleDateString()}
+                                </span>
+                              </div>
+                            )}
+                            {selectedResident.employmentStatus && (
+                              <div>
+                                <span className="text-gray-600">Employment:</span>
+                                <span className="ml-2 font-medium capitalize">
+                                  {selectedResident.employmentStatus}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </TabsContent>
 
                       <TabsContent value="progress" className="space-y-4">
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-medium text-gray-700">Overall Progress</h4>
-                            <span className="text-lg font-bold text-blue-600">{selectedResident.progressScore}%</span>
-                          </div>
-                          <Progress value={selectedResident.progressScore} className="h-3" />
-                        </div>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between py-2 border-b">
-                            <span className="text-sm text-gray-600">Program Compliance</span>
-                            <div className="flex items-center">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                              <span className="text-sm font-medium">Excellent</span>
+                        {selectedResident.progressScore != null ? (
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-sm font-medium text-gray-700">Overall Progress</h4>
+                              <span className="text-lg font-bold text-blue-600">{selectedResident.progressScore}%</span>
                             </div>
+                            <Progress value={selectedResident.progressScore} className="h-3" />
                           </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">Progress data not yet available for this resident.</p>
+                        )}
+                        {selectedResident.stage != null && (
                           <div className="flex items-center justify-between py-2 border-b">
-                            <span className="text-sm text-gray-600">Attendance Rate</span>
+                            <span className="text-sm text-gray-600">Current Stage</span>
                             <div className="flex items-center">
                               <TrendingUp className="w-4 h-4 text-blue-500 mr-1" />
-                              <span className="text-sm font-medium">92%</span>
+                              <span className="text-sm font-medium">{getStageLabel(selectedResident.stage)}</span>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between py-2">
-                            <span className="text-sm text-gray-600">Goals Completed</span>
-                            <div className="flex items-center">
-                              <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                              <span className="text-sm font-medium">8/12</span>
-                            </div>
-                          </div>
-                        </div>
+                        )}
                       </TabsContent>
 
                       <TabsContent value="activity" className="space-y-4">
                         <h4 className="text-sm font-medium text-gray-700">Recent Activity</h4>
-                        <div className="space-y-3">
-                          {selectedResident.recentActivity.map((activity, index) => (
-                            <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(activity.date).toLocaleDateString()} • {activity.type}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <p className="text-sm text-gray-500 text-center py-4">
+                          View case notes for a full activity history.
+                        </p>
                       </TabsContent>
                     </Tabs>
 
@@ -505,13 +397,23 @@ export default function Residents() {
           <CaseNoteModal 
             isOpen={showCaseNotesModal} 
             onClose={() => setShowCaseNotesModal(false)}
-            onSave={(note) => {
-              // Handle saving the case note
-              console.log('Case note saved:', note);
+            onSave={async (note) => {
+              await apiRequest('POST', '/api/staff-case-notes', {
+                clientId: note.residentId,
+                noteType: note.type,
+                title: note.subject,
+                summary: note.content,
+                details: note.content,
+                priority: note.priority === 'urgent' ? 4 : note.priority === 'high' ? 3 : note.priority === 'medium' ? 2 : 1,
+                confidential: note.confidential,
+                followUpDate: note.followUpDate,
+                tags: note.tags,
+                actionItems: note.actionItems,
+              });
               setShowCaseNotesModal(false);
             }}
             note={undefined}
-            residents={residentsData.map(r => ({ id: r.id, name: r.name }))}
+            residents={residents.map(r => ({ id: r.id, name: r.name }))}
           />
         )}
       </div>
