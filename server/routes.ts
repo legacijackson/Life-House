@@ -51,10 +51,12 @@ import {
   faxes,
   auditLog,
   appSettings,
+  resources,
+  residentResources,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
-import { eq, and, like, desc, sql, inArray, isNull, lt, gte, asc, aliasedTable } from "drizzle-orm";
+import { eq, and, or, like, ilike, desc, sql, inArray, isNull, lt, gte, asc, aliasedTable } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
@@ -1549,27 +1551,21 @@ startxref
 
   app.get('/api/resident/resources', roleRoute(['Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const resources = [
-        {
-          id: '1',
-          title: 'Job Training Programs',
-          category: 'Employment',
-          description: 'Local job training and placement programs',
-          location: 'Downtown Training Center',
-          contact: '(555) 123-4567',
-          website: 'https://example.com/jobs'
-        },
-        {
-          id: '2',
-          title: 'Financial Literacy Course',
-          category: 'Education',
-          description: 'Free 8-week financial management course',
-          location: 'Community College',
-          contact: '(555) 987-6543',
-          website: 'https://example.com/finance'
-        }
-      ];
-      res.json(resources);
+      const { category, search } = req.query as Record<string, string>;
+      const conditions: any[] = [eq(resources.status, 'active')];
+      if (category && category !== 'all') {
+        conditions.push(eq(resources.category, category as any));
+      }
+      if (search) {
+        conditions.push(
+          or(
+            ilike(resources.name, `%${search}%`),
+            ilike(resources.description, `%${search}%`)
+          )
+        );
+      }
+      const rows = await db.select().from(resources).where(and(...conditions)).orderBy(asc(resources.name));
+      res.json(rows);
     } catch (error) {
       console.error('Resident resources error:', error);
       res.status(500).json({ message: 'Failed to fetch resources' });
@@ -3426,13 +3422,21 @@ Resident is ready to begin programming and case management services.`,
     }));
 
   // Profile completion endpoint
-  app.post('/api/auth/complete-profile', async (req: Request, res: Response) => {
+  app.post('/api/auth/complete-profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // In production, validate JWT and update user profile
-      const updates = req.body;
+      const userId = req.user!.id;
+      const { firstName, lastName, phone, dateOfBirth } = req.body;
 
-      // TODO: Handle file upload for avatar
-      // TODO: Update user in database
+      const nameUpdate: Record<string, any> = {};
+      if (firstName || lastName) {
+        const parts = [firstName, lastName].filter(Boolean);
+        if (parts.length) nameUpdate.name = parts.join(' ');
+      }
+      if (phone) nameUpdate.phone = phone;
+
+      if (Object.keys(nameUpdate).length) {
+        await db.update(users).set(nameUpdate).where(eq(users.id, userId));
+      }
 
       res.json({ success: true, message: 'Profile completed successfully' });
     } catch (error) {

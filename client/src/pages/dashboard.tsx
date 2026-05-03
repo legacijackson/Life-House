@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 import { StatsCards } from "@/components/stats-cards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,36 +27,14 @@ interface Resident {
   status: string;
 }
 
-const mockResidents: Resident[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@email.com",
-    stage: 3,
-    lastContact: "2 days ago",
-    status: "Active"
-  },
-  {
-    id: "2", 
-    name: "Maria Garcia",
-    email: "maria.garcia@email.com",
-    stage: 5,
-    lastContact: "1 day ago",
-    status: "Active"
-  },
-  {
-    id: "3",
-    name: "Robert Johnson", 
-    email: "robert.j@email.com",
-    stage: 2,
-    lastContact: "5 days ago",
-    status: "Needs Attention"
-  }
-];
-
 export default function Dashboard() {
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   
+  const { data: residents = [] } = useQuery<Resident[]>({
+    queryKey: ['/api/residents'],
+    queryFn: () => apiRequest('GET', '/api/residents').then((r) => r.json()),
+  });
+
   const { data: stats } = useQuery<{
     activeResidents: number;
     pendingNotes: number; 
@@ -143,7 +122,7 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="space-y-3">
-                        {mockResidents.map((resident) => (
+                        {residents.slice(0, 10).map((resident) => (
                           <tr key={resident.id} className="border-b border-gray-100 last:border-0">
                             <td className="py-3">
                               <div className="flex items-center space-x-3">
