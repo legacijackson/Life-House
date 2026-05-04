@@ -79,3 +79,9 @@ export async function smsPasswordReset(to: string, resetUrl: string) {
     `Life House: Password reset link (expires in 1 hour): ${resetUrl} — If you didn't request this, call (855) 454-3387.`
   );
 }
+
+export async function smsStaffNewApplication(to: string, applicantName: string, confirmationNumber: string) {
+  await sendSMS(normalizePhone(to),
+    `Life House Alert: New housing application from ${applicantName} (${confirmationNumber}). Log in to review: lifehousereentry.com/app — (855) 454-3387`
+  );
+}

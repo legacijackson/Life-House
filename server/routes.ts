@@ -74,7 +74,7 @@ import Stripe from "stripe";
 import { setupAuth } from "./replitAuth";
 import { notifyNewLead, notifyCallbackAssigned, notifyAdmins, createNotification, sendEmailNotification, sendSmsNotification, logComm } from "./services/notifications";
 import { sendWelcomeEmail, sendHousingAssignedEmail, sendDonationReceiptEmail, sendNewApplicationEmail, sendStaffAlertEmail, sendAppointmentReminder } from "./services/email";
-import { smsHousingAssigned, smsWelcome, smsDocumentReady } from "./services/sms";
+import { smsHousingAssigned, smsWelcome, smsDocumentReady, smsStaffNewApplication } from "./services/sms";
 import { callCallLogScript, callLCPReferralScript, callIntakeScript } from "./services/apps-script";
 import { pushMaintenanceExpense } from "./services/finance";
 import { sendFaxViaTelnyx, getFaxStatus } from "./services/fax";
@@ -291,17 +291,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('New housing application:', application.id, confirmationNumber);
 
-      // Alert admins by email
-      const adminUsers = await db.select({ email: users.email, name: users.name })
+      // Alert admins by email + SMS
+      const applicantName = [req.body.firstName, req.body.lastName].filter(Boolean).join(' ') || 'Applicant';
+      const adminUsers = await db.select({ email: users.email, name: users.name, phone: users.phone })
         .from(users).where(eq(users.isAdmin, true));
       for (const admin of adminUsers) {
         if (admin.email) {
           sendNewApplicationEmail(admin.email, {
-            name: [req.body.firstName, req.body.lastName].filter(Boolean).join(' ') || 'Applicant',
+            name: applicantName,
             phone: req.body.phone,
             email: req.body.email,
             referralSource: req.body.referralSource,
           }).catch(e => console.error('[Apply] Admin alert email failed:', e.message));
+        }
+        if (admin.phone) {
+          smsStaffNewApplication(admin.phone, applicantName, confirmationNumber)
+            .catch(e => console.error('[Apply] Admin alert SMS failed:', e.message));
         }
       }
 
@@ -5906,6 +5911,18 @@ Resident is ready to begin programming and case management services.`,
     const url = getEmbedUrl(req.params.slug);
     res.json({ url });
   }));
+
+  // Public embed URL for client-facing signing page (no auth — slug is the secret)
+  app.get('/api/sign/embed/:slug', async (req: Request, res: Response) => {
+    try {
+      const { slug } = req.params;
+      if (!slug || slug.length < 8) return res.status(400).json({ message: 'Invalid signing link.' });
+      const url = getEmbedUrl(slug);
+      res.json({ url });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
 
   // DocuSeal webhook
   app.post('/api/webhooks/docuseal', async (req: Request, res: Response) => {

@@ -106,26 +106,55 @@ export default function Communications() {
     queryFn: () => apiRequest("GET", "/api/clients").then(r => r.json()),
   });
 
+  const optimisticAdd = (entry: Partial<CommLogEntry>) => {
+    const placeholder: CommLogEntry = {
+      id: `optimistic-${Date.now()}`,
+      channel: entry.channel ?? "email",
+      status: "pending",
+      toAddress: entry.toAddress ?? "",
+      subject: entry.subject,
+      body: entry.body,
+      templateType: "manual",
+      createdAt: new Date().toISOString(),
+      recipientName: entry.recipientName,
+    };
+    qc.setQueryData<CommLogEntry[]>(["/api/communications/log", channelFilter], (old = []) => [placeholder, ...old]);
+  };
+
   const sendEmail = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/communications/send-email", data).then(r => r.json()),
+    onMutate: (data: any) => {
+      const recipient = (staffUsers as any[]).find((u: any) => u.id === data.toUserId);
+      optimisticAdd({ channel: "email", toAddress: data.toEmail, subject: data.subject, body: data.body, recipientName: recipient?.name });
+    },
     onSuccess: () => {
       toast({ title: "Email sent" });
       setComposeOpen(false);
       setForm({ toUserId: "", toEmail: "", toPhone: "", subject: "", body: "" });
       qc.invalidateQueries({ queryKey: ["/api/communications/log"] });
     },
-    onError: (e: any) => toast({ title: "Failed to send email", description: e.message, variant: "destructive" }),
+    onError: (e: any) => {
+      qc.invalidateQueries({ queryKey: ["/api/communications/log"] });
+      toast({ title: "Failed to send email", description: e.message, variant: "destructive" });
+    },
   });
 
   const sendSMS = useMutation({
     mutationFn: (data: any) => apiRequest("POST", "/api/communications/send-sms", data).then(r => r.json()),
+    onMutate: (data: any) => {
+      const recipient = (staffUsers as any[]).find((u: any) => u.id === data.toUserId);
+      optimisticAdd({ channel: "sms", toAddress: data.toPhone, body: data.body, recipientName: recipient?.name });
+    },
     onSuccess: () => {
       toast({ title: "SMS sent" });
       setComposeOpen(false);
       setForm({ toUserId: "", toEmail: "", toPhone: "", subject: "", body: "" });
       qc.invalidateQueries({ queryKey: ["/api/communications/log"] });
     },
-    onError: (e: any) => toast({ title: "Failed to send SMS", description: e.message, variant: "destructive" }),
+    onError: (e: any) => {
+      qc.invalidateQueries({ queryKey: ["/api/communications/log"] });
+      toast({ title: "Failed to send SMS", description: e.message, variant: "destructive" });
+    },
   });
 
   const handleUserSelect = (userId: string) => {

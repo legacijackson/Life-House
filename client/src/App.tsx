@@ -50,6 +50,7 @@ import LifeDesignFormPage from "@/pages/life-design/index";
 import AuthorizationRequestsPage from "@/pages/authorization-requests";
 import MessagesPage from "@/pages/messages";
 import CommunicationsPage from "@/pages/communications";
+import SignPage from "@/pages/sign/index";
 
 // Remove ProtectedRoutes component as we're handling auth in Router now
 
@@ -70,6 +71,7 @@ function Router() {
             <Route path="/app" component={StaffLogin} />
             <Route path="/lcp/:token" component={LcpFormPage} />
             <Route path="/life-design/:token" component={LifeDesignFormPage} />
+            <Route path="/sign/:slug" component={SignPage} />
             <Route component={NotFound} />
           </>
         ) : (
@@ -108,6 +110,7 @@ function Router() {
             <Route path="/app/communications" component={CommunicationsPage} />
             <Route path="/lcp/:token" component={LcpFormPage} />
             <Route path="/life-design/:token" component={LifeDesignFormPage} />
+            <Route path="/sign/:slug" component={SignPage} />
             <Route component={NotFound} />
           </>
         )}
