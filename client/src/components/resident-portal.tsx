@@ -20,7 +20,10 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  Plus
+  Plus,
+  FileText,
+  Bell,
+  BookOpen
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +32,10 @@ import { useAuth } from "@/hooks/useAuth";
 interface ClientProfileData {
   housingStatus: 'not_needed' | 'requested' | 'pending_assignment' | 'assigned' | 'exited' | null;
   programStatus: string | null;
+  propertyAssignment: string | null;
+  roomAssignment: string | null;
+  moveInDate: string | null;
+  roommates: { id: string; name: string; avatar?: string }[];
 }
 
 
@@ -97,6 +104,10 @@ export function ResidentPortal() {
     select: (data: any) => ({
       housingStatus: data?.housingStatus ?? null,
       programStatus: data?.programStatus ?? null,
+      propertyAssignment: data?.propertyAssignment ?? null,
+      roomAssignment: data?.roomAssignment ?? null,
+      moveInDate: data?.moveInDate ?? null,
+      roommates: data?.roommates ?? [],
     }),
   });
 
@@ -128,6 +139,25 @@ export function ResidentPortal() {
   const { data: tickets } = useQuery<MaintenanceTicket[]>({
     queryKey: ['/api/tickets'],
   });
+
+  // House rules query
+  const { data: houseRules } = useQuery<{ id: string; title: string; content: string; category: string }[]>({
+    queryKey: ['/api/house-rules'],
+  });
+
+  // Housing notices query
+  const { data: housingNotices } = useQuery<{ id: string; title: string; content: string; priority: string; createdAt: string }[]>({
+    queryKey: ['/api/housing/notices'],
+  });
+
+  // Move-in checklist query (only when housed)
+  const { data: checklists } = useQuery<{ id: string; type: string; items: any[]; completedAt: string | null }[]>({
+    queryKey: ['/api/housing/checklists', (user as any)?.id],
+    queryFn: () => fetch(`/api/housing/checklists/${(user as any)?.id}`, { credentials: 'include' }).then(r => r.json()),
+    enabled: housingAssigned && !!(user as any)?.id,
+  });
+
+  const moveInChecklist = checklists?.find(c => c.type === 'move_in');
 
   // Resources query with search
   const { data: resources, isLoading: resourcesLoading } = useQuery<Resource[]>({
@@ -255,13 +285,17 @@ export function ResidentPortal() {
           {housingAssigned && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Bed Status</CardTitle>
+              <CardTitle className="text-sm font-medium">Housing</CardTitle>
               <Home className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {dashboardData?.bedStatus || 'Active'}
-              </div>
+              <div className="text-2xl font-bold text-green-600">Active</div>
+              {clientProfile?.roomAssignment && (
+                <p className="text-xs text-gray-500 mt-1">Room: {clientProfile.roomAssignment}</p>
+              )}
+              {clientProfile?.moveInDate && (
+                <p className="text-xs text-gray-400 mt-0.5">Since {new Date(clientProfile.moveInDate).toLocaleDateString()}</p>
+              )}
               <Badge className="mt-2 bg-green-100 text-green-800">Confirmed</Badge>
             </CardContent>
           </Card>
@@ -546,6 +580,127 @@ export function ResidentPortal() {
           </Card>
         </div>
         </div>
+
+        {/* Housing Notices */}
+        {housingNotices && housingNotices.length > 0 && (
+          <Card className="mb-6 border-orange-200">
+            <CardHeader>
+              <CardTitle className="flex items-center text-orange-800">
+                <Bell className="w-5 h-5 mr-2" />
+                Housing Notices
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {housingNotices.map(notice => (
+                  <div key={notice.id} className={`p-3 rounded-lg border ${notice.priority === 'urgent' ? 'bg-red-50 border-red-200' : notice.priority === 'high' ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-semibold text-sm">{notice.title}</h4>
+                      {notice.priority !== 'normal' && (
+                        <Badge className={notice.priority === 'urgent' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'} variant="secondary">
+                          {notice.priority}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-700 mt-1">{notice.content}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Roommate Info */}
+        {housingAssigned && clientProfile?.roommates && clientProfile.roommates.length > 0 && (
+          <Card className="mb-6 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-blue-800 text-sm flex items-center">
+                <Home className="w-4 h-4 mr-2" />
+                Your Roommates
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {clientProfile.roommates.map(roommate => (
+                  <div key={roommate.id} className="flex items-center gap-3 py-2 border-b last:border-0">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      {roommate.avatar ? (
+                        <img src={roommate.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-medium text-blue-700">
+                          {roommate.name?.split(' ').map(n => n[0]).join('') || '?'}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm text-gray-700">{roommate.name}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Move-in Checklist (shown when housed and checklist exists) */}
+        {housingAssigned && moveInChecklist && (
+          <Card className="mb-6 border-green-200">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center text-green-800">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Move-in Checklist
+                </span>
+                {moveInChecklist.completedAt ? (
+                  <Badge className="bg-green-100 text-green-800">Completed</Badge>
+                ) : (
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    {moveInChecklist.items.filter((i: any) => i.status === 'done' || i.status === 'na').length} / {moveInChecklist.items.length} Done
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {moveInChecklist.items.map((item: any) => (
+                  <div key={item.key} className="flex items-center gap-3 py-2 border-b last:border-0">
+                    {item.status === 'done' ? (
+                      <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    ) : item.status === 'na' ? (
+                      <div className="w-4 h-4 rounded-full bg-gray-200 flex-shrink-0" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                    )}
+                    <span className={`text-sm ${item.status === 'done' ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-3">Contact your case manager to complete any pending items.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* House Rules */}
+        {housingAssigned && houseRules && houseRules.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center text-gray-800">
+                <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+                House Rules
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {houseRules.map(rule => (
+                  <div key={rule.id} className="border-b last:border-0 pb-3 last:pb-0">
+                    <h4 className="font-semibold text-sm text-gray-900">{rule.title}</h4>
+                    <p className="text-sm text-gray-600 mt-1">{rule.content}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Dialog open={housingRequestOpen} onOpenChange={setHousingRequestOpen}>
           <DialogContent className="max-w-md">

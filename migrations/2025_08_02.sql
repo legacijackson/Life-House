@@ -43,6 +43,60 @@ CREATE TABLE IF NOT EXISTS housing_waitlist (
 CREATE INDEX IF NOT EXISTS housing_waitlist_participant_idx ON housing_waitlist(participant_id);
 CREATE INDEX IF NOT EXISTS housing_waitlist_status_idx ON housing_waitlist(status);
 
+-- Housing checklist type enum
+DO $$ BEGIN
+  CREATE TYPE housing_checklist_type AS ENUM ('move_in', 'move_out', 'room_inspection');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- Housing checklists table
+CREATE TABLE IF NOT EXISTS housing_checklists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id VARCHAR NOT NULL REFERENCES users(id),
+  type housing_checklist_type NOT NULL,
+  property_id VARCHAR,
+  room_assignment VARCHAR,
+  completed_at TIMESTAMP,
+  completed_by VARCHAR REFERENCES users(id),
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS housing_checklists_client_idx ON housing_checklists(client_id);
+CREATE INDEX IF NOT EXISTS housing_checklists_type_idx ON housing_checklists(type);
+
+-- House rules table
+CREATE TABLE IF NOT EXISTS house_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id VARCHAR,
+  title VARCHAR NOT NULL,
+  content TEXT NOT NULL,
+  category VARCHAR DEFAULT 'general',
+  is_active BOOLEAN DEFAULT true,
+  sort_order INTEGER DEFAULT 0,
+  created_by VARCHAR REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS house_rules_property_idx ON house_rules(property_id);
+CREATE INDEX IF NOT EXISTS house_rules_active_idx ON house_rules(is_active);
+
+-- Housing notices table
+CREATE TABLE IF NOT EXISTS housing_notices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  property_id VARCHAR,
+  room_assignment VARCHAR,
+  title VARCHAR NOT NULL,
+  content TEXT NOT NULL,
+  priority VARCHAR DEFAULT 'normal',
+  expires_at TIMESTAMP,
+  created_by VARCHAR REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS housing_notices_property_idx ON housing_notices(property_id);
+CREATE INDEX IF NOT EXISTS housing_notices_expires_idx ON housing_notices(expires_at);
+
 -- Admin users: seed only if not exist
 INSERT INTO users (id, role, name, email, first_name, last_name, password_hash, is_admin, created_at, updated_at)
 VALUES

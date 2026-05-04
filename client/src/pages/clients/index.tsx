@@ -223,6 +223,118 @@ function MiniModal({ title, open, onClose, children }: { title: string; open: bo
 
 // ── Assign Housing Modal ──────────────────────────────────────────────────────
 
+interface ChecklistItem { key: string; label: string; status: 'pending' | 'done' | 'na'; note?: string }
+interface HousingChecklistData { id: string; type: string; items: ChecklistItem[]; completedAt: string | null; createdAt: string }
+
+function HousingChecklistPanel({ clientId }: { clientId: string }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [newType, setNewType] = useState<string>('move_out');
+  const [showNew, setShowNew] = useState(false);
+
+  const { data: checklists, isLoading } = useQuery<HousingChecklistData[]>({
+    queryKey: ['/api/housing/checklists', clientId],
+    queryFn: () => fetch(`/api/housing/checklists/${clientId}`, { credentials: 'include' }).then(r => r.json()),
+  });
+
+  const updateItems = useMutation({
+    mutationFn: ({ id, items }: { id: string; items: ChecklistItem[] }) =>
+      apiRequest('PATCH', `/api/housing/checklists/${id}/items`, { items }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/housing/checklists', clientId] });
+      toast({ title: 'Checklist updated' });
+    },
+  });
+
+  const createChecklist = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/housing/checklists', { clientId, type: newType }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/housing/checklists', clientId] });
+      setShowNew(false);
+      toast({ title: 'Checklist created' });
+    },
+  });
+
+  const toggleItem = (checklist: HousingChecklistData, item: ChecklistItem) => {
+    const next: ChecklistItem['status'] = item.status === 'pending' ? 'done' : item.status === 'done' ? 'na' : 'pending';
+    const items = checklist.items.map(i => i.key === item.key ? { ...i, status: next } : i);
+    updateItems.mutate({ id: checklist.id, items });
+  };
+
+  if (isLoading) return <p className="text-xs text-gray-500">Loading checklists…</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-700">Housing Checklists</h3>
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowNew(v => !v)}>
+          <Plus className="h-3.5 w-3.5 mr-1" /> New Checklist
+        </Button>
+      </div>
+
+      {showNew && (
+        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border">
+          <Select value={newType} onValueChange={setNewType}>
+            <SelectTrigger className="h-8 text-xs w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="move_out">Move-Out Checklist</SelectItem>
+              <SelectItem value="room_inspection">Room Inspection</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="h-8 text-xs" onClick={() => createChecklist.mutate()} disabled={createChecklist.isPending}>
+            Create
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setShowNew(false)}>Cancel</Button>
+        </div>
+      )}
+
+      {(!checklists || checklists.length === 0) && (
+        <p className="text-xs text-gray-400">No housing checklists yet. A move-in checklist is created automatically when housing is assigned.</p>
+      )}
+
+      {checklists?.map(cl => {
+        const done = cl.items.filter(i => i.status === 'done' || i.status === 'na').length;
+        const total = cl.items.length;
+        return (
+          <div key={cl.id} className="border rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
+              <div>
+                <span className="text-xs font-semibold capitalize">{cl.type.replace('_', ' ')}</span>
+                <span className="text-xs text-gray-500 ml-2">{new Date(cl.createdAt).toLocaleDateString()}</span>
+              </div>
+              {cl.completedAt ? (
+                <Badge className="bg-green-100 text-green-800 text-xs">Completed</Badge>
+              ) : (
+                <Badge className="bg-yellow-100 text-yellow-800 text-xs">{done}/{total}</Badge>
+              )}
+            </div>
+            <div className="p-3 space-y-1">
+              {cl.items.map(item => (
+                <button
+                  key={item.key}
+                  className="flex items-center gap-2 w-full text-left py-1.5 px-2 rounded hover:bg-gray-50 group"
+                  onClick={() => toggleItem(cl, item)}
+                >
+                  {item.status === 'done' ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  ) : item.status === 'na' ? (
+                    <div className="h-4 w-4 rounded-full bg-gray-300 flex-shrink-0" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                  )}
+                  <span className={`text-xs ${item.status === 'done' ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AssignHousingModal({ client, onClose }: { client: Client; onClose: () => void }) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -594,6 +706,7 @@ function ClientProfileDrawer({ client, onClose }: { client: Client; onClose: () 
           <TabsTrigger value="notes" className="text-xs">Case Notes</TabsTrigger>
           <TabsTrigger value="events" className="text-xs">Events</TabsTrigger>
           <TabsTrigger value="documents" className="text-xs">Documents</TabsTrigger>
+          <TabsTrigger value="housing" className="text-xs">Housing</TabsTrigger>
           <TabsTrigger value="maintenance" className="text-xs">Maintenance</TabsTrigger>
           <TabsTrigger value="history" className="text-xs">History</TabsTrigger>
         </TabsList>
@@ -957,6 +1070,11 @@ function ClientProfileDrawer({ client, onClose }: { client: Client; onClose: () 
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          {/* Housing Tab */}
+          <TabsContent value="housing" className="p-4 space-y-4 mt-0">
+            <HousingChecklistPanel clientId={client.id} />
           </TabsContent>
 
           {/* Maintenance Tab */}

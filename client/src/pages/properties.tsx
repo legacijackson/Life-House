@@ -8,11 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Building, Bed, Users, Calendar, Settings, Plus, Wifi, Car, Coffee, Shield, UserPlus, X, Loader2,
+  BookOpen, Bell, Trash2,
 } from 'lucide-react';
+import { Textarea } from "@/components/ui/textarea";
 import { AddPropertyModal } from "@/components/add-property-modal";
 
 interface Property {
@@ -56,6 +59,9 @@ function amenityIcon(amenity: string) {
   return map[amenity] ?? Building;
 }
 
+interface HouseRule { id: string; title: string; content: string; category: string; sortOrder: number }
+interface HousingNotice { id: string; title: string; content: string; priority: string; createdAt: string }
+
 export default function Properties() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -66,6 +72,13 @@ export default function Properties() {
   const [roomBeds, setRoomBeds] = useState('1');
   const [assignOpen, setAssignOpen] = useState<Room | null>(null);
   const [assignClientId, setAssignClientId] = useState('');
+
+  // House rules state
+  const [addRuleOpen, setAddRuleOpen] = useState(false);
+  const [ruleForm, setRuleForm] = useState({ title: '', content: '', category: 'general' });
+  // Notices state
+  const [addNoticeOpen, setAddNoticeOpen] = useState(false);
+  const [noticeForm, setNoticeForm] = useState({ title: '', content: '', priority: 'normal' });
 
   const { data: properties = [], isLoading } = useQuery<Property[]>({
     queryKey: ['/api/properties'],
@@ -95,6 +108,48 @@ export default function Properties() {
       toast({ title: 'Room added' });
     },
     onError: () => toast({ title: 'Failed to add room', variant: 'destructive' }),
+  });
+
+  const { data: houseRules = [] } = useQuery<HouseRule[]>({
+    queryKey: ['/api/house-rules', selectedProperty?.id],
+    queryFn: () => apiRequest('GET', `/api/house-rules?propertyId=${selectedProperty!.id}`).then(r => r.json()),
+    enabled: !!selectedProperty?.id,
+  });
+
+  const { data: housingNotices = [] } = useQuery<HousingNotice[]>({
+    queryKey: ['/api/housing/notices', selectedProperty?.id],
+    queryFn: () => apiRequest('GET', `/api/housing/notices?propertyId=${selectedProperty!.id}`).then(r => r.json()),
+    enabled: !!selectedProperty?.id,
+  });
+
+  const createRule = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', '/api/house-rules', { ...data, propertyId: selectedProperty?.id }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/house-rules', selectedProperty?.id] });
+      setAddRuleOpen(false);
+      setRuleForm({ title: '', content: '', category: 'general' });
+      toast({ title: 'House rule added' });
+    },
+  });
+
+  const deleteRule = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/house-rules/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['/api/house-rules', selectedProperty?.id] }),
+  });
+
+  const createNotice = useMutation({
+    mutationFn: (data: any) => apiRequest('POST', '/api/housing/notices', { ...data, propertyId: selectedProperty?.id }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/housing/notices', selectedProperty?.id] });
+      setAddNoticeOpen(false);
+      setNoticeForm({ title: '', content: '', priority: 'normal' });
+      toast({ title: 'Notice posted' });
+    },
+  });
+
+  const deleteNotice = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/housing/notices/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['/api/housing/notices', selectedProperty?.id] }),
   });
 
   const assignBed = useMutation({
@@ -250,10 +305,12 @@ export default function Properties() {
                     </CardHeader>
                     <CardContent>
                       <Tabs defaultValue="rooms">
-                        <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="rooms">Rooms ({propertyRooms.length})</TabsTrigger>
-                          <TabsTrigger value="occupants">Occupants</TabsTrigger>
-                          <TabsTrigger value="details">Details</TabsTrigger>
+                        <TabsList className="grid w-full grid-cols-5">
+                          <TabsTrigger value="rooms" className="text-xs">Rooms ({propertyRooms.length})</TabsTrigger>
+                          <TabsTrigger value="occupants" className="text-xs">Occupants</TabsTrigger>
+                          <TabsTrigger value="rules" className="text-xs">Rules ({(houseRules as HouseRule[]).length})</TabsTrigger>
+                          <TabsTrigger value="notices" className="text-xs">Notices ({(housingNotices as HousingNotice[]).length})</TabsTrigger>
+                          <TabsTrigger value="details" className="text-xs">Details</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="rooms" className="mt-3 space-y-3">
@@ -340,6 +397,97 @@ export default function Properties() {
                                 </div>
                               </div>
                             ))}
+                        </TabsContent>
+
+                        {/* House Rules Tab */}
+                        <TabsContent value="rules" className="mt-3 space-y-3">
+                          <div className="flex justify-end">
+                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAddRuleOpen(v => !v)}>
+                              <Plus className="w-3 h-3 mr-1" /> Add Rule
+                            </Button>
+                          </div>
+                          {addRuleOpen && (
+                            <div className="border rounded-lg p-3 space-y-2 bg-gray-50">
+                              <Input placeholder="Rule title *" className="h-8 text-sm" value={ruleForm.title} onChange={e => setRuleForm(f => ({...f, title: e.target.value}))} />
+                              <Textarea placeholder="Rule content *" className="text-sm min-h-[60px]" value={ruleForm.content} onChange={e => setRuleForm(f => ({...f, content: e.target.value}))} />
+                              <Select value={ruleForm.category} onValueChange={v => setRuleForm(f => ({...f, category: v}))}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {['general','safety','quiet_hours','visitors','chores'].map(c => <SelectItem key={c} value={c}>{c.replace('_', ' ')}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex gap-2">
+                                <Button size="sm" className="h-7 text-xs" onClick={() => createRule.mutate(ruleForm)} disabled={!ruleForm.title || !ruleForm.content || createRule.isPending}>Save</Button>
+                                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAddRuleOpen(false)}>Cancel</Button>
+                              </div>
+                            </div>
+                          )}
+                          {(houseRules as HouseRule[]).length === 0 && !addRuleOpen && (
+                            <p className="text-xs text-gray-400 text-center py-6">No house rules yet.</p>
+                          )}
+                          {(houseRules as HouseRule[]).map(rule => (
+                            <div key={rule.id} className="flex items-start justify-between p-3 bg-white border rounded-lg gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <BookOpen className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                                  <span className="text-sm font-semibold truncate">{rule.title}</span>
+                                  <Badge variant="secondary" className="text-xs capitalize">{rule.category.replace('_',' ')}</Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 whitespace-pre-wrap">{rule.content}</p>
+                              </div>
+                              <button className="text-red-400 hover:text-red-600 flex-shrink-0" onClick={() => deleteRule.mutate(rule.id)}>
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </TabsContent>
+
+                        {/* Notices Tab */}
+                        <TabsContent value="notices" className="mt-3 space-y-3">
+                          <div className="flex justify-end">
+                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAddNoticeOpen(v => !v)}>
+                              <Bell className="w-3 h-3 mr-1" /> Post Notice
+                            </Button>
+                          </div>
+                          {addNoticeOpen && (
+                            <div className="border rounded-lg p-3 space-y-2 bg-gray-50">
+                              <Input placeholder="Notice title *" className="h-8 text-sm" value={noticeForm.title} onChange={e => setNoticeForm(f => ({...f, title: e.target.value}))} />
+                              <Textarea placeholder="Notice content *" className="text-sm min-h-[60px]" value={noticeForm.content} onChange={e => setNoticeForm(f => ({...f, content: e.target.value}))} />
+                              <Select value={noticeForm.priority} onValueChange={v => setNoticeForm(f => ({...f, priority: v}))}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {['low','normal','high','urgent'].map(p => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex gap-2">
+                                <Button size="sm" className="h-7 text-xs" onClick={() => createNotice.mutate(noticeForm)} disabled={!noticeForm.title || !noticeForm.content || createNotice.isPending}>Post</Button>
+                                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAddNoticeOpen(false)}>Cancel</Button>
+                              </div>
+                            </div>
+                          )}
+                          {(housingNotices as HousingNotice[]).length === 0 && !addNoticeOpen && (
+                            <p className="text-xs text-gray-400 text-center py-6">No active notices.</p>
+                          )}
+                          {(housingNotices as HousingNotice[]).map(notice => (
+                            <div key={notice.id} className={`flex items-start justify-between p-3 rounded-lg gap-3 border ${notice.priority === 'urgent' ? 'bg-red-50 border-red-200' : notice.priority === 'high' ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-200'}`}>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Bell className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span className="text-sm font-semibold truncate">{notice.title}</span>
+                                  {notice.priority !== 'normal' && (
+                                    <Badge className={`text-xs capitalize ${notice.priority === 'urgent' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}`}>
+                                      {notice.priority}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-700">{notice.content}</p>
+                                <p className="text-xs text-gray-400 mt-1">{new Date(notice.createdAt).toLocaleDateString()}</p>
+                              </div>
+                              <button className="text-red-400 hover:text-red-600 flex-shrink-0" onClick={() => deleteNotice.mutate(notice.id)}>
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
                         </TabsContent>
 
                         <TabsContent value="details" className="mt-3 space-y-4">

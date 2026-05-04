@@ -58,6 +58,9 @@ import {
   programs,
   programEnrollments,
   housingWaitlist,
+  housingChecklists,
+  houseRules,
+  housingNotices,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -72,6 +75,7 @@ import { pushMaintenanceExpense } from "./services/finance";
 import { sendFaxViaTelnyx, getFaxStatus } from "./services/fax";
 import { createSubmission, getSubmission, getEmbedUrl, leaseTemplateId, carePlanTemplateId, medicalReleaseTemplateId } from "./services/docuseal";
 import { uploadToSpaces, testSpacesConnection, getPresignedDownloadUrl, deleteFromSpaces } from "./services/spaces";
+import { generateConsentForm, generateCaseNote, generateMonthlyReport } from "./services/pdf";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -1154,18 +1158,55 @@ startxref
 
   app.post('/api/staff/generate-pdf', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { residentId, type } = req.body;
+      const { residentId, type, noteData } = req.body;
 
-      // In production, generate actual PDF here
-      const fileName = `${type}_${residentId}_${Date.now()}.pdf`;
-      const downloadUrl = `/downloads/${fileName}`;
+      let pdfBuffer: Buffer;
+      let fileName: string;
 
-      console.log(`Generated PDF: ${fileName} for resident ${residentId}`);
+      if (type === 'consent_form') {
+        const clientUser = await db.select().from(users).where(eq(users.id, residentId)).limit(1);
+        const client = clientUser[0];
+        pdfBuffer = await generateConsentForm({
+          id: residentId,
+          name: client?.name || 'Unknown',
+          email: client?.email || undefined,
+          phone: client?.phone || undefined,
+          caseManager: req.user.name,
+        });
+        fileName = `consent_form_${residentId}_${Date.now()}.pdf`;
+      } else if (type === 'case_note') {
+        pdfBuffer = await generateCaseNote({
+          clientName: noteData?.clientName || 'Unknown',
+          clientId: residentId,
+          author: req.user.name,
+          date: new Date().toLocaleDateString(),
+          noteType: noteData?.noteType || 'Progress Note',
+          content: noteData?.content || '',
+          goals: noteData?.goals,
+          nextSteps: noteData?.nextSteps,
+        });
+        fileName = `case_note_${residentId}_${Date.now()}.pdf`;
+      } else {
+        return res.status(400).json({ message: 'Unknown PDF type. Use: consent_form, case_note' });
+      }
 
-      res.json({ 
-        downloadUrl,
-        fileName 
-      });
+      let downloadUrl: string;
+      try {
+        const { url } = await uploadToSpaces({
+          buffer: pdfBuffer,
+          originalName: fileName,
+          mimeType: 'application/pdf',
+          folder: 'generated-pdfs',
+        });
+        downloadUrl = url;
+      } catch {
+        // Fallback: send inline
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        return res.send(pdfBuffer);
+      }
+
+      res.json({ downloadUrl, fileName });
     } catch (error) {
       console.error('PDF generation error:', error);
       res.status(500).json({ message: 'Failed to generate PDF' });
@@ -1174,16 +1215,52 @@ startxref
 
   app.post('/api/staff/monthly-report', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // In production, generate actual monthly report here
-      const fileName = `monthly_report_${new Date().toISOString().slice(0, 7)}.pdf`;
-      const downloadUrl = `/downloads/${fileName}`;
+      const now = new Date();
+      const month = now.toLocaleString('default', { month: 'long' });
+      const year = now.getFullYear();
 
-      console.log(`Generated monthly report: ${fileName}`);
+      const allClients = await db.select().from(users).where(eq(users.role as any, 'Resident'));
+      const stats = {
+        totalClients: allClients.length,
+        activeResidents: allClients.length,
+        newIntakes: 0,
+        discharges: 0,
+        employmentPlacements: 0,
+        housingPlacements: 0,
+        averageGoalCompletion: 0,
+      };
 
-      res.json({ 
-        downloadUrl,
-        fileName 
+      const pdfBuffer = await generateMonthlyReport({
+        month,
+        year,
+        generatedBy: req.user.name,
+        stats,
+        clients: allClients.slice(0, 50).map(c => ({
+          name: c.name || 'Unknown',
+          status: c.role,
+          programStage: 'Active',
+          goalCompletion: 0,
+        })),
       });
+
+      const fileName = `monthly_report_${now.toISOString().slice(0, 7)}.pdf`;
+
+      let downloadUrl: string;
+      try {
+        const { url } = await uploadToSpaces({
+          buffer: pdfBuffer,
+          originalName: fileName,
+          mimeType: 'application/pdf',
+          folder: 'reports',
+        });
+        downloadUrl = url;
+      } catch {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        return res.send(pdfBuffer);
+      }
+
+      res.json({ downloadUrl, fileName });
     } catch (error) {
       console.error('Monthly report generation error:', error);
       res.status(500).json({ message: 'Failed to generate monthly report' });
@@ -1312,6 +1389,27 @@ startxref
       await db.update(housingWaitlist)
         .set({ status: 'assigned', reviewedAt: now, reviewedBy: req.user.id })
         .where(eq(housingWaitlist.participantId, clientId));
+
+      // Create move-in checklist
+      const moveInItems = [
+        { key: 'photo_id', label: 'Photo ID verified and on file', status: 'pending' },
+        { key: 'orientation', label: 'Program orientation completed', status: 'pending' },
+        { key: 'house_rules', label: 'House rules reviewed and signed', status: 'pending' },
+        { key: 'room_inspection', label: 'Room inspection completed (pre-occupancy)', status: 'pending' },
+        { key: 'key_issued', label: 'Room key / access fob issued', status: 'pending' },
+        { key: 'emergency_contacts', label: 'Emergency contacts on file', status: 'pending' },
+        { key: 'benefits_check', label: 'Benefits status confirmed (Medi-Cal, CalFresh, GA)', status: 'pending' },
+        { key: 'case_manager_intro', label: 'Introduced to case manager', status: 'pending' },
+        { key: 'program_agreement', label: 'Program agreement signed', status: 'pending' },
+        { key: 'fee_agreement', label: '30% income contribution agreement signed', status: 'pending' },
+      ];
+      await db.insert(housingChecklists).values({
+        clientId,
+        type: 'move_in',
+        propertyId: propertyId || null,
+        roomAssignment: roomAssignment || bedAssignment || null,
+        items: moveInItems,
+      });
 
       res.json({ success: true, message: 'Housing assigned and client converted to resident' });
     } catch (error) {
@@ -1505,6 +1603,43 @@ startxref
   }));
 
   // Resident Portal Routes
+  app.get('/api/resident/profile', authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user.id;
+      const [profile] = await db.select().from(clientProfiles).where(eq(clientProfiles.userId, userId)).limit(1);
+      const [resProfile] = await db.select().from(residentProfiles).where(eq(residentProfiles.userId, userId)).limit(1);
+
+      let roommateInfo: any[] = [];
+      if (resProfile?.roomAssignment && resProfile?.propertyAssignment) {
+        const roommates = await db.select({
+          id: users.id,
+          name: users.name,
+          profileImageUrl: users.profileImageUrl,
+        })
+        .from(residentProfiles)
+        .innerJoin(users, eq(users.id, residentProfiles.userId))
+        .where(and(
+          eq(residentProfiles.propertyAssignment, resProfile.propertyAssignment),
+          eq(residentProfiles.roomAssignment, resProfile.roomAssignment),
+          sql`${residentProfiles.userId} != ${userId}`
+        ));
+        roommateInfo = roommates.map(r => ({ id: r.id, name: r.name, avatar: r.profileImageUrl }));
+      }
+
+      res.json({
+        programStatus: profile?.programStatus ?? null,
+        housingStatus: profile?.housingStatus ?? null,
+        propertyAssignment: resProfile?.propertyAssignment ?? null,
+        roomAssignment: resProfile?.roomAssignment ?? null,
+        moveInDate: resProfile?.moveInDate ? new Date(resProfile.moveInDate).toISOString() : null,
+        roommates: roommateInfo,
+      });
+    } catch (err) {
+      console.error('Resident profile error:', err);
+      res.status(500).json({ message: 'Failed to fetch profile' });
+    }
+  }));
+
   app.get('/api/resident/dashboard', roleRoute(['Resident'], async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user.id;
@@ -3511,102 +3646,6 @@ Resident is ready to begin programming and case management services.`,
       }
     }));
 
-  // Update user profile
-app.patch("/api/users/:id", requireAuth, async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const updates = req.body;
-
-    const [user] = await db
-      .update(users)
-      .set({
-        ...updates,
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId))
-      .returning();
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.json(user);
-  } catch (error) {
-    console.error("Error updating user:", error);
-    res.status(500).json({ error: "Failed to update user" });
-  }
-});
-
-// Upload user avatar
-app.post("/api/users/:id/avatar", requireAuth, upload.single('avatar'), async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const file = req.file;
-
-    if (!file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    // Store the uploaded file path as profile image
-    const profileImageUrl = `/uploads/${file.filename}`;
-
-    const [user] = await db
-      .update(users)
-      .set({
-        profileImageUrl: profileImageUrl,
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId))
-      .returning();
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.json({ 
-      message: "Avatar uploaded successfully", 
-      profileImage: profileImageUrl,
-      user 
-    });
-  } catch (error) {
-    console.error("Error uploading avatar:", error);
-    res.status(500).json({ error: "Failed to upload avatar" });
-  }
-});
-
-// Set user avatar preset
-app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const { avatarUrl } = req.body;
-
-    if (!avatarUrl) {
-      return res.status(400).json({ error: "Avatar URL is required" });
-    }
-
-    const [user] = await db
-      .update(users)
-      .set({
-        profileImageUrl: avatarUrl,
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, userId))
-      .returning();
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.json({ 
-      message: "Avatar updated successfully", 
-      profileImage: avatarUrl,
-      user 
-    });
-  } catch (error) {
-    console.error("Error setting avatar preset:", error);
-    res.status(500).json({ error: "Failed to set avatar preset" });
-  }
-});
 
   // Donor Management Routes
   app.get('/api/donors', roleRoute(['Admin', 'CaseManager'], async (req: AuthenticatedRequest, res: Response) => {
@@ -5762,6 +5801,163 @@ app.post("/api/users/:id/avatar-preset", requireAuth, async (req, res) => {
       res.status(500).json({ message: err.message });
     }
   });
+
+  // ── HOUSING CHECKLISTS ────────────────────────────────────────────────────
+
+  app.get('/api/housing/checklists/:clientId', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const checklists = await db.select().from(housingChecklists)
+        .where(eq(housingChecklists.clientId, req.params.clientId))
+        .orderBy(desc(housingChecklists.createdAt));
+      res.json(checklists);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to fetch checklists' });
+    }
+  }));
+
+  app.patch('/api/housing/checklists/:id/items', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { items } = req.body;
+      const allDone = Array.isArray(items) && items.every((i: any) => i.status === 'done' || i.status === 'na');
+      const [updated] = await db.update(housingChecklists)
+        .set({
+          items,
+          completedAt: allDone ? new Date() : null,
+          completedBy: allDone ? req.user.id : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(housingChecklists.id, req.params.id))
+        .returning();
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to update checklist' });
+    }
+  }));
+
+  app.post('/api/housing/checklists', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId, type, propertyId, roomAssignment, notes } = req.body;
+      let items: any[] = [];
+      if (type === 'move_out') {
+        items = [
+          { key: 'belongings_removed', label: 'All personal belongings removed', status: 'pending' },
+          { key: 'room_cleaned', label: 'Room cleaned to move-out standard', status: 'pending' },
+          { key: 'key_returned', label: 'Room key / access fob returned', status: 'pending' },
+          { key: 'room_inspection', label: 'Move-out room inspection completed', status: 'pending' },
+          { key: 'damages_noted', label: 'Any damages documented', status: 'pending' },
+          { key: 'forwarding_address', label: 'Forwarding address on file', status: 'pending' },
+          { key: 'next_housing', label: 'Next housing confirmed or referral provided', status: 'pending' },
+          { key: 'savings_released', label: 'Reimbursable savings processed (if applicable)', status: 'pending' },
+          { key: 'aftercare_plan', label: 'Aftercare / alumni plan in place', status: 'pending' },
+          { key: 'exit_interview', label: 'Exit interview completed', status: 'pending' },
+        ];
+      } else if (type === 'room_inspection') {
+        items = [
+          { key: 'walls', label: 'Walls — no damage or unauthorized markings', status: 'pending' },
+          { key: 'floors', label: 'Floors — clean, no damage', status: 'pending' },
+          { key: 'windows', label: 'Windows — intact, locks working', status: 'pending' },
+          { key: 'doors', label: 'Doors — locks functioning, no damage', status: 'pending' },
+          { key: 'furniture', label: 'Furniture — present and undamaged', status: 'pending' },
+          { key: 'bathroom', label: 'Bathroom — clean, fixtures working', status: 'pending' },
+          { key: 'smoke_detector', label: 'Smoke detector tested and functioning', status: 'pending' },
+        ];
+      }
+      const [checklist] = await db.insert(housingChecklists).values({ clientId, type, propertyId, roomAssignment, items, notes }).returning();
+      res.status(201).json(checklist);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to create checklist' });
+    }
+  }));
+
+  // ── HOUSE RULES ───────────────────────────────────────────────────────────
+
+  app.get('/api/house-rules', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.query;
+      const query = db.select().from(houseRules).where(eq(houseRules.isActive, true)).orderBy(asc(houseRules.sortOrder));
+      const rules = await query;
+      const filtered = propertyId
+        ? rules.filter(r => !r.propertyId || r.propertyId === propertyId)
+        : rules;
+      res.json(filtered);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to fetch house rules' });
+    }
+  });
+
+  app.post('/api/house-rules', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [rule] = await db.insert(houseRules).values({ ...req.body, createdBy: req.user.id }).returning();
+      res.status(201).json(rule);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to create house rule' });
+    }
+  }));
+
+  app.patch('/api/house-rules/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [rule] = await db.update(houseRules).set({ ...req.body, updatedAt: new Date() }).where(eq(houseRules.id, req.params.id)).returning();
+      res.json(rule);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to update house rule' });
+    }
+  }));
+
+  app.delete('/api/house-rules/:id', roleRoute(['Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.update(houseRules).set({ isActive: false, updatedAt: new Date() }).where(eq(houseRules.id, req.params.id));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to delete house rule' });
+    }
+  }));
+
+  // ── HOUSING NOTICES ───────────────────────────────────────────────────────
+
+  app.get('/api/housing/notices', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.query;
+      const notices = await db.select().from(housingNotices).orderBy(desc(housingNotices.createdAt));
+      const now = new Date();
+      const active = notices.filter(n => !n.expiresAt || n.expiresAt > now);
+      const filtered = propertyId ? active.filter(n => !n.propertyId || n.propertyId === propertyId) : active;
+      res.json(filtered);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to fetch notices' });
+    }
+  });
+
+  app.post('/api/housing/notices', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const [notice] = await db.insert(housingNotices).values({ ...req.body, createdBy: req.user.id }).returning();
+      res.status(201).json(notice);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to create notice' });
+    }
+  }));
+
+  app.delete('/api/housing/notices/:id', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await db.delete(housingNotices).where(eq(housingNotices.id, req.params.id));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to delete notice' });
+    }
+  }));
+
+  // Set user avatar preset
+  app.post('/api/users/:id/avatar-preset', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { avatarUrl } = req.body;
+      if (!avatarUrl) return res.status(400).json({ error: 'Avatar URL is required' });
+      await db.update(users).set({ profileImageUrl: avatarUrl, updatedAt: new Date() }).where(eq(users.id, id));
+      res.json({ avatarUrl });
+    } catch (error) {
+      console.error('Error setting avatar preset:', error);
+      res.status(500).json({ error: 'Failed to set avatar preset' });
+    }
+  }));
 
   // Create HTTP server
   const httpServer = createServer(app);

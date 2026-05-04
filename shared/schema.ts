@@ -1915,3 +1915,62 @@ export const insertYoutubeWatchEventSchema = createInsertSchema(youtubeWatchEven
 export type YoutubeWatchEvent = typeof youtubeWatchEvents.$inferSelect;
 
 export type HousingWaitlist = typeof housingWaitlist.$inferSelect;
+
+// ── HOUSING CHECKLISTS (move-in / move-out) ───────────────────────────────────
+export const housingChecklistTypeEnum = pgEnum('housing_checklist_type', ['move_in', 'move_out', 'room_inspection']);
+
+export const housingChecklists = pgTable('housing_checklists', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id).notNull(),
+  type: housingChecklistTypeEnum('type').notNull(),
+  propertyId: varchar('property_id'),
+  roomAssignment: varchar('room_assignment'),
+  completedAt: timestamp('completed_at'),
+  completedBy: varchar('completed_by').references(() => users.id),
+  // items: [{key, label, status: 'pending'|'done'|'na', completedAt, note}]
+  items: jsonb('items').notNull().default(sql`'[]'::jsonb`),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('housing_checklists_client_idx').on(table.clientId),
+  index('housing_checklists_type_idx').on(table.type),
+]);
+
+export type HousingChecklist = typeof housingChecklists.$inferSelect;
+
+// ── HOUSE RULES ───────────────────────────────────────────────────────────────
+export const houseRules = pgTable('house_rules', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar('property_id'),
+  title: varchar('title').notNull(),
+  content: text('content').notNull(),
+  category: varchar('category').default('general'), // general, safety, quiet_hours, visitors, chores
+  isActive: boolean('is_active').default(true),
+  sortOrder: integer('sort_order').default(0),
+  createdBy: varchar('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('house_rules_property_idx').on(table.propertyId),
+  index('house_rules_active_idx').on(table.isActive),
+]);
+
+export type HouseRule = typeof houseRules.$inferSelect;
+
+// ── HOUSING NOTICES ───────────────────────────────────────────────────────────
+export const housingNotices = pgTable('housing_notices', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar('property_id'),
+  roomAssignment: varchar('room_assignment'),
+  title: varchar('title').notNull(),
+  content: text('content').notNull(),
+  priority: varchar('priority').default('normal'), // low, normal, high, urgent
+  expiresAt: timestamp('expires_at'),
+  createdBy: varchar('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('housing_notices_property_idx').on(table.propertyId),
+  index('housing_notices_expires_idx').on(table.expiresAt),
+]);
