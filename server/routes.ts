@@ -61,6 +61,9 @@ import {
   housingChecklists,
   houseRules,
   housingNotices,
+  signatureRequests,
+  documents,
+  communicationLog,
 } from "@shared/schema";
 import { nanoid } from "nanoid";
 import { db } from "./db";
@@ -72,7 +75,6 @@ import { setupAuth } from "./replitAuth";
 import { notifyNewLead, notifyCallbackAssigned, notifyAdmins, createNotification, sendEmailNotification, sendSmsNotification, logComm } from "./services/notifications";
 import { sendWelcomeEmail, sendHousingAssignedEmail, sendDonationReceiptEmail, sendNewApplicationEmail, sendStaffAlertEmail, sendAppointmentReminder } from "./services/email";
 import { smsHousingAssigned, smsWelcome, smsDocumentReady } from "./services/sms";
-import { communicationLog } from "@shared/schema";
 import { callCallLogScript, callLCPReferralScript, callIntakeScript } from "./services/apps-script";
 import { pushMaintenanceExpense } from "./services/finance";
 import { sendFaxViaTelnyx, getFaxStatus } from "./services/fax";
@@ -2611,6 +2613,7 @@ startxref
         size: req.file.size,
         storagePath,
         checksum: null,
+        category: 'general' as any,
       });
 
       res.status(201).json({
@@ -3319,6 +3322,7 @@ startxref
         size: req.file?.size ?? null,
         storagePath,
         checksum: null,
+        category: 'general' as any,
       });
       res.json({
         id: doc.id,
@@ -3609,7 +3613,8 @@ Resident is ready to begin programming and case management services.`,
               ownerType: 'resident',
               ownerId: newResident.id,
               storagePath,
-              checksum: null
+              checksum: null,
+              category: 'general' as any,
             });
             documentIds.push(document.id);
           }
@@ -5730,7 +5735,7 @@ Resident is ready to begin programming and case management services.`,
       const telnyxFaxId: string = faxData?.fax_id ?? faxData?.id ?? '';
 
       if (telnyxFaxId) {
-        const updates: Partial<{ status: string; error: string; sentAt: Date; receivedAt: Date; pages: number }> = {};
+        const updates: Partial<{ status: string; error: string; sentAt: Date; receivedAt: Date; pages: number; mediaUrl: string }> = {};
 
         if (eventType === 'fax.sent') {
           updates.status = 'sent';
@@ -5743,6 +5748,93 @@ Resident is ready to begin programming and case management services.`,
           updates.status = 'received';
           updates.receivedAt = new Date();
           if (faxData.page_count) updates.pages = faxData.page_count;
+
+          // Auto-archive received fax PDF to Spaces + Google Drive
+          const mediaUrl: string = faxData.media_url ?? faxData.document_url ?? '';
+          if (mediaUrl) {
+            updates.mediaUrl = mediaUrl;
+
+            // Fire-and-forget archive pipeline
+            (async () => {
+              try {
+                // Download fax PDF
+                const pdfRes = await fetch(mediaUrl);
+                if (!pdfRes.ok) throw new Error(`Failed to download fax PDF: ${pdfRes.status}`);
+                const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
+                const fileName = `received_fax_${telnyxFaxId}_${Date.now()}.pdf`;
+
+                // Upload to Spaces
+                let spacesKey = '';
+                let spacesUrl = '';
+                try {
+                  const { key, url } = await uploadToSpaces({
+                    buffer: pdfBuffer,
+                    originalName: fileName,
+                    mimeType: 'application/pdf',
+                    folder: 'received-faxes',
+                  });
+                  spacesKey = key;
+                  spacesUrl = url;
+                } catch (e) {
+                  console.warn('[Fax archive] Spaces upload skipped:', (e as any).message);
+                }
+
+                // Create document record
+                const [docRecord] = await db.insert(documents).values({
+                  ownerType: 'org',
+                  ownerId: '00000000-0000-0000-0000-000000000000' as any,
+                  title: `Received Fax — ${new Date().toLocaleDateString()} from ${faxData.from ?? 'Unknown'}`,
+                  mime: 'application/pdf',
+                  size: pdfBuffer.length,
+                  storagePath: spacesUrl || mediaUrl,
+                  category: 'fax_received',
+                  spacesKey: spacesKey || undefined,
+                  sourceType: 'fax',
+                  sourceId: telnyxFaxId,
+                }).returning();
+
+                // Update fax record with doc and spaces info
+                await db.update(faxes).set({
+                  docId: docRecord.id,
+                  spacesKey: spacesKey || undefined,
+                  ...updates,
+                } as any).where(eq(faxes.telnyxFaxId, telnyxFaxId));
+
+                // Try Google Drive upload
+                try {
+                  const { uploadFile, ensureSubfolder } = await import('./services/google-drive');
+                  const inboxFolderId = process.env.GOOGLE_FAX_INBOX_FOLDER_ID;
+                  if (inboxFolderId) {
+                    const { id: driveFileId, url: driveUrl } = await uploadFile({
+                      name: fileName,
+                      mimeType: 'application/pdf',
+                      content: pdfBuffer,
+                      parentFolderId: inboxFolderId,
+                    });
+                    await db.update(faxes).set({ driveFileId, driveUrl } as any).where(eq(faxes.telnyxFaxId, telnyxFaxId));
+                    await db.update(documents).set({ driveFileId, driveUrl }).where(eq(documents.id, docRecord.id));
+                  }
+                } catch (e) {
+                  console.warn('[Fax archive] Google Drive upload skipped:', (e as any).message);
+                }
+
+                // Notify admins
+                await notifyAdmins({
+                  type: 'fax_received',
+                  title: `Received fax from ${faxData.from ?? 'Unknown'}`,
+                  body: `${faxData.page_count ?? '?'} page(s) received${spacesUrl ? ' — filed to Spaces' : ''}`,
+                  priority: 'normal',
+                });
+
+              } catch (archiveErr: any) {
+                console.error('[Fax archive] Pipeline failed:', archiveErr.message);
+              }
+            })();
+
+            // Respond immediately, don't wait for archive
+            res.json({ received: true });
+            return;
+          }
         }
 
         if (Object.keys(updates).length) {
@@ -5773,6 +5865,27 @@ Resident is ready to begin programming and case management services.`,
       const templateId = templateMap[templateType];
       if (!templateId) return res.status(400).json({ message: `Unknown templateType: ${templateType}` });
       const result = await createSubmission({ templateId, submitters, sendEmail: req.body.sendEmail ?? false });
+
+      // Create a signatureRequests record for tracking
+      const clientId = req.body.clientId;
+      if (clientId && result.id) {
+        try {
+          const firstSubmitter = result.submitters?.[0];
+          await db.insert(signatureRequests).values({
+            clientId,
+            requestedBy: req.user.id,
+            templateType,
+            templateName: templateType,
+            docusealSubmissionId: String(result.id),
+            docusealSubmitterSlug: firstSubmitter?.slug,
+            status: 'pending',
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          });
+        } catch (e) {
+          console.warn('[DocuSeal] Failed to create signatureRequest record:', (e as any).message);
+        }
+      }
+
       res.json(result);
     } catch (err: any) {
       console.error('DocuSeal submission error:', err.message);
@@ -5802,25 +5915,118 @@ Resident is ready to begin programming and case management services.`,
       const submissionData = payload?.data ?? {};
 
       if (eventType === 'submission.completed' && submissionData?.id) {
-        // Find the first submitter email and name to look up users
         const submitter = submissionData?.submitters?.[0];
-        if (submitter?.email) {
-          // Notify the client and case manager
-          const [signerUser] = await db
-            .select({ id: users.id, name: users.name })
-            .from(users)
-            .where(eq(users.email, submitter.email))
-            .limit(1);
+        const templateName = submissionData.template?.name ?? 'document';
 
-          if (signerUser) {
-            await createNotification({
-              userId: signerUser.id,
-              type: 'general',
-              title: 'Document signed',
-              body: `Your signature on "${submissionData.template?.name ?? 'document'}" has been received.`,
-            });
-          }
+        // Find client by submitter email
+        let signerUser: { id: string; name: string | null } | null = null;
+        if (submitter?.email) {
+          const [u] = await db.select({ id: users.id, name: users.name })
+            .from(users).where(eq(users.email, submitter.email)).limit(1);
+          signerUser = u ?? null;
         }
+
+        // Update signature_requests record
+        await db.update(signatureRequests)
+          .set({ status: 'completed', signedAt: new Date(), updatedAt: new Date() })
+          .where(eq(signatureRequests.docusealSubmissionId, String(submissionData.id)));
+
+        // Fire-and-forget: download signed PDF and archive
+        (async () => {
+          try {
+            // Download completed PDF from DocuSeal
+            const docusealBase = process.env.DOCUSEAL_BASE_URL || 'https://api.docuseal.co';
+            const docusealKey = process.env.DOCUSEAL_API_KEY;
+            if (!docusealKey) return;
+
+            const pdfRes = await fetch(`${docusealBase}/api/submissions/${submissionData.id}/download`, {
+              headers: { 'X-Auth-Token': docusealKey },
+            });
+            if (!pdfRes.ok) throw new Error(`DocuSeal PDF download failed: ${pdfRes.status}`);
+
+            const pdfBuffer = Buffer.from(await pdfRes.arrayBuffer());
+            const fileName = `signed_${templateName.replace(/\s+/g, '_')}_${submissionData.id}_${Date.now()}.pdf`;
+
+            // Upload to Spaces
+            let spacesUrl = '';
+            let spacesKey = '';
+            try {
+              const uploaded = await uploadToSpaces({
+                buffer: pdfBuffer,
+                originalName: fileName,
+                mimeType: 'application/pdf',
+                folder: 'signed-documents',
+              });
+              spacesUrl = uploaded.url;
+              spacesKey = uploaded.key;
+            } catch (e) {
+              console.warn('[DocuSeal archive] Spaces upload skipped:', (e as any).message);
+            }
+
+            // Create document record linked to client
+            const clientOwnerId = signerUser?.id ?? '00000000-0000-0000-0000-000000000000';
+            const [docRecord] = await db.insert(documents).values({
+              ownerType: 'resident',
+              ownerId: clientOwnerId as any,
+              title: `Signed: ${templateName}`,
+              mime: 'application/pdf',
+              size: pdfBuffer.length,
+              storagePath: spacesUrl || `docuseal://${submissionData.id}`,
+              category: 'signed',
+              spacesKey: spacesKey || undefined,
+              sourceType: 'esign',
+              sourceId: String(submissionData.id),
+            }).returning();
+
+            // Update signature_requests with signed PDF URL
+            await db.update(signatureRequests)
+              .set({ signedPdfUrl: spacesUrl || undefined, updatedAt: new Date() })
+              .where(eq(signatureRequests.docusealSubmissionId, String(submissionData.id)));
+
+            // Try Google Drive upload to client's Signed Documents folder
+            if (signerUser?.id) {
+              try {
+                const { uploadFile, ensureSubfolder } = await import('./services/google-drive');
+                const clientFolderEnv = process.env.GOOGLE_CLIENTS_FOLDER_ID;
+                if (clientFolderEnv) {
+                  const { id: driveFileId, url: driveUrl } = await uploadFile({
+                    name: fileName,
+                    mimeType: 'application/pdf',
+                    content: pdfBuffer,
+                    parentFolderId: clientFolderEnv,
+                  });
+                  await db.update(documents).set({ driveFileId, driveUrl }).where(eq(documents.id, docRecord.id));
+                  await db.update(signatureRequests).set({ driveFileId, driveUrl, updatedAt: new Date() })
+                    .where(eq(signatureRequests.docusealSubmissionId, String(submissionData.id)));
+                }
+              } catch (e) {
+                console.warn('[DocuSeal archive] Google Drive upload skipped:', (e as any).message);
+              }
+            }
+
+          } catch (archiveErr: any) {
+            console.error('[DocuSeal archive] Pipeline failed:', archiveErr.message);
+          }
+        })();
+
+        // Notify client and admins
+        if (signerUser) {
+          await createNotification({
+            userId: signerUser.id,
+            type: 'document_signed',
+            title: 'Document signed',
+            body: `Your signature on "${templateName}" has been received and filed.`,
+            priority: 'normal',
+          });
+        }
+
+        await notifyAdmins({
+          type: 'document_signed',
+          title: `Document signed: ${templateName}`,
+          body: `${signerUser?.name ?? 'Unknown'} signed "${templateName}"`,
+          priority: 'normal',
+        });
+
       } else if (eventType === 'submission.created' && submissionData?.id) {
         const submitter = submissionData?.submitters?.[0];
         if (submitter?.email) {
@@ -5848,6 +6054,87 @@ Resident is ready to begin programming and case management services.`,
       res.status(500).json({ message: err.message });
     }
   });
+
+  // ── SIGNATURE REQUESTS ───────────────────────────────────────────────────
+
+  app.get('/api/signature-requests', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId, status } = req.query as Record<string, string>;
+      const conditions: any[] = [];
+      if (clientId) conditions.push(eq(signatureRequests.clientId, clientId));
+      if (status) conditions.push(eq(signatureRequests.status as any, status));
+      const rows = await db.select({
+        id: signatureRequests.id,
+        clientId: signatureRequests.clientId,
+        clientName: users.name,
+        templateType: signatureRequests.templateType,
+        templateName: signatureRequests.templateName,
+        status: signatureRequests.status,
+        signedPdfUrl: signatureRequests.signedPdfUrl,
+        driveUrl: signatureRequests.driveUrl,
+        signedAt: signatureRequests.signedAt,
+        createdAt: signatureRequests.createdAt,
+        docusealSubmitterSlug: signatureRequests.docusealSubmitterSlug,
+      })
+        .from(signatureRequests)
+        .leftJoin(users, eq(users.id, signatureRequests.clientId))
+        .where(conditions.length ? and(...conditions) : undefined)
+        .orderBy(desc(signatureRequests.createdAt))
+        .limit(100);
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to fetch signature requests' });
+    }
+  }));
+
+  // Received faxes view
+  app.get('/api/fax/received', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const rows = await db.select({
+        id: faxes.id,
+        fromNumber: faxes.fromNumber,
+        pages: faxes.pages,
+        receivedAt: faxes.receivedAt,
+        mediaUrl: faxes.mediaUrl,
+        driveUrl: faxes.driveUrl,
+        spacesKey: faxes.spacesKey,
+        clientId: faxes.clientId,
+        clientName: users.name,
+        status: faxes.status,
+      })
+        .from(faxes)
+        .leftJoin(users, eq(users.id, faxes.clientId))
+        .where(eq(faxes.direction, 'inbound'))
+        .orderBy(desc(faxes.createdAt))
+        .limit(50);
+
+      // Generate presigned URLs for Spaces objects
+      const result = await Promise.all(rows.map(async r => {
+        let viewUrl = r.driveUrl || r.mediaUrl;
+        if (r.spacesKey && !viewUrl) {
+          try { viewUrl = await getPresignedDownloadUrl(r.spacesKey); } catch {}
+        }
+        return { ...r, viewUrl };
+      }));
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to fetch received faxes' });
+    }
+  }));
+
+  // Link received fax to a client
+  app.patch('/api/fax/:id/link-client', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId } = req.body;
+      const [updated] = await db.update(faxes)
+        .set({ clientId })
+        .where(eq(faxes.id, req.params.id))
+        .returning();
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: 'Failed to link fax to client' });
+    }
+  }));
 
   // ── HOUSING CHECKLISTS ────────────────────────────────────────────────────
 

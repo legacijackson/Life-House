@@ -207,7 +207,7 @@ export interface IStorage {
   // Document operations
   getDocuments(filters?: { ownerType?: string; ownerId?: string }): Promise<DBDocument[]>;
   getDocument(id: string): Promise<DBDocument | undefined>;
-  createDocument(document: Omit<DBDocument, 'id' | 'uploadedAt'>): Promise<DBDocument>;
+  createDocument(document: Pick<DBDocument, 'ownerType' | 'ownerId' | 'title' | 'mime' | 'size' | 'storagePath' | 'checksum'> & Partial<Omit<DBDocument, 'id' | 'uploadedAt' | 'ownerType' | 'ownerId' | 'title' | 'mime' | 'size' | 'storagePath' | 'checksum'>>): Promise<DBDocument>;
   updateDocument(id: string, updates: Partial<DBDocument>): Promise<DBDocument>;
   deleteDocument(id: string): Promise<void>;
   getDocumentsByOwner(ownerType: string, ownerId: string): Promise<DBDocument[]>;
@@ -1405,7 +1405,7 @@ Notes: ${residentData.eligibilityNotes || 'None'}`
     return document;
   }
 
-  async createDocument(document: Omit<DBDocument, 'id' | 'uploadedAt'>): Promise<DBDocument> {
+  async createDocument(document: Pick<DBDocument, 'ownerType' | 'ownerId' | 'title' | 'mime' | 'size' | 'storagePath' | 'checksum'> & Partial<Omit<DBDocument, 'id' | 'uploadedAt' | 'ownerType' | 'ownerId' | 'title' | 'mime' | 'size' | 'storagePath' | 'checksum'>>): Promise<DBDocument> {
     const [newDocument] = await db.insert(documents).values(document).returning();
     return newDocument;
   }

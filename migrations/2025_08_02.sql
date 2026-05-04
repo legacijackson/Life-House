@@ -126,6 +126,54 @@ CREATE INDEX IF NOT EXISTS comm_log_user_idx ON communication_log(to_user_id);
 CREATE INDEX IF NOT EXISTS comm_log_channel_idx ON communication_log(channel);
 CREATE INDEX IF NOT EXISTS comm_log_created_idx ON communication_log(created_at);
 
+-- Document category enum
+DO $$ BEGIN
+  CREATE TYPE document_category AS ENUM (
+    'general','signed','fax_received','fax_sent','consent_form',
+    'care_plan','case_note','id_document','lease','medical','other'
+  );
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- Add new columns to documents table
+ALTER TABLE documents
+  ADD COLUMN IF NOT EXISTS category document_category DEFAULT 'general',
+  ADD COLUMN IF NOT EXISTS drive_file_id VARCHAR,
+  ADD COLUMN IF NOT EXISTS drive_url VARCHAR,
+  ADD COLUMN IF NOT EXISTS spaces_key VARCHAR,
+  ADD COLUMN IF NOT EXISTS presigned_url VARCHAR,
+  ADD COLUMN IF NOT EXISTS source_type VARCHAR,
+  ADD COLUMN IF NOT EXISTS source_id VARCHAR,
+  ADD COLUMN IF NOT EXISTS uploaded_by VARCHAR REFERENCES users(id);
+
+-- Add new columns to faxes table
+ALTER TABLE faxes
+  ADD COLUMN IF NOT EXISTS media_url TEXT,
+  ADD COLUMN IF NOT EXISTS drive_file_id TEXT,
+  ADD COLUMN IF NOT EXISTS drive_url TEXT,
+  ADD COLUMN IF NOT EXISTS spaces_key TEXT;
+
+-- Signature requests table
+CREATE TABLE IF NOT EXISTS signature_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id VARCHAR REFERENCES users(id),
+  requested_by VARCHAR REFERENCES users(id),
+  template_type VARCHAR NOT NULL,
+  template_name VARCHAR,
+  docuseal_submission_id TEXT,
+  docuseal_submitter_slug TEXT,
+  status VARCHAR DEFAULT 'pending',
+  signed_pdf_url VARCHAR,
+  drive_file_id VARCHAR,
+  drive_url VARCHAR,
+  signed_at TIMESTAMP,
+  expires_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS sig_requests_client_idx ON signature_requests(client_id);
+CREATE INDEX IF NOT EXISTS sig_requests_status_idx ON signature_requests(status);
+CREATE INDEX IF NOT EXISTS sig_requests_submission_idx ON signature_requests(docuseal_submission_id);
+
 -- Admin users: seed only if not exist
 INSERT INTO users (id, role, name, email, first_name, last_name, password_hash, is_admin, created_at, updated_at)
 VALUES

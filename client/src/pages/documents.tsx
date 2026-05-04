@@ -30,7 +30,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { FileIcon, UploadIcon, DownloadIcon, TrashIcon, FileTextIcon, ImageIcon, PenToolIcon, EditIcon, Send, FileSignature, History } from 'lucide-react';
+import { FileIcon, UploadIcon, DownloadIcon, TrashIcon, FileTextIcon, ImageIcon, PenToolIcon, EditIcon, Send, FileSignature, History, Inbox, Link, CheckCircle, Clock, XCircle, ExternalLink } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
 import { SignatureCanvas } from '@/components/signature-canvas';
@@ -65,6 +66,9 @@ export default function DocumentsPage() {
   const [signEmail, setSignEmail] = useState('');
   const [signName, setSignName] = useState('');
 
+  const [linkFaxId, setLinkFaxId] = useState<string | null>(null);
+  const [linkClientId, setLinkClientId] = useState('');
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -73,10 +77,30 @@ export default function DocumentsPage() {
     queryKey: ['/api/documents'],
   });
 
-  // Fetch fax history
+  // Fetch fax history (sent)
   const { data: faxHistory = [] } = useQuery<any[]>({
     queryKey: ['/api/fax'],
     queryFn: () => apiRequest('GET', '/api/fax').then((r) => r.json()),
+  });
+
+  // Fetch received faxes
+  const { data: receivedFaxes = [] } = useQuery<any[]>({
+    queryKey: ['/api/fax/received'],
+    queryFn: () => apiRequest('GET', '/api/fax/received').then((r) => r.json()),
+    refetchInterval: 30000,
+  });
+
+  // Fetch signature requests
+  const { data: signatureRequests = [] } = useQuery<any[]>({
+    queryKey: ['/api/signature-requests'],
+    queryFn: () => apiRequest('GET', '/api/signature-requests').then((r) => r.json()),
+    refetchInterval: 30000,
+  });
+
+  // Fetch clients for link dialog
+  const { data: clients = [] } = useQuery<any[]>({
+    queryKey: ['/api/users'],
+    queryFn: () => apiRequest('GET', '/api/users').then((r) => r.json()),
   });
 
   // Upload mutation
@@ -140,6 +164,18 @@ export default function DocumentsPage() {
       toast({ title: 'Fax queued', description: 'The document has been queued for faxing.' });
     },
     onError: (err: any) => toast({ title: 'Fax failed', description: err.message, variant: 'destructive' }),
+  });
+
+  const linkFaxClientMutation = useMutation({
+    mutationFn: async ({ faxId, clientId }: { faxId: string; clientId: string }) =>
+      apiRequest('PATCH', `/api/fax/${faxId}/link-client`, { clientId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/fax/received'] });
+      setLinkFaxId(null);
+      setLinkClientId('');
+      toast({ title: 'Linked', description: 'Fax linked to client record.' });
+    },
+    onError: (err: any) => toast({ title: 'Error', description: err.message, variant: 'destructive' }),
   });
 
   const sendSignMutation = useMutation({
@@ -268,6 +304,24 @@ export default function DocumentsPage() {
     }
   };
 
+  const getSignStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'pending': return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'expired': return <XCircle className="h-4 w-4 text-red-500" />;
+      default: return <Clock className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getSignStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'expired': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="container mx-auto py-8">
       <Card>
@@ -277,17 +331,205 @@ export default function DocumentsPage() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="documents">
-            <TabsList className="mb-4">
+            <TabsList className="mb-4 flex flex-wrap gap-1">
               <TabsTrigger value="documents">
                 <FileIcon className="w-4 h-4 mr-2" />
                 Documents
               </TabsTrigger>
+              <TabsTrigger value="received-faxes">
+                <Inbox className="w-4 h-4 mr-2" />
+                Received Faxes {receivedFaxes.length > 0 && `(${receivedFaxes.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="esign-requests">
+                <FileSignature className="w-4 h-4 mr-2" />
+                eSign Requests {signatureRequests.length > 0 && `(${signatureRequests.length})`}
+              </TabsTrigger>
               <TabsTrigger value="fax-history">
                 <History className="w-4 h-4 mr-2" />
-                Fax History {faxHistory.length > 0 && `(${faxHistory.length})`}
+                Sent Faxes {faxHistory.length > 0 && `(${faxHistory.length})`}
               </TabsTrigger>
             </TabsList>
 
+            {/* Received Faxes Tab */}
+            <TabsContent value="received-faxes">
+              {/* Link-client dialog */}
+              <Dialog open={!!linkFaxId} onOpenChange={(o) => { if (!o) { setLinkFaxId(null); setLinkClientId(''); } }}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Link Fax to Client</DialogTitle>
+                    <DialogDescription>Associate this received fax with a client record.</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <Label>Select Client</Label>
+                    <Select value={linkClientId} onValueChange={setLinkClientId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a client…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name || `${c.firstName} ${c.lastName}`}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setLinkFaxId(null); setLinkClientId(''); }}>Cancel</Button>
+                    <Button
+                      disabled={!linkClientId || linkFaxClientMutation.isPending}
+                      onClick={() => linkFaxId && linkFaxClientMutation.mutate({ faxId: linkFaxId, clientId: linkClientId })}
+                    >
+                      {linkFaxClientMutation.isPending ? 'Linking…' : 'Link to Client'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>From</TableHead>
+                    <TableHead>Pages</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Received</TableHead>
+                    <TableHead>Storage</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {receivedFaxes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                        No received faxes yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : receivedFaxes.map((fax: any) => (
+                    <TableRow key={fax.id}>
+                      <TableCell className="font-medium">{fax.fromNumber ?? '—'}</TableCell>
+                      <TableCell>{fax.pages ?? '—'}</TableCell>
+                      <TableCell>
+                        {fax.clientName ? (
+                          <span className="text-sm font-medium">{fax.clientName}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">Unlinked</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {fax.receivedAt ? format(new Date(fax.receivedAt), 'MMM d, yyyy h:mm a') :
+                         fax.createdAt ? format(new Date(fax.createdAt), 'MMM d, yyyy h:mm a') : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {fax.driveUrl ? (
+                          <Badge className="bg-blue-100 text-blue-800">Drive + Spaces</Badge>
+                        ) : fax.spacesKey ? (
+                          <Badge className="bg-green-100 text-green-800">Spaces</Badge>
+                        ) : (
+                          <Badge className="bg-gray-100 text-gray-500">Pending</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        {fax.presignedUrl && (
+                          <Button variant="ghost" size="sm" title="View PDF" onClick={() => window.open(fax.presignedUrl, '_blank')}>
+                            <DownloadIcon className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {fax.driveUrl && (
+                          <Button variant="ghost" size="sm" title="Open in Drive" onClick={() => window.open(fax.driveUrl, '_blank')}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" title="Link to Client" onClick={() => setLinkFaxId(fax.id)}>
+                          <Link className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            {/* eSign Requests Tab */}
+            <TabsContent value="esign-requests">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Document</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Requested</TableHead>
+                    <TableHead>Signed</TableHead>
+                    <TableHead>Storage</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {signatureRequests.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-gray-500 py-8">
+                        No eSign requests yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : signatureRequests.map((req: any) => (
+                    <TableRow key={req.id}>
+                      <TableCell className="font-medium">
+                        {req.templateName || req.templateType}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {req.clientName ?? <span className="text-gray-400 italic">—</span>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {getSignStatusIcon(req.status)}
+                          <Badge className={getSignStatusColor(req.status)}>{req.status}</Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {req.createdAt ? format(new Date(req.createdAt), 'MMM d, yyyy') : '—'}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {req.signedAt ? format(new Date(req.signedAt), 'MMM d, yyyy') : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {req.driveUrl ? (
+                          <Badge className="bg-blue-100 text-blue-800">Drive + Spaces</Badge>
+                        ) : req.signedPdfUrl ? (
+                          <Badge className="bg-green-100 text-green-800">Spaces</Badge>
+                        ) : (
+                          <Badge className="bg-gray-100 text-gray-500">Pending</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        {req.signedPdfUrl && (
+                          <Button variant="ghost" size="sm" title="View Signed PDF" onClick={() => window.open(req.signedPdfUrl, '_blank')}>
+                            <DownloadIcon className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {req.driveUrl && (
+                          <Button variant="ghost" size="sm" title="Open in Drive" onClick={() => window.open(req.driveUrl, '_blank')}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {req.docusealSubmitterSlug && req.status === 'pending' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Copy Signing Link"
+                            onClick={() => {
+                              const url = `${window.location.origin}/sign/${req.docusealSubmitterSlug}`;
+                              navigator.clipboard.writeText(url);
+                              toast({ title: 'Copied', description: 'Signing link copied to clipboard.' });
+                            }}
+                          >
+                            <Link className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            {/* Sent Faxes Tab */}
             <TabsContent value="fax-history">
               <Table>
                 <TableHeader>

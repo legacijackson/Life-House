@@ -621,6 +621,11 @@ export const partners = pgTable("partners", {
   index("partners_confirmation_idx").on(table.confirmationNumber),
 ]);
 
+export const documentCategoryEnum = pgEnum('document_category', [
+  'general', 'signed', 'fax_received', 'fax_sent', 'consent_form',
+  'care_plan', 'case_note', 'id_document', 'lease', 'medical', 'other'
+]);
+
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   ownerType: varchar("owner_type").notNull(), // resident | org
@@ -631,6 +636,14 @@ export const documents = pgTable("documents", {
   storagePath: varchar("storage_path").notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow(),
   checksum: varchar("checksum"),
+  category: documentCategoryEnum('category').default('general'),
+  driveFileId: varchar("drive_file_id"),
+  driveUrl: varchar("drive_url"),
+  spacesKey: varchar("spaces_key"),
+  presignedUrl: varchar("presigned_url"),
+  sourceType: varchar("source_type"), // upload | fax | esign | generated
+  sourceId: varchar("source_id"),     // telnyxFaxId or docuseal submission ID
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
 });
 
 // Homepage Content table for editable copy
@@ -1733,6 +1746,10 @@ export const faxes = pgTable('faxes', {
   toNumber: text('to_number'),
   fromNumber: text('from_number'),
   docId: uuid('doc_id').references(() => documents.id),
+  mediaUrl: text('media_url'),         // URL to fax PDF from Telnyx
+  driveFileId: text('drive_file_id'),  // Google Drive file ID after archiving
+  driveUrl: text('drive_url'),         // Google Drive web view URL
+  spacesKey: text('spaces_key'),       // DigitalOcean Spaces object key
   coverPageIncluded: boolean('cover_page_included').default(true),
   pages: integer('pages'),
   sentAt: timestamp('sent_at'),
@@ -1741,6 +1758,31 @@ export const faxes = pgTable('faxes', {
   error: text('error'),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+// ── SIGNATURE REQUESTS ────────────────────────────────────────────────────────
+export const signatureRequests = pgTable('signature_requests', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar('client_id').references(() => users.id),
+  requestedBy: varchar('requested_by').references(() => users.id),
+  templateType: varchar('template_type').notNull(), // lease, care_plan, medical_release, consent_form, custom
+  templateName: varchar('template_name'),
+  docusealSubmissionId: text('docuseal_submission_id'),
+  docusealSubmitterSlug: text('docuseal_submitter_slug'),
+  status: varchar('status').default('pending'),  // pending | completed | declined | expired
+  signedPdfUrl: varchar('signed_pdf_url'),        // Spaces URL after download
+  driveFileId: varchar('drive_file_id'),
+  driveUrl: varchar('drive_url'),
+  signedAt: timestamp('signed_at'),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('sig_requests_client_idx').on(table.clientId),
+  index('sig_requests_status_idx').on(table.status),
+  index('sig_requests_submission_idx').on(table.docusealSubmissionId),
+]);
+
+export type SignatureRequest = typeof signatureRequests.$inferSelect;
 
 // ── TOUCHPOINTS ────────────────────────────────────────────────────────────────
 export const touchpoints = pgTable('touchpoints', {
