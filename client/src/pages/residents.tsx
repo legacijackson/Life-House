@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
@@ -23,7 +23,10 @@ import {
   TrendingUp,
   FileText,
   Bed,
-  ExternalLink
+  ExternalLink,
+  ClipboardList,
+  CheckCircle2,
+  Home,
 } from 'lucide-react';
 
 interface Resident {
@@ -41,6 +44,49 @@ interface Resident {
   justiceStatus?: string;
   enrollmentDate?: string;
   progressScore?: number;
+}
+
+function ResidentTimeline({ residentId }: { residentId: string }) {
+  const { data: events = [], isLoading } = useQuery<any[]>({
+    queryKey: [`/api/clients/${residentId}/timeline`],
+    queryFn: () => apiRequest('GET', `/api/clients/${residentId}/timeline`).then(r => r.json()),
+  });
+
+  const iconMap: Record<string, React.ReactNode> = {
+    file: <ClipboardList className="h-3 w-3" />,
+    check: <CheckCircle2 className="h-3 w-3" />,
+    home: <Home className="h-3 w-3" />,
+    star: <TrendingUp className="h-3 w-3" />,
+  };
+  const colorMap: Record<string, string> = {
+    case_note: 'bg-blue-100 text-blue-600',
+    touchpoint: 'bg-green-100 text-green-600',
+    housing: 'bg-purple-100 text-purple-600',
+    milestone: 'bg-amber-100 text-amber-600',
+  };
+
+  if (isLoading) return <p className="text-xs text-gray-400 py-2">Loading…</p>;
+  if (!events.length) return <p className="text-xs text-gray-400 py-2">No activity recorded yet.</p>;
+
+  return (
+    <div className="relative space-y-3 max-h-64 overflow-y-auto pr-1">
+      <div className="absolute left-3.5 top-0 bottom-0 w-px bg-gray-200" />
+      {events.map((evt: any) => (
+        <div key={evt.id} className="flex gap-3 relative">
+          <div className={`z-10 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${colorMap[evt.type] ?? 'bg-gray-100 text-gray-500'}`}>
+            {iconMap[evt.icon] ?? <ClipboardList className="h-3 w-3" />}
+          </div>
+          <div className="flex-1 min-w-0 pb-2">
+            <p className="text-xs font-medium text-gray-900 leading-tight">{evt.title}</p>
+            {evt.description && <p className="text-xs text-gray-500 truncate mt-0.5">{evt.description}</p>}
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {evt.date ? new Date(evt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function Residents() {
@@ -337,11 +383,9 @@ export default function Residents() {
                         )}
                       </TabsContent>
 
-                      <TabsContent value="activity" className="space-y-4">
+                      <TabsContent value="activity" className="space-y-3">
                         <h4 className="text-sm font-medium text-gray-700">Recent Activity</h4>
-                        <p className="text-sm text-gray-500 text-center py-4">
-                          View case notes for a full activity history.
-                        </p>
+                        <ResidentTimeline residentId={selectedResident.id} />
                       </TabsContent>
                     </Tabs>
 

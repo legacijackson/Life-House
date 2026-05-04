@@ -27,6 +27,11 @@ import {
   ClipboardCheck,
   CheckSquare,
   Send,
+  DollarSign,
+  Wrench,
+  FolderOpen,
+  BookOpen,
+  MonitorPlay,
 } from "lucide-react";
 
 // Define navigation for different contexts
@@ -43,48 +48,51 @@ const residentNavigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Check-in", href: "/app/check-in", icon: CheckSquare },
   { name: "Resources", href: "/app/resources", icon: Archive },
+  { name: "Documents", href: "/app/documents", icon: FolderOpen },
   { name: "Requests", href: "/app/authorization-requests", icon: ClipboardCheck },
-  { name: "Maintenance", href: "/app/maintenance", icon: Building },
+  { name: "Maintenance", href: "/app/maintenance", icon: Wrench },
   { name: "Messages", href: "/app/messages", icon: MessageSquare },
 ];
 
 // Staff navigation (for case workers)
 const staffNavigation = [
-  { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
+  { name: "Dashboard", href: "/app/dashboard", icon: Home },
   { name: "Clients", href: "/app/clients", icon: Users },
   { name: "Intake & Referrals", href: "/app/intake", icon: UserPlus },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Events & Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Check-in Roster", href: "/app/check-in", icon: CheckSquare },
-  { name: "Onboarding", href: "/app/onboarding", icon: UserPlus },
+  { name: "Onboarding", href: "/app/onboarding", icon: BookOpen },
+  { name: "Documents", href: "/app/documents", icon: FolderOpen },
   { name: "Auth Requests", href: "/app/authorization-requests", icon: ClipboardCheck },
   { name: "Messages", href: "/app/messages", icon: MessageSquare },
   { name: "Communications", href: "/app/communications", icon: Send },
   { name: "Properties", href: "/app/properties", icon: Building },
-  { name: "Reports", href: "/app/reports", icon: BarChart3 },
+  { name: "Maintenance", href: "/app/maintenance", icon: Wrench },
   { name: "Resources", href: "/app/resources", icon: Archive },
-  { name: "Maintenance", href: "/app/maintenance", icon: Building },
-  { name: "Workshop Studio", href: "/app/workshop-studio", icon: Building },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
+  { name: "Workshop Studio", href: "/app/workshop-studio", icon: MonitorPlay },
 ];
 
 // Admin navigation (includes all staff items plus admin panel)
 const adminNavigation = [
-  { name: "Staff Dashboard", href: "/app/staff-dashboard", icon: Home },
+  { name: "Dashboard", href: "/app/dashboard", icon: Home },
   { name: "Clients", href: "/app/clients", icon: Users },
   { name: "Intake & Referrals", href: "/app/intake", icon: UserPlus },
   { name: "Case Notes", href: "/app/case-notes", icon: FileText },
   { name: "Events & Attendance", href: "/app/attendance", icon: Calendar },
   { name: "Check-in Roster", href: "/app/check-in", icon: CheckSquare },
-  { name: "Onboarding", href: "/app/onboarding", icon: UserPlus },
+  { name: "Onboarding", href: "/app/onboarding", icon: BookOpen },
+  { name: "Documents", href: "/app/documents", icon: FolderOpen },
   { name: "Auth Requests", href: "/app/authorization-requests", icon: ClipboardCheck },
   { name: "Messages", href: "/app/messages", icon: MessageSquare },
   { name: "Communications", href: "/app/communications", icon: Send },
   { name: "Properties", href: "/app/properties", icon: Building },
-  { name: "Reports", href: "/app/reports", icon: BarChart3 },
+  { name: "Maintenance", href: "/app/maintenance", icon: Wrench },
   { name: "Resources", href: "/app/resources", icon: Archive },
-  { name: "Maintenance", href: "/app/maintenance", icon: Building },
-  { name: "Workshop Studio", href: "/app/workshop-studio", icon: Building },
-  { name: "Finance", href: "/app/finance", icon: BarChart3 },
+  { name: "Reports", href: "/app/reports", icon: BarChart3 },
+  { name: "Workshop Studio", href: "/app/workshop-studio", icon: MonitorPlay },
+  { name: "Finance", href: "/app/finance", icon: DollarSign },
   { name: "Admin Panel", href: "/app/admin-panel", icon: Settings },
 ];
 
