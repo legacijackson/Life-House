@@ -1916,6 +1916,30 @@ export type YoutubeWatchEvent = typeof youtubeWatchEvents.$inferSelect;
 
 export type HousingWaitlist = typeof housingWaitlist.$inferSelect;
 
+// ── COMMUNICATION LOG ─────────────────────────────────────────────────────────
+export const commChannelEnum = pgEnum('comm_channel', ['email', 'sms', 'in_app', 'fax']);
+export const commStatusEnum = pgEnum('comm_status', ['sent', 'failed', 'pending', 'delivered', 'bounced']);
+
+export const communicationLog = pgTable('communication_log', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  channel: commChannelEnum('channel').notNull(),
+  status: commStatusEnum('status').default('pending'),
+  toUserId: varchar('to_user_id').references(() => users.id),
+  toAddress: varchar('to_address').notNull(), // email or phone
+  fromAddress: varchar('from_address'),
+  subject: varchar('subject'),
+  body: text('body'),
+  templateType: varchar('template_type'), // welcome, housing_assigned, appointment_reminder, etc.
+  externalId: varchar('external_id'), // sendgrid message id or twilio SID
+  errorMessage: text('error_message'),
+  sentBy: varchar('sent_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('comm_log_user_idx').on(table.toUserId),
+  index('comm_log_channel_idx').on(table.channel),
+  index('comm_log_created_idx').on(table.createdAt),
+]);
+
 // ── HOUSING CHECKLISTS (move-in / move-out) ───────────────────────────────────
 export const housingChecklistTypeEnum = pgEnum('housing_checklist_type', ['move_in', 'move_out', 'room_inspection']);
 

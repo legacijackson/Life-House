@@ -97,6 +97,35 @@ CREATE TABLE IF NOT EXISTS housing_notices (
 CREATE INDEX IF NOT EXISTS housing_notices_property_idx ON housing_notices(property_id);
 CREATE INDEX IF NOT EXISTS housing_notices_expires_idx ON housing_notices(expires_at);
 
+-- Communication channel/status enums
+DO $$ BEGIN
+  CREATE TYPE comm_channel AS ENUM ('email', 'sms', 'in_app', 'fax');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE comm_status AS ENUM ('sent', 'failed', 'pending', 'delivered', 'bounced');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- Communication log table
+CREATE TABLE IF NOT EXISTS communication_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  channel comm_channel NOT NULL,
+  status comm_status DEFAULT 'pending',
+  to_user_id VARCHAR REFERENCES users(id),
+  to_address VARCHAR NOT NULL,
+  from_address VARCHAR,
+  subject VARCHAR,
+  body TEXT,
+  template_type VARCHAR,
+  external_id VARCHAR,
+  error_message TEXT,
+  sent_by VARCHAR REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS comm_log_user_idx ON communication_log(to_user_id);
+CREATE INDEX IF NOT EXISTS comm_log_channel_idx ON communication_log(channel);
+CREATE INDEX IF NOT EXISTS comm_log_created_idx ON communication_log(created_at);
+
 -- Admin users: seed only if not exist
 INSERT INTO users (id, role, name, email, first_name, last_name, password_hash, is_admin, created_at, updated_at)
 VALUES

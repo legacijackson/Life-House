@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { notifications, users } from "../../shared/schema";
+import { notifications, users, communicationLog } from "../../shared/schema";
 import { eq } from "drizzle-orm";
 
 interface NotificationPayload {
@@ -39,6 +39,115 @@ export async function notifyUser(userId: string, payload: Omit<NotificationPaylo
   return createNotification({ ...payload, userId });
 }
 
+// ── Communication log ─────────────────────────────────────────────────────────
+
+export async function logComm(opts: {
+  channel: 'email' | 'sms' | 'in_app' | 'fax';
+  toUserId?: string;
+  toAddress: string;
+  fromAddress?: string;
+  subject?: string;
+  body?: string;
+  templateType?: string;
+  externalId?: string;
+  status?: 'sent' | 'failed' | 'pending' | 'delivered' | 'bounced';
+  errorMessage?: string;
+  sentBy?: string;
+}) {
+  try {
+    await db.insert(communicationLog).values({
+      channel: opts.channel,
+      status: opts.status ?? 'sent',
+      toUserId: opts.toUserId,
+      toAddress: opts.toAddress,
+      fromAddress: opts.fromAddress,
+      subject: opts.subject,
+      body: opts.body,
+      templateType: opts.templateType,
+      externalId: opts.externalId,
+      errorMessage: opts.errorMessage,
+      sentBy: opts.sentBy,
+    });
+  } catch (err) {
+    console.error("[CommLog] Failed to log:", err);
+  }
+}
+
+// ── Wrapped send helpers (log + send) ─────────────────────────────────────────
+
+export async function sendEmailNotification(opts: {
+  toUserId?: string;
+  toEmail: string;
+  toName?: string;
+  subject: string;
+  html: string;
+  templateType?: string;
+  sentBy?: string;
+}) {
+  const { sendEmail } = await import("./email");
+  try {
+    await sendEmail({ to: opts.toEmail, toName: opts.toName, subject: opts.subject, html: opts.html });
+    await logComm({
+      channel: 'email',
+      toUserId: opts.toUserId,
+      toAddress: opts.toEmail,
+      subject: opts.subject,
+      body: opts.html.replace(/<[^>]+>/g, '').slice(0, 500),
+      templateType: opts.templateType,
+      status: 'sent',
+      sentBy: opts.sentBy,
+    });
+  } catch (err: any) {
+    await logComm({
+      channel: 'email',
+      toUserId: opts.toUserId,
+      toAddress: opts.toEmail,
+      subject: opts.subject,
+      templateType: opts.templateType,
+      status: 'failed',
+      errorMessage: err.message,
+      sentBy: opts.sentBy,
+    });
+  }
+}
+
+export async function sendSmsNotification(opts: {
+  toUserId?: string;
+  toPhone: string;
+  body: string;
+  templateType?: string;
+  sentBy?: string;
+}) {
+  const { sendSMS, normalizePhone } = await import("./sms");
+  const normalized = normalizePhone(opts.toPhone);
+  try {
+    const sid = await sendSMS(normalized, opts.body);
+    await logComm({
+      channel: 'sms',
+      toUserId: opts.toUserId,
+      toAddress: normalized,
+      body: opts.body,
+      templateType: opts.templateType,
+      externalId: sid,
+      status: 'sent',
+      sentBy: opts.sentBy,
+    });
+  } catch (err: any) {
+    await logComm({
+      channel: 'sms',
+      toUserId: opts.toUserId,
+      toAddress: normalized,
+      body: opts.body,
+      templateType: opts.templateType,
+      status: 'failed',
+      errorMessage: err.message,
+      sentBy: opts.sentBy,
+    });
+  }
+}
+
+// ── Google Chat ───────────────────────────────────────────────────────────────
+
 export async function sendGoogleChatMessage(webhookUrl: string, text: string, threadKey?: string) {
   if (!webhookUrl) return;
 
@@ -73,7 +182,6 @@ export async function notifyNewLead(callDetails: {
   const title = `New ${callDetails.contactType} call — ${name}`;
   const body = `Phone: ${callDetails.phone ?? "N/A"}`;
 
-  // In-app notification for staff
   const staffUsers = await db.select({ id: users.id, isAdmin: users.isAdmin })
     .from(users)
     .where(eq(users.role, "CaseManager" as any));
@@ -91,7 +199,6 @@ export async function notifyNewLead(callDetails: {
   }
   await notifyAdmins({ type: "new_lead_call", title, body, priority: "high", linkType: "call_log", linkId: callDetails.callId });
 
-  // Google Chat
   const webhook = process.env.GOOGLE_CHAT_WEBHOOK;
   if (webhook) {
     await sendGoogleChatMessage(webhook, `📞 *${title}*\n${body}`, process.env.GOOGLE_CHAT_CALLBACKS_THREAD);

@@ -69,7 +69,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
 import { setupAuth } from "./replitAuth";
-import { notifyNewLead, notifyCallbackAssigned, notifyAdmins, createNotification } from "./services/notifications";
+import { notifyNewLead, notifyCallbackAssigned, notifyAdmins, createNotification, sendEmailNotification, sendSmsNotification, logComm } from "./services/notifications";
+import { sendWelcomeEmail, sendHousingAssignedEmail, sendDonationReceiptEmail, sendNewApplicationEmail, sendStaffAlertEmail, sendAppointmentReminder } from "./services/email";
+import { smsHousingAssigned, smsWelcome, smsDocumentReady } from "./services/sms";
+import { communicationLog } from "@shared/schema";
 import { callCallLogScript, callLCPReferralScript, callIntakeScript } from "./services/apps-script";
 import { pushMaintenanceExpense } from "./services/finance";
 import { sendFaxViaTelnyx, getFaxStatus } from "./services/fax";
@@ -286,8 +289,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('New housing application:', application.id, confirmationNumber);
 
-      res.status(201).json({ 
-        success: true, 
+      // Alert admins by email
+      const adminUsers = await db.select({ email: users.email, name: users.name })
+        .from(users).where(eq(users.isAdmin, true));
+      for (const admin of adminUsers) {
+        if (admin.email) {
+          sendNewApplicationEmail(admin.email, {
+            name: [req.body.firstName, req.body.lastName].filter(Boolean).join(' ') || 'Applicant',
+            phone: req.body.phone,
+            email: req.body.email,
+            referralSource: req.body.referralSource,
+          }).catch(e => console.error('[Apply] Admin alert email failed:', e.message));
+        }
+      }
+
+      res.status(201).json({
+        success: true,
         message: confirmationMessage,
         applicationId: application.id,
         confirmationNumber
@@ -1376,7 +1393,7 @@ startxref
         .set({ role: 'Resident', updatedAt: now })
         .where(eq(users.id, clientId));
 
-      // Notify the client
+      // Notify the client — in-app, email, and SMS
       await createNotification({
         userId: clientId,
         type: 'housing_assigned',
@@ -1384,6 +1401,27 @@ startxref
         body: `You have been assigned housing. Welcome to Life House! Your move-in date is ${moveInDate ? new Date(moveInDate).toLocaleDateString() : 'TBD'}.`,
         priority: 'high',
       });
+
+      const [clientUser] = await db.select().from(users).where(eq(users.id, clientId)).limit(1);
+      if (clientUser) {
+        const moveInFormatted = moveInDate ? new Date(moveInDate).toLocaleDateString() : undefined;
+
+        if (clientUser.email) {
+          sendHousingAssignedEmail(clientUser.email, clientUser.name || 'Resident', {
+            propertyAddress: propertyId,
+            roomAssignment: roomAssignment || bedAssignment,
+            moveInDate: moveInFormatted,
+            caseManager: req.user.name,
+          }).then(() => logComm({ channel: 'email', toUserId: clientId, toAddress: clientUser.email!, templateType: 'housing_assigned', status: 'sent', sentBy: req.user.id }))
+            .catch(e => logComm({ channel: 'email', toUserId: clientId, toAddress: clientUser.email!, templateType: 'housing_assigned', status: 'failed', errorMessage: e.message }));
+        }
+
+        if (clientUser.phone) {
+          smsHousingAssigned(clientUser.phone, clientUser.name || 'Resident', moveInFormatted)
+            .then(() => logComm({ channel: 'sms', toUserId: clientId, toAddress: clientUser.phone!, templateType: 'housing_assigned', status: 'sent', sentBy: req.user.id }))
+            .catch(e => logComm({ channel: 'sms', toUserId: clientId, toAddress: clientUser.phone!, templateType: 'housing_assigned', status: 'failed', errorMessage: e.message }));
+        }
+      }
 
       // Remove from waitlist if present
       await db.update(housingWaitlist)
@@ -2325,7 +2363,16 @@ startxref
 
           await storage.createDonation(donation);
 
-          // TODO: Send thank you email
+          // Send donation receipt email
+          if (donation.email && donation.email !== 'anonymous@lifehouse.org') {
+            const donorName = [donation.firstName, donation.lastName].filter(Boolean).join(' ') || 'Donor';
+            sendDonationReceiptEmail(donation.email, donorName, {
+              amount: donation.amount,
+              frequency: donation.frequency === 'monthly' ? 'Monthly Recurring' : 'One-Time',
+              date: new Date().toLocaleDateString(),
+              transactionId: donation.stripePaymentId,
+            }).catch(e => console.error('[Stripe webhook] Donation email failed:', e.message));
+          }
           console.log('Donation successful:', donation);
           break;
 
@@ -5944,6 +5991,128 @@ Resident is ready to begin programming and case management services.`,
       res.status(500).json({ message: 'Failed to delete notice' });
     }
   }));
+
+  // ── COMMUNICATIONS (SendGrid + Twilio) ───────────────────────────────────────
+
+  // Send email manually (staff → client or group)
+  app.post('/api/communications/send-email', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { toUserId, toEmail, subject, body, templateType } = req.body;
+      if (!toEmail || !subject || !body) return res.status(400).json({ message: 'toEmail, subject, and body are required' });
+
+      let recipientUser: { name: string | null } | undefined;
+      if (toUserId) {
+        const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, toUserId)).limit(1);
+        recipientUser = u;
+      }
+
+      const { sendEmail } = await import('./services/email');
+      const { wrapCustomHtml } = await import('./services/email').then(m => ({ wrapCustomHtml: (b: string) => b }));
+
+      await sendEmailNotification({
+        toUserId,
+        toEmail,
+        toName: recipientUser?.name || undefined,
+        subject,
+        html: `<h2>${subject}</h2><div style="white-space:pre-wrap">${body}</div>`,
+        templateType: templateType || 'manual',
+        sentBy: req.user.id,
+      });
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to send email' });
+    }
+  }));
+
+  // Send SMS manually
+  app.post('/api/communications/send-sms', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { toUserId, toPhone, body, templateType } = req.body;
+      if (!toPhone || !body) return res.status(400).json({ message: 'toPhone and body are required' });
+
+      await sendSmsNotification({
+        toUserId,
+        toPhone,
+        body,
+        templateType: templateType || 'manual',
+        sentBy: req.user.id,
+      });
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to send SMS' });
+    }
+  }));
+
+  // Communication log
+  app.get('/api/communications/log', roleRoute(['CaseManager', 'Admin'], async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { userId, channel, limit: limitStr } = req.query as Record<string, string>;
+      const limitN = Math.min(parseInt(limitStr || '50'), 200);
+
+      const conditions: any[] = [];
+      if (userId) conditions.push(eq(communicationLog.toUserId, userId));
+      if (channel) conditions.push(eq(communicationLog.channel as any, channel));
+
+      const rows = await db.select({
+        id: communicationLog.id,
+        channel: communicationLog.channel,
+        status: communicationLog.status,
+        toAddress: communicationLog.toAddress,
+        subject: communicationLog.subject,
+        body: communicationLog.body,
+        templateType: communicationLog.templateType,
+        createdAt: communicationLog.createdAt,
+        toUserId: communicationLog.toUserId,
+        sentBy: communicationLog.sentBy,
+        errorMessage: communicationLog.errorMessage,
+        recipientName: users.name,
+      })
+        .from(communicationLog)
+        .leftJoin(users, eq(users.id, communicationLog.toUserId))
+        .where(conditions.length ? and(...conditions) : undefined)
+        .orderBy(desc(communicationLog.createdAt))
+        .limit(limitN);
+
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: 'Failed to fetch communication log' });
+    }
+  }));
+
+  // Twilio SMS webhook (incoming messages)
+  app.post('/api/webhooks/twilio/sms', async (req: Request, res: Response) => {
+    try {
+      const { From, Body, MessageSid } = req.body;
+      console.log('[Twilio SMS inbound]', From, Body);
+
+      await logComm({
+        channel: 'sms',
+        toAddress: process.env.TWILIO_PHONE_NUMBER || 'lifehouse',
+        fromAddress: From,
+        body: Body,
+        templateType: 'inbound',
+        externalId: MessageSid,
+        status: 'delivered',
+      });
+
+      // Notify admins in-app about the reply
+      await notifyAdmins({
+        type: 'sms_reply',
+        title: `SMS reply from ${From}`,
+        body: Body?.slice(0, 160),
+        priority: 'normal',
+      });
+
+      res.set('Content-Type', 'text/xml');
+      res.send('<Response></Response>');
+    } catch (err) {
+      console.error('[Twilio SMS webhook]', err);
+      res.set('Content-Type', 'text/xml');
+      res.send('<Response></Response>');
+    }
+  });
 
   // Set user avatar preset
   app.post('/api/users/:id/avatar-preset', requireAuth, authRoute(async (req: AuthenticatedRequest, res: Response) => {

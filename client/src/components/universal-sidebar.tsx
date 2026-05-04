@@ -26,6 +26,7 @@ import {
   CheckCheck,
   ClipboardCheck,
   CheckSquare,
+  Send,
 } from "lucide-react";
 
 // Define navigation for different contexts
@@ -58,6 +59,7 @@ const staffNavigation = [
   { name: "Onboarding", href: "/app/onboarding", icon: UserPlus },
   { name: "Auth Requests", href: "/app/authorization-requests", icon: ClipboardCheck },
   { name: "Messages", href: "/app/messages", icon: MessageSquare },
+  { name: "Communications", href: "/app/communications", icon: Send },
   { name: "Properties", href: "/app/properties", icon: Building },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Resources", href: "/app/resources", icon: Archive },
@@ -76,6 +78,7 @@ const adminNavigation = [
   { name: "Onboarding", href: "/app/onboarding", icon: UserPlus },
   { name: "Auth Requests", href: "/app/authorization-requests", icon: ClipboardCheck },
   { name: "Messages", href: "/app/messages", icon: MessageSquare },
+  { name: "Communications", href: "/app/communications", icon: Send },
   { name: "Properties", href: "/app/properties", icon: Building },
   { name: "Reports", href: "/app/reports", icon: BarChart3 },
   { name: "Resources", href: "/app/resources", icon: Archive },
