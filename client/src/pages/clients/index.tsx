@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -204,6 +204,53 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
         <ChevronRight className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
       </CardContent>
     </Card>
+  );
+}
+
+// ── Client Timeline ────────────────────────────────────────────────────────────
+
+function ClientTimeline({ clientId }: { clientId: string }) {
+  const { data: events = [], isLoading } = useQuery<any[]>({
+    queryKey: [`/api/clients/${clientId}/timeline`],
+    queryFn: () => apiRequest("GET", `/api/clients/${clientId}/timeline`).then(r => r.json()),
+  });
+
+  const iconMap: Record<string, React.ReactNode> = {
+    file: <ClipboardList className="h-3 w-3" />,
+    check: <CheckCircle2 className="h-3 w-3" />,
+    home: <Home className="h-3 w-3" />,
+    star: <History className="h-3 w-3" />,
+  };
+  const colorMap: Record<string, string> = {
+    case_note: "bg-blue-100 text-blue-600",
+    touchpoint: "bg-green-100 text-green-600",
+    housing: "bg-purple-100 text-purple-600",
+    milestone: "bg-amber-100 text-amber-600",
+  };
+
+  if (isLoading) return <p className="text-xs text-gray-400">Loading timeline…</p>;
+  if (!events.length) return <p className="text-xs text-gray-400">No activity recorded yet.</p>;
+
+  return (
+    <div className="relative space-y-3">
+      <div className="absolute left-3.5 top-0 bottom-0 w-px bg-gray-200" />
+      {events.map((evt) => (
+        <div key={evt.id} className="flex gap-3 relative">
+          <div className={`z-10 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${colorMap[evt.type] ?? "bg-gray-100 text-gray-500"}`}>
+            {iconMap[evt.icon] ?? <ClipboardList className="h-3 w-3" />}
+          </div>
+          <div className="flex-1 min-w-0 pb-2">
+            <p className="text-xs font-medium text-gray-900 leading-tight">{evt.title}</p>
+            {evt.description && (
+              <p className="text-xs text-gray-500 truncate mt-0.5">{evt.description}</p>
+            )}
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {evt.date ? new Date(evt.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1085,8 +1132,8 @@ function ClientProfileDrawer({ client, onClose }: { client: Client; onClose: () 
           </TabsContent>
 
           {/* History Tab */}
-          <TabsContent value="history" className="p-4 space-y-4 mt-0">
-            <p className="text-xs text-gray-500">Program timeline and touch points log coming soon.</p>
+          <TabsContent value="history" className="p-4 space-y-3 mt-0">
+            <ClientTimeline clientId={client.id} />
             <Button
               size="sm"
               variant="outline"

@@ -307,22 +307,200 @@ export default function Intake() {
                   ) : referrals?.length === 0 ? (
                     <div className="text-center py-4 text-gray-500">No referrals found</div>
                   ) : (
-                    <div className="text-center py-4 text-gray-500">Referral management coming soon</div>
+                    <div className="space-y-3">
+                      {referrals?.filter(r => r.status === 'new' || r.status === 'in_review').map((referral) => (
+                        <Card key={referral.id} className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedReferral(referral)}>
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <div className="font-medium">{referral.basicResidentInfo?.name || 'Unknown'}</div>
+                              <div className="text-sm text-gray-600">
+                                From: {referral.referrerOrg} — {referral.referrerName}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {referral.referrerEmail} {referral.referrerPhone ? `| ${referral.referrerPhone}` : ''}
+                              </div>
+                              {referral.basicResidentInfo?.earliestReadyDate && (
+                                <div className="text-xs text-gray-400">
+                                  Ready: {new Date(referral.basicResidentInfo.earliestReadyDate).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={getStatusBadgeColor(referral.status)} variant="secondary">
+                                {referral.status === 'in_review' ? 'In Review' : referral.status}
+                              </Badge>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="sm" variant="outline" onClick={e => e.stopPropagation()}>
+                                    Update <ChevronDown className="w-3 h-3 ml-1" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={e => { e.stopPropagation(); handleStatusUpdate(referral.id, 'in_review'); }}>
+                                    <Clock className="w-4 h-4 mr-2 text-yellow-600" /> Mark In Review
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={e => { e.stopPropagation(); handleStatusUpdate(referral.id, 'accepted'); }}>
+                                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" /> Accept
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={e => { e.stopPropagation(); handleStatusUpdate(referral.id, 'waitlist'); }}>
+                                    <Users className="w-4 h-4 mr-2 text-orange-600" /> Waitlist
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={e => { e.stopPropagation(); handleStatusUpdate(referral.id, 'declined'); }}>
+                                    <X className="w-4 h-4 mr-2 text-red-600" /> Decline
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                          {referral.notes && (
+                            <p className="text-xs text-gray-500 mt-2 border-t pt-2">{referral.notes}</p>
+                          )}
+                        </Card>
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="in_progress" className="space-y-6">
-              <div className="text-center py-8 text-gray-500">
-                In Progress functionality coming soon
-              </div>
+              {/* In-progress applications */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Clock className="w-5 h-5 mr-2 text-purple-600" />
+                    In-Progress Applications ({applications?.filter(a => a.status === 'in_progress' || a.status === 'approved' || a.status === 'waitlisted').length || 0})
+                  </CardTitle>
+                  <CardDescription>Applications being actively reviewed or awaiting onboarding</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {applicationsLoading ? (
+                    <div className="text-center py-4">Loading…</div>
+                  ) : applications?.filter(a => ['in_progress', 'approved', 'waitlisted'].includes(a.status)).length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">No in-progress applications</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {applications?.filter(a => ['in_progress', 'approved', 'waitlisted'].includes(a.status)).map((app: any) => (
+                        <Card key={app.id} className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedApplication(app)}>
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <div className="font-medium">{app.name}</div>
+                              <div className="text-sm text-gray-600">{app.email} | {app.phone}</div>
+                              <div className="text-xs text-gray-400">Confirmation: {app.confirmationNumber}</div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={getStatusBadgeColor(app.status)} variant="secondary">{app.status}</Badge>
+                              <Button size="sm" variant="outline" onClick={e => { e.stopPropagation(); setSelectedApplication(app); }}>
+                                <Eye className="w-3 h-3 mr-1" /> Review
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* In-review referrals */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <UserPlus className="w-5 h-5 mr-2 text-blue-600" />
+                    Accepted / Waitlisted Referrals ({referrals?.filter(r => r.status === 'accepted' || r.status === 'waitlist').length || 0})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {referralsLoading ? (
+                    <div className="text-center py-4">Loading…</div>
+                  ) : referrals?.filter(r => r.status === 'accepted' || r.status === 'waitlist').length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">No accepted or waitlisted referrals</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {referrals?.filter(r => r.status === 'accepted' || r.status === 'waitlist').map((referral) => (
+                        <Card key={referral.id} className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <div className="font-medium">{referral.basicResidentInfo?.name || 'Unknown'}</div>
+                              <div className="text-sm text-gray-600">{referral.referrerOrg} — {referral.referrerName}</div>
+                            </div>
+                            <Badge className={getStatusBadgeColor(referral.status)} variant="secondary">
+                              {referral.status === 'waitlist' ? 'Waitlisted' : 'Accepted'}
+                            </Badge>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="closed" className="space-y-6">
-              <div className="text-center py-8 text-gray-500">
-                Closed referrals functionality coming soon
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <AlertCircle className="w-5 h-5 mr-2 text-gray-500" />
+                    Closed Applications ({applications?.filter(a => ['denied', 'closed'].includes(a.status)).length || 0})
+                  </CardTitle>
+                  <CardDescription>Denied, closed, or inactive applications</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {applicationsLoading ? (
+                    <div className="text-center py-4">Loading…</div>
+                  ) : applications?.filter(a => ['denied', 'closed'].includes(a.status)).length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">No closed applications</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {applications?.filter(a => ['denied', 'closed'].includes(a.status)).map((app: any) => (
+                        <Card key={app.id} className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedApplication(app)}>
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <div className="font-medium text-gray-700">{app.name}</div>
+                              <div className="text-sm text-gray-500">{app.email}</div>
+                              <div className="text-xs text-gray-400">
+                                {app.confirmationNumber} · Submitted {new Date(app.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <Badge className={getStatusBadgeColor(app.status)} variant="secondary">{app.status}</Badge>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <UserPlus className="w-5 h-5 mr-2 text-gray-500" />
+                    Declined Referrals ({referrals?.filter(r => r.status === 'declined').length || 0})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {referralsLoading ? (
+                    <div className="text-center py-4">Loading…</div>
+                  ) : referrals?.filter(r => r.status === 'declined').length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">No declined referrals</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {referrals?.filter(r => r.status === 'declined').map((referral) => (
+                        <Card key={referral.id} className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <div className="font-medium text-gray-700">{referral.basicResidentInfo?.name || 'Unknown'}</div>
+                              <div className="text-sm text-gray-500">{referral.referrerOrg}</div>
+                              <div className="text-xs text-gray-400">{new Date(referral.createdAt).toLocaleDateString()}</div>
+                            </div>
+                            <Badge className={getStatusBadgeColor(referral.status)} variant="secondary">Declined</Badge>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

@@ -2,6 +2,8 @@ import { storage } from "../storage";
 import { syncFreedomVoiceCalls } from "./freedomvoice-sync";
 import { checkCaseNoteDeadlines } from "./case-note-deadlines";
 import { takeWeeklyClientSnapshots } from "./weekly-snapshots";
+import { notifyAdmins, createNotification } from "../services/notifications";
+import { sendStaffAlertEmail } from "../services/email";
 
 // Simple in-memory job scheduler for background tasks
 class JobScheduler {
@@ -85,7 +87,16 @@ class JobScheduler {
         
         if (newResources.length > 0) {
           console.log(`[ResourceDiff] Found ${newResources.length} new resources`);
-          // TODO: Send notification to case managers
+          const names = newResources.slice(0, 5).map((r: any) => r.name).join(', ');
+          const body = `${newResources.length} new community resource(s) added: ${names}${newResources.length > 5 ? ', and more.' : '.'}`;
+          await notifyAdmins({ type: 'new_resources', title: 'New Community Resources Added', body }).catch(() => {});
+          const caseManagers = await storage.getUsers({ role: 'CaseManager' });
+          for (const cm of caseManagers) {
+            await createNotification({ userId: cm.id, type: 'new_resources', title: 'New Community Resources', body }).catch(() => {});
+            if ((cm as any).email) {
+              sendStaffAlertEmail((cm as any).email, 'New Community Resources', body).catch(() => {});
+            }
+          }
         }
         
         console.log('[ResourceDiff] Nightly diff complete');
@@ -126,7 +137,15 @@ class JobScheduler {
         
         if (upcomingTouchpoints.length > 0) {
           console.log(`[StopArmsReminder] ${upcomingTouchpoints.length} residents have upcoming touchpoints`);
-          // TODO: Send reminders to case managers
+          const body = `${upcomingTouchpoints.length} resident(s) have STOP touchpoints due within 48 hours. Please review and schedule check-ins.`;
+          await notifyAdmins({ type: 'stop_arms_reminder', title: 'STOP Touchpoints Due Soon', body }).catch(() => {});
+          const caseManagers = await storage.getUsers({ role: 'CaseManager' });
+          for (const cm of caseManagers) {
+            await createNotification({ userId: cm.id, type: 'stop_arms_reminder', title: 'STOP Touchpoints Due Soon', body }).catch(() => {});
+            if ((cm as any).email) {
+              sendStaffAlertEmail((cm as any).email, 'STOP Touchpoints Due Soon', body).catch(() => {});
+            }
+          }
         }
         
       } catch (error) {
@@ -178,7 +197,16 @@ class JobScheduler {
         
         if (overdueResidents.length > 0) {
           console.log(`[OverdueNotesWatchdog] ${overdueResidents.length} residents have overdue case notes`);
-          // TODO: Send alerts to case managers
+          const names = overdueResidents.slice(0, 5).map((r: any) => r.name || r.email).join(', ');
+          const body = `${overdueResidents.length} resident(s) have no case note in over 7 days: ${names}${overdueResidents.length > 5 ? ', and more.' : '.'}`;
+          await notifyAdmins({ type: 'overdue_case_notes', title: 'Overdue Case Notes', body }).catch(() => {});
+          const caseManagers = await storage.getUsers({ role: 'CaseManager' });
+          for (const cm of caseManagers) {
+            await createNotification({ userId: cm.id, type: 'overdue_case_notes', title: 'Overdue Case Notes', body }).catch(() => {});
+            if ((cm as any).email) {
+              sendStaffAlertEmail((cm as any).email, 'Overdue Case Notes Alert', body).catch(() => {});
+            }
+          }
         }
         
       } catch (error) {

@@ -18,7 +18,8 @@ import {
   Bell,
   Plus,
   AlertTriangle,
-  Info
+  Info,
+  FileText,
 } from "lucide-react";
 
 interface Resident {
@@ -112,7 +113,7 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
                 <p className="text-sm text-gray-600">
-                  Welcome back, {user?.name || 'Sarah'}. Here's what's happening today.
+                  Welcome back, {user?.name || 'Staff'}. Here's what's happening today.
                 </p>
               </div>
               <div className="flex items-center space-x-4">
@@ -224,9 +225,10 @@ export default function Dashboard() {
                   <CardTitle>Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full justify-start h-auto p-4 bg-gray-50 hover:bg-gray-100"
+                    onClick={() => navigate('/app/attendance')}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -239,24 +241,26 @@ export default function Dashboard() {
                     </div>
                   </Button>
 
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full justify-start h-auto p-4 bg-gray-50 hover:bg-gray-100"
+                    onClick={() => navigate('/app/case-notes')}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <CheckSquare className="w-4 h-4 text-green-600" />
+                        <FileText className="w-4 h-4 text-green-600" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-medium text-gray-900">Log Service</p>
-                        <p className="text-xs text-gray-500">Record billable service</p>
+                        <p className="text-sm font-medium text-gray-900">Add Case Note</p>
+                        <p className="text-xs text-gray-500">Document client progress</p>
                       </div>
                     </div>
                   </Button>
 
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full justify-start h-auto p-4 bg-gray-50 hover:bg-gray-100"
+                    onClick={() => navigate('/app/resources')}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
@@ -265,6 +269,22 @@ export default function Dashboard() {
                       <div className="text-left">
                         <p className="text-sm font-medium text-gray-900">Find Resources</p>
                         <p className="text-xs text-gray-500">Search available services</p>
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start h-auto p-4 bg-gray-50 hover:bg-gray-100"
+                    onClick={() => navigate('/app/clients')}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Users className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-gray-900">View Clients</p>
+                        <p className="text-xs text-gray-500">Manage client caseload</p>
                       </div>
                     </div>
                   </Button>

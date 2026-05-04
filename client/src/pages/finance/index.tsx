@@ -24,6 +24,16 @@ function fmtShort(amount: number) {
   return "$" + amount.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
+function exportCsv(rows: Record<string, unknown>[], filename: string) {
+  if (!rows.length) return;
+  const keys = Object.keys(rows[0]);
+  const csv = [keys.join(","), ...rows.map(r => keys.map(k => JSON.stringify(r[k] ?? "")).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = filename;
+  a.click();
+}
+
 export default function FinancePage() {
   const { toast } = useToast();
 
@@ -150,10 +160,22 @@ export default function FinancePage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => toast({ title: "Export feature coming soon" })}
+          onClick={() => {
+            if (!donations.length) { toast({ title: "No data to export" }); return; }
+            const rows = donations.map((d: any) => ({
+              Date: d.processedAt ? new Date(d.processedAt).toLocaleDateString() : '',
+              Amount: d.amount,
+              Frequency: d.frequency ?? 'one_time',
+              Designation: d.designation ?? '',
+              DonorEmail: donors.find((x: any) => x.id === d.donorId)?.email ?? '',
+              DonorName: donors.find((x: any) => x.id === d.donorId)?.name ?? '',
+              Status: d.status ?? '',
+            }));
+            exportCsv(rows, `life-house-donations-${new Date().toISOString().slice(0,10)}.csv`);
+          }}
         >
           <Download className="h-4 w-4 mr-2" />
-          Export
+          Export CSV
         </Button>
       </div>
 
